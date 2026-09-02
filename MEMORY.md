@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprints 00–03 complete; Sprint 04 Job Payments item 4 complete.
+- **Stage:** Sprints 00–03 complete; Sprint 04 Job Payments item 5 complete.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
@@ -14,6 +14,7 @@
 - **Job payment schema:** `JobPayments` has an enforced exactly-one payee check (user or collection client), row-version concurrency, exact JMD totals, and unique line associations. `Payrolls` is a minimal locked/generated association prerequisite only; Sprint 05 owns payroll behavior. See `20260902221255_AddJobPaymentEntities`.
 - **Job management:** `JobPaymentService` is the shared Manager+ adapter for Processing-only job creation and line management. It validates compatible source ownership/state and recalculates all stored JMD totals server-side.
 - **Job lifecycle:** Managers submit valid Processing payments; only Accountants can schedule Submitted payments at a UTC time. Scheduled jobs are immutable because all line commands require Processing status.
+- **Settlement:** only Accountants can mark a Scheduled job paid; it atomically records payment metadata, cascades claims/collections/payrolls to their paid states, queues payout notification records, and writes an audit event.
 - **Projects:** `ElixomClaim.Lib`, `ElixomClaim.Web`, and matching Lib/Web xUnit test projects under `src/`.
 - **Frontend:** Razor MVC with Bootstrap 5.3 and jQuery 3.7 from CDN only; printable documents are HTML/CSS only—PDF generation is forbidden.
 

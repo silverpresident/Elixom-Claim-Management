@@ -24,7 +24,7 @@
 | 2 | Complete | 2026-09-02 | Added shared Manager-authorized `JobPaymentService`: Processing-only create/attach/remove/deduction commands, accepted-claim/user and Collected-collection/client validation, linked source status updates, and server-side exact totals. Tests: `JobPaymentServiceTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (76). |
 | 3 | In progress | 2026-09-02 | Building Manager job-payment list/detail, compatible collection review and attachment flows, internal-note-safe print view, and controlled payout-notification resend command. |
 | 4 | Complete | 2026-09-02 | Added shared `SubmitAsync` and Accountant-only `ScheduleAsync` commands. Submission requires a non-negative payable total; schedule requires UTC time, transitions only Submitted jobs, locks line edits through existing Processing-only enforcement, and audits both states. Tests: `JobPaymentServiceTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (77). |
-| 5 | Not started | — | — |
+| 5 | Complete | 2026-09-02 | Added Accountant-only atomic `MarkPaidAsync`: required UTC payment date/transaction number, Scheduled-only transition, linked claim/collection/payroll state cascade, payout outbox records, audit event, and concurrency/idempotency guards. Tests: `JobPaymentServiceTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (78). |
 | 6 | Not started | — | — |
 | 7 | Not started | — | — |
 | 8 | Not started | — | — |

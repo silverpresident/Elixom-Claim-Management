@@ -65,6 +65,26 @@ public class JobPaymentServiceTests
         Assert.Contains(db.AuditRecords, x => x.Action == "JOB_PAYMENT_SCHEDULED");
     }
 
+    [Fact]
+    public async Task MarkPaidAsync_CascadesLinkedStatesAndCannotReplay()
+    {
+        await using var db = CreateDb();
+        var accountant = User(UserRole.Accountant, "accountant@anonymized.example.com"); var payee = User(UserRole.User, "payee@anonymized.example.com");
+        var claim = new Claim { ClaimantUserId = payee.Id, Title = "Claim", Description = "Description", Amount = 100m, Status = ClaimStatus.Accepted, PaymentStatus = ClaimPaymentStatus.Processing };
+        var client = new CollectionClient { Name = "Client" };
+        db.AddRange(accountant, payee, claim, client); await db.SaveChangesAsync();
+        var collection = new CollectionTransaction { CollectionClientId = client.Id, TellerUserId = accountant.Id, PurposeOptionId = 1, AmountOptionId = 1, PayorName = "Payor", Amount = 200m, Status = CollectionStatus.Processing, PaymentDateUtc = DateTime.UtcNow };
+        var payroll = new Payroll { UserId = payee.Id, NetAmount = 300m, Status = PayrollStatus.Submitted };
+        var job = new JobPayment { PayeeUserId = payee.Id, Status = JobPaymentStatus.Scheduled, JobTotal = 600m, TotalPaid = 600m };
+        db.AddRange(collection, payroll, job); await db.SaveChangesAsync();
+        db.AddRange(new JobPaymentClaim { JobPaymentId = job.Id, ClaimId = claim.Id }, new JobPaymentCollection { JobPaymentId = job.Id, CollectionTransactionId = collection.Id }, new JobPaymentPayroll { JobPaymentId = job.Id, PayrollId = payroll.Id }); await db.SaveChangesAsync();
+        var service = Service(db);
+
+        Assert.True((await service.MarkPaidAsync(job.Id, accountant.Id, DateTime.UtcNow, "TXN-1")).IsSuccess);
+        Assert.Equal(JobPaymentStatus.Paid, job.Status); Assert.Equal(ClaimPaymentStatus.Paid, claim.PaymentStatus); Assert.Equal(CollectionStatus.Transferred, collection.Status); Assert.Equal(PayrollStatus.Paid, payroll.Status);
+        Assert.Single(db.EmailOutboxItems); Assert.True((await service.MarkPaidAsync(job.Id, accountant.Id, DateTime.UtcNow, "TXN-2")).IsFailure);
+    }
+
     private static ApplicationDbContext CreateDb() => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     private static User User(UserRole role, string email) => new() { Email = email, NormalizedEmail = email.ToUpperInvariant(), FullName = "User", Role = role };
     private static JobPaymentService Service(ApplicationDbContext db) => new(db, new AuditService(db, NullLogger<AuditService>.Instance), new SystemClock(), NullLogger<JobPaymentService>.Instance);

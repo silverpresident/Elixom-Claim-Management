@@ -88,6 +88,31 @@ public class JobPaymentService : IJobPaymentService
         job.Status = JobPaymentStatus.Scheduled; job.ScheduledAtUtc = scheduledAtUtc; await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_SCHEDULED", job, actorUserId, ct); return Result.Success();
     }
 
+    public async Task<Result> MarkPaidAsync(long jobPaymentId, Guid actorUserId, DateTime paymentDateUtc, string transactionNumber, CancellationToken ct = default)
+    {
+        var role = await _db.Users.Where(u => u.Id == actorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct);
+        if (role is not { } userRole || !userRole.HasMinimumRole(UserRole.Accountant)) return Result.Failure("Accountant access is required.");
+        if (paymentDateUtc.Kind != DateTimeKind.Utc || string.IsNullOrWhiteSpace(transactionNumber)) return Result.Failure("UTC payment date and transaction number are required.");
+        var job = await _db.JobPayments.Include(j => j.Claims).ThenInclude(x => x.Claim).Include(j => j.Collections).ThenInclude(x => x.CollectionTransaction).Include(j => j.Payrolls).ThenInclude(x => x.Payroll).Include(j => j.PayeeUser).SingleOrDefaultAsync(j => j.Id == jobPaymentId, ct);
+        if (job is null || job.Status != JobPaymentStatus.Scheduled) return Result.Failure("Only Scheduled job payments can be marked paid.");
+        if (await _db.EmailOutboxItems.AnyAsync(e => e.IdempotencyKey == $"job-payment-paid:{job.Id}", ct)) return Result.Failure("This job payment has already been settled.");
+        await using var transaction = _db.Database.IsRelational() ? await _db.Database.BeginTransactionAsync(ct) : null;
+        try
+        {
+            job.Status = JobPaymentStatus.Paid; job.PaymentDateUtc = paymentDateUtc; job.PaymentTransactionNumber = transactionNumber.Trim();
+            foreach (var line in job.Claims) line.Claim.PaymentStatus = ClaimPaymentStatus.Paid;
+            foreach (var line in job.Collections) line.CollectionTransaction.Status = CollectionStatus.Transferred;
+            foreach (var line in job.Payrolls) line.Payroll.Status = PayrollStatus.Paid;
+            var recipients = job.PayeeUser is not null
+                ? new[] { job.PayeeUser.Email }
+                : await _db.CollectionClientUsers.Where(x => x.CollectionClientId == job.CollectionClientId && x.User.IsActive).Select(x => x.User.Email).ToArrayAsync(ct);
+            foreach (var recipient in recipients.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
+                _db.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient, Subject = $"Payout summary #{job.Id}", HtmlBody = $"<article><h1>Payout summary</h1><p>Payment #{job.Id}</p><p>Total paid: {job.TotalPaid:N2} JMD</p><p>Transaction: {System.Text.Encodings.Web.HtmlEncoder.Default.Encode(job.PaymentTransactionNumber)}</p></article>", RelatedEntityType = "JobPayment", RelatedEntityId = job.Id.ToString(), IdempotencyKey = $"job-payment-paid:{job.Id}:{recipient.ToUpperInvariant()}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
+            await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_PAID", job, actorUserId, ct); if (transaction is not null) await transaction.CommitAsync(ct); return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException) { if (transaction is not null) await transaction.RollbackAsync(ct); return Result.Failure("The job payment was changed by another operation; refresh and retry."); }
+    }
+
     private async Task RecalculateAsync(JobPayment job, CancellationToken ct)
     {
         var claims = await _db.JobPaymentClaims.Where(x => x.JobPaymentId == job.Id).Select(x => x.Claim.Amount).ToListAsync(ct); var collections = await _db.JobPaymentCollections.Where(x => x.JobPaymentId == job.Id).Select(x => new { x.CollectionTransaction.Amount, x.CollectionTransaction.ProcessingFee }).ToListAsync(ct); var payrolls = await _db.JobPaymentPayrolls.Where(x => x.JobPaymentId == job.Id).Select(x => x.Payroll.NetAmount).ToListAsync(ct); var deductions = await _db.JobPaymentDeductions.Where(x => x.JobPaymentId == job.Id).Select(x => x.Amount).ToListAsync(ct);
