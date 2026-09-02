@@ -20,6 +20,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<OAuthToken> OAuthTokens => Set<OAuthToken>();
     public DbSet<Claim> Claims => Set<Claim>();
     public DbSet<ClaimComment> ClaimComments => Set<ClaimComment>();
+    public DbSet<CollectionClient> CollectionClients => Set<CollectionClient>();
+    public DbSet<CollectionClientUser> CollectionClientUsers => Set<CollectionClientUser>();
+    public DbSet<CollectionClientBankDetail> CollectionClientBankDetails => Set<CollectionClientBankDetail>();
+    public DbSet<CollectionPurposeOption> CollectionPurposeOptions => Set<CollectionPurposeOption>();
+    public DbSet<CollectionAmountOption> CollectionAmountOptions => Set<CollectionAmountOption>();
+    public DbSet<CollectionTransaction> CollectionTransactions => Set<CollectionTransaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -200,6 +206,90 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(cc => cc.ClaimId);
+        });
+
+        modelBuilder.Entity<CollectionClient>(entity =>
+        {
+            entity.ToTable("CollectionClients");
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Name).IsRequired().HasMaxLength(200);
+            entity.Property(c => c.IsActive).IsRequired().HasDefaultValue(true);
+            entity.HasIndex(c => c.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<CollectionClientUser>(entity =>
+        {
+            entity.ToTable("CollectionClientUsers");
+            entity.HasKey(cu => new { cu.CollectionClientId, cu.UserId });
+            entity.HasOne(cu => cu.CollectionClient).WithMany(c => c.AssignedUsers)
+                .HasForeignKey(cu => cu.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(cu => cu.User).WithMany().HasForeignKey(cu => cu.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(cu => cu.UserId);
+        });
+
+        modelBuilder.Entity<CollectionClientBankDetail>(entity =>
+        {
+            entity.ToTable("CollectionClientBankDetails");
+            entity.HasKey(b => b.Id);
+            entity.Property(b => b.AccountName).IsRequired().HasMaxLength(200);
+            entity.Property(b => b.BankName).IsRequired().HasMaxLength(200);
+            entity.Property(b => b.BranchCode).IsRequired().HasMaxLength(50);
+            entity.Property(b => b.AccountNumber).IsRequired().HasMaxLength(100);
+            entity.Property(b => b.IsActive).IsRequired().HasDefaultValue(true);
+            entity.HasOne(b => b.CollectionClient).WithMany(c => c.BankDetails)
+                .HasForeignKey(b => b.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(b => new { b.CollectionClientId, b.IsActive });
+        });
+
+        modelBuilder.Entity<CollectionPurposeOption>(entity =>
+        {
+            entity.ToTable("CollectionPurposeOptions");
+            entity.HasKey(o => o.Id);
+            entity.HasAlternateKey(o => new { o.Id, o.CollectionClientId });
+            entity.Property(o => o.Name).IsRequired().HasMaxLength(200);
+            entity.Property(o => o.IsActive).IsRequired().HasDefaultValue(true);
+            entity.HasOne(o => o.CollectionClient).WithMany(c => c.PurposeOptions)
+                .HasForeignKey(o => o.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(o => new { o.CollectionClientId, o.Name }).IsUnique();
+        });
+
+        modelBuilder.Entity<CollectionAmountOption>(entity =>
+        {
+            entity.ToTable("CollectionAmountOptions");
+            entity.HasKey(o => o.Id);
+            entity.HasAlternateKey(o => new { o.Id, o.CollectionClientId });
+            entity.Property(o => o.Name).IsRequired().HasMaxLength(200);
+            entity.Property(o => o.Amount).IsRequired().HasPrecision(18, 2);
+            entity.Property(o => o.IsActive).IsRequired().HasDefaultValue(true);
+            entity.HasOne(o => o.CollectionClient).WithMany(c => c.AmountOptions)
+                .HasForeignKey(o => o.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(o => new { o.CollectionClientId, o.Name }).IsUnique();
+        });
+
+        modelBuilder.Entity<CollectionTransaction>(entity =>
+        {
+            entity.ToTable("CollectionTransactions");
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.PayorName).IsRequired().HasMaxLength(200);
+            entity.Property(c => c.PayorEmail).HasMaxLength(256);
+            entity.Property(c => c.ReferenceNumber).HasMaxLength(100);
+            entity.Property(c => c.Method).IsRequired().HasConversion<string>().HasMaxLength(50);
+            entity.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
+            entity.Property(c => c.Amount).IsRequired().HasPrecision(18, 2);
+            entity.Property(c => c.ProcessingFee).IsRequired().HasPrecision(18, 2);
+            entity.Property(c => c.Currency).IsRequired().HasMaxLength(10).HasDefaultValue("JMD");
+            entity.Property(c => c.RowVersion).IsRowVersion();
+            entity.HasOne(c => c.CollectionClient).WithMany().HasForeignKey(c => c.CollectionClientId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.PurposeOption).WithMany().HasForeignKey(c => new { c.PurposeOptionId, c.CollectionClientId })
+                .HasPrincipalKey(o => new { o.Id, o.CollectionClientId }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.AmountOption).WithMany().HasForeignKey(c => new { c.AmountOptionId, c.CollectionClientId })
+                .HasPrincipalKey(o => new { o.Id, o.CollectionClientId }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.TellerUser).WithMany().HasForeignKey(c => c.TellerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(c => new { c.CollectionClientId, c.Status, c.PaymentDateUtc });
+            entity.HasIndex(c => new { c.TellerUserId, c.CreatedAtUtc });
         });
     }
 

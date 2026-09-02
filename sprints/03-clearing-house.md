@@ -17,7 +17,7 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | — |
+| 1 | Complete | 2026-09-02 | Added collection client, assignment, bank-detail, client-scoped purpose/amount option, and collection transaction entities with composite client-option foreign keys, indexes, `decimal(18,2)` JMD values, and lifecycle enums. Migration: `20260902214419_AddCollectionEntities`. Tests: `CollectionModelTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (62). |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
