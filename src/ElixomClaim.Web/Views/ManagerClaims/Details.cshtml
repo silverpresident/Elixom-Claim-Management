@@ -1,0 +1,119 @@
+@model ElixomClaim.Lib.Entities.Claim
+@{
+    ViewData["Title"] = $"Review Claim #{Model.Id}";
+}
+
+<div class="container my-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Claim Review #@Model.Id</h5>
+                    <span class="badge bg-primary fs-6">@Model.Status</span>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <label class="text-muted small text-uppercase fw-bold">Claimant</label>
+                        <p class="fs-5 mb-0 fw-bold">@Model.ClaimantUser?.FullName (<a href="mailto:@Model.ClaimantUser?.Email">@Model.ClaimantUser?.Email</a>)</p>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="text-muted small text-uppercase fw-bold">Title</label>
+                            <h4 class="fw-bold">@Model.Title</h4>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <label class="text-muted small text-uppercase fw-bold">Amount (JMD)</label>
+                            <h3 class="text-primary fw-bold">$@Model.Amount.ToString("N2")</h3>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="text-muted small text-uppercase fw-bold">Description & Justification</label>
+                        <p class="lead text-dark fs-6" style="white-space: pre-wrap;">@Model.Description</p>
+                    </div>
+
+                    @if (Model.Status == ElixomClaim.Lib.Entities.ClaimStatus.Submitted)
+                    {
+                        <div class="bg-light p-3 rounded border mb-4">
+                            <h6 class="fw-bold mb-3">Management Action</h6>
+                            <div class="d-flex gap-3">
+                                <form asp-action="Accept" asp-route-id="@Model.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-success btn-lg">Accept Claim</button>
+                                </form>
+
+                                <button type="button" class="btn btn-outline-danger btn-lg" data-bs-toggle="collapse" data-bs-target="#rejectCollapse">Reject Claim</button>
+                            </div>
+
+                            <div class="collapse mt-3" id="rejectCollapse">
+                                <form asp-action="Reject" asp-route-id="@Model.Id" method="post" class="card card-body border-danger">
+                                    @Html.AntiForgeryToken()
+                                    <label class="form-label fw-bold text-danger">Reason for Rejection</label>
+                                    <textarea name="rejectionReason" class="form-control mb-3" rows="3" placeholder="Provide clear reason for claimant..." required></textarea>
+                                    <button type="submit" class="btn btn-danger">Confirm Rejection</button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+
+                    <a asp-action="Index" class="btn btn-outline-secondary">Back to Queue</a>
+                </div>
+            </div>
+
+            <!-- Activity & Public/Private Comments -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Activity & Discussion Notes</h5>
+                    <span class="badge bg-secondary">Manager Access</span>
+                </div>
+                <div class="card-body">
+                    @if (!Model.Comments.Any())
+                    {
+                        <p class="text-muted mb-0">No comments added yet.</p>
+                    }
+                    else
+                    {
+                        <div class="timeline">
+                            @foreach (var comment in Model.Comments)
+                            {
+                                <div class="p-3 bg-light rounded mb-3 border @(comment.IsPrivate ? "border-warning" : "")">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <div>
+                                            <strong>@comment.AuthorUser?.FullName</strong>
+                                            @if (comment.IsPrivate)
+                                            {
+                                                <span class="badge bg-warning text-dark ms-2">Private Note</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-info text-dark ms-2">Public Comment</span>
+                                            }
+                                        </div>
+                                        <small class="text-muted">@comment.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</small>
+                                    </div>
+                                    <p class="mb-0">@comment.Content</p>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <form asp-action="AddComment" asp-route-id="@Model.Id" method="post" class="mt-4">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Add Manager Comment or Private Note</label>
+                            <textarea name="content" class="form-control" rows="3" placeholder="Add note or public message..." required></textarea>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="isPrivate" value="true" id="isPrivateCheck">
+                            <label class="form-check-label text-muted" for="isPrivateCheck">
+                                Private Note (Internal management only—hidden from claimant)
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Note/Comment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

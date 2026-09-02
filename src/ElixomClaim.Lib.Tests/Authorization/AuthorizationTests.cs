@@ -3,6 +3,7 @@ using ElixomClaim.Lib.Authorization;
 using ElixomClaim.Lib.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Xunit;
+using SecurityClaim = System.Security.Claims.Claim;
 
 namespace ElixomClaim.Lib.Tests.Authorization;
 
@@ -35,7 +36,7 @@ public class AuthorizationTests
         var handler = new MinimumRoleHandler();
         var requirement = new MinimumRoleRequirement(UserRole.Teller);
         var user = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim(ClaimTypes.Role, UserRole.Manager.ToString())
+            new SecurityClaim(ClaimTypes.Role, UserRole.Manager.ToString())
         ]));
         var context = new AuthorizationHandlerContext([requirement], user, null);
 
@@ -50,7 +51,7 @@ public class AuthorizationTests
         var handler = new MinimumRoleHandler();
         var requirement = new MinimumRoleRequirement(UserRole.User);
         var user = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim(ClaimTypes.Role, UserRole.Blocked.ToString())
+            new SecurityClaim(ClaimTypes.Role, UserRole.Blocked.ToString())
         ]));
         var context = new AuthorizationHandlerContext([requirement], user, null);
 
@@ -70,8 +71,8 @@ public class AuthorizationTests
         var handler = new ResourceOwnershipHandler();
         var requirement = new ResourceOwnershipRequirement();
         var user = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim(ClaimTypes.NameIdentifier, "user-123"),
-            new Claim(ClaimTypes.Role, UserRole.User.ToString())
+            new SecurityClaim(ClaimTypes.NameIdentifier, "user-123"),
+            new SecurityClaim(ClaimTypes.Role, UserRole.User.ToString())
         ]));
         var resource = new SampleResource { OwnerUserId = "user-123" };
         var context = new AuthorizationHandlerContext([requirement], user, resource);
@@ -87,8 +88,8 @@ public class AuthorizationTests
         var handler = new ResourceOwnershipHandler();
         var requirement = new ResourceOwnershipRequirement();
         var user = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim(ClaimTypes.NameIdentifier, "user-123"),
-            new Claim(ClaimTypes.Role, UserRole.User.ToString())
+            new SecurityClaim(ClaimTypes.NameIdentifier, "user-123"),
+            new SecurityClaim(ClaimTypes.Role, UserRole.User.ToString())
         ]));
         var resource = new SampleResource { OwnerUserId = "user-999" };
         var context = new AuthorizationHandlerContext([requirement], user, resource);
@@ -104,8 +105,8 @@ public class AuthorizationTests
         var handler = new ResourceOwnershipHandler();
         var requirement = new ResourceOwnershipRequirement();
         var user = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim(ClaimTypes.NameIdentifier, "admin-user"),
-            new Claim(ClaimTypes.Role, UserRole.Administrator.ToString())
+            new SecurityClaim(ClaimTypes.NameIdentifier, "admin-user"),
+            new SecurityClaim(ClaimTypes.Role, UserRole.Administrator.ToString())
         ]));
         var resource = new SampleResource { OwnerUserId = "user-999" };
         var context = new AuthorizationHandlerContext([requirement], user, resource);
@@ -121,8 +122,8 @@ public class AuthorizationTests
         var handler = new ResourceOwnershipHandler();
         var requirement = new ResourceOwnershipRequirement();
         var user = new ClaimsPrincipal(new ClaimsIdentity([
-            new Claim(ClaimTypes.NameIdentifier, "user-123"),
-            new Claim(ClaimTypes.Role, UserRole.Blocked.ToString())
+            new SecurityClaim(ClaimTypes.NameIdentifier, "user-123"),
+            new SecurityClaim(ClaimTypes.Role, UserRole.Blocked.ToString())
         ]));
         var resource = new SampleResource { OwnerUserId = "user-123" };
         var context = new AuthorizationHandlerContext([requirement], user, resource);

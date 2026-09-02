@@ -43,8 +43,8 @@ public static class UserValidationEvents
                 identity.RemoveClaim(claim);
             }
 
-            identity.AddClaim(new Claim(ClaimTypes.Role, user.Role.ToString()));
-            identity.AddClaim(new Claim("UserId", user.Id.ToString()));
+            identity.AddClaim(new System.Security.Claims.Claim(ClaimTypes.Role, user.Role.ToString()));
+            identity.AddClaim(new System.Security.Claims.Claim("UserId", user.Id.ToString()));
         }
     }
 }

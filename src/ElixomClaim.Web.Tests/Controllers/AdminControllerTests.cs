@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using SecurityClaim = System.Security.Claims.Claim;
 
 namespace ElixomClaim.Web.Tests.Controllers;
 
@@ -39,8 +40,8 @@ public class AdminControllerTests
         var controller = new AdminController(db, audit);
         var managerUser = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, "mgr-1"),
-            new Claim(ClaimTypes.Role, UserRole.Manager.ToString())
+            new SecurityClaim(ClaimTypes.NameIdentifier, "mgr-1"),
+            new SecurityClaim(ClaimTypes.Role, UserRole.Manager.ToString())
         }, "TestAuth"));
 
         controller.ControllerContext = new ControllerContext
@@ -74,8 +75,8 @@ public class AdminControllerTests
         var controller = new AdminController(db, audit);
         var adminUser = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, "admin-1"),
-            new Claim(ClaimTypes.Role, UserRole.Administrator.ToString())
+            new SecurityClaim(ClaimTypes.NameIdentifier, "admin-1"),
+            new SecurityClaim(ClaimTypes.Role, UserRole.Administrator.ToString())
         }, "TestAuth"));
 
         controller.ControllerContext = new ControllerContext

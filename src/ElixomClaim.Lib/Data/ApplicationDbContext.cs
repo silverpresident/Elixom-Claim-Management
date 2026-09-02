@@ -18,6 +18,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<OAuthClient> OAuthClients => Set<OAuthClient>();
     public DbSet<OAuthAuthorizationCode> OAuthAuthorizationCodes => Set<OAuthAuthorizationCode>();
     public DbSet<OAuthToken> OAuthTokens => Set<OAuthToken>();
+    public DbSet<Claim> Claims => Set<Claim>();
+    public DbSet<ClaimComment> ClaimComments => Set<ClaimComment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +27,10 @@ public class ApplicationDbContext : DbContext
 
         // Enforce Azure SQL schema 'dbclaim'
         modelBuilder.HasDefaultSchema(DefaultSchema);
+
+        // Global soft-delete query filters
+        modelBuilder.Entity<Claim>().HasQueryFilter(c => !c.IsDeleted);
+        modelBuilder.Entity<ClaimComment>().HasQueryFilter(cc => !cc.IsDeleted);
 
         modelBuilder.Entity<User>(entity =>
         {
@@ -149,6 +155,51 @@ public class ApplicationDbContext : DbContext
             entity.Property(t => t.IsRevoked).IsRequired().HasDefaultValue(false);
             entity.Property(t => t.ExpiresAtUtc).IsRequired();
             entity.Property(t => t.CreatedAtUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<Claim>(entity =>
+        {
+            entity.ToTable("Claims");
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Title).IsRequired().HasMaxLength(200);
+            entity.Property(c => c.Description).IsRequired().HasMaxLength(4000);
+            entity.Property(c => c.Amount).IsRequired().HasPrecision(18, 2);
+            entity.Property(c => c.Currency).IsRequired().HasMaxLength(10).HasDefaultValue("JMD");
+            entity.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
+            entity.Property(c => c.PaymentStatus).IsRequired().HasConversion<string>().HasMaxLength(50);
+            entity.Property(c => c.RejectionReason).HasMaxLength(1000);
+            entity.Property(c => c.IsDeleted).IsRequired().HasDefaultValue(false);
+            entity.Property(c => c.RowVersion).IsRowVersion();
+
+            entity.HasOne(c => c.ClaimantUser)
+                .WithMany()
+                .HasForeignKey(c => c.ClaimantUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(c => c.ClaimantUserId);
+            entity.HasIndex(c => c.Status);
+            entity.HasIndex(c => c.PaymentStatus);
+        });
+
+        modelBuilder.Entity<ClaimComment>(entity =>
+        {
+            entity.ToTable("ClaimComments");
+            entity.HasKey(cc => cc.Id);
+            entity.Property(cc => cc.Content).IsRequired().HasMaxLength(4000);
+            entity.Property(cc => cc.IsPrivate).IsRequired().HasDefaultValue(false);
+            entity.Property(cc => cc.IsDeleted).IsRequired().HasDefaultValue(false);
+
+            entity.HasOne(cc => cc.Claim)
+                .WithMany(c => c.Comments)
+                .HasForeignKey(cc => cc.ClaimId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(cc => cc.AuthorUser)
+                .WithMany()
+                .HasForeignKey(cc => cc.AuthorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(cc => cc.ClaimId);
         });
     }
 
