@@ -1,0 +1,3 @@
+@model ElixomClaim.Lib.Entities.JobPayment
+@{ ViewData["Title"] = $"Job payment #{Model.Id}"; }
+<article><h1>Job payment summary</h1><p>Payment #@Model.Id</p><p>Payee: @(Model.PayeeUser?.FullName ?? Model.CollectionClient?.Name)</p><p>Total: @Model.TotalPaid.ToString("N2") JMD</p><h2>Claims</h2><ul>@foreach(var item in Model.Claims){<li>@item.Claim.Title — @item.Claim.Amount.ToString("N2") JMD</li>}</ul><p class="no-print"><button onclick="window.print()">Print</button></p></article>

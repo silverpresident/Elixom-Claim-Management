@@ -1,0 +1,3 @@
+@model IEnumerable<ElixomClaim.Lib.Entities.JobPayment>
+@{ ViewData["Title"] = "Job payments"; }
+<h1>Job payments</h1><table class="table"><thead><tr><th>ID</th><th>Payee</th><th>Total</th><th>Status</th></tr></thead><tbody>@foreach(var job in Model){<tr><td><a asp-action="Details" asp-route-id="@job.Id">#@job.Id</a></td><td>@(job.PayeeUser?.FullName ?? job.CollectionClient?.Name)</td><td>@job.TotalPaid.ToString("N2") JMD</td><td>@job.Status</td></tr>}</tbody></table>

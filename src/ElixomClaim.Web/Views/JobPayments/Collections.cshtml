@@ -1,0 +1,3 @@
+@model IEnumerable<ElixomClaim.Lib.Entities.CollectionTransaction>
+@{ var job = (ElixomClaim.Lib.Entities.JobPayment)ViewBag.Job; ViewData["Title"] = "Compatible collections"; }
+<h1>Collected transactions for @job.CollectionClientId</h1><table class="table"><tbody>@foreach(var collection in Model){<tr><td>#@collection.Id</td><td>@collection.PurposeOption.Name</td><td>@collection.Amount.ToString("N2") JMD</td><td><form method="post" asp-action="AttachCollection" asp-route-id="@job.Id" asp-route-collectionId="@collection.Id">@Html.AntiForgeryToken()<button class="btn btn-primary">Attach</button></form></td></tr>}</tbody></table>

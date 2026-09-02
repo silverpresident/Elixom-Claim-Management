@@ -58,6 +58,18 @@ public class JobPaymentService : IJobPaymentService
         _db.JobPaymentDeductions.Add(new() { JobPaymentId = c.JobPaymentId, Description = c.Description.Trim(), Amount = c.Amount, CreatedAtUtc = _clock.UtcNow }); await _db.SaveChangesAsync(ct); await RecalculateAsync(jobResult.Value!, ct); await _db.SaveChangesAsync(ct); return Result.Success();
     }
 
+    public async Task<Result> ResendNotificationAsync(long jobPaymentId, Guid actorUserId, CancellationToken ct = default)
+    {
+        var auth = await AuthorizeAsync(actorUserId, ct); if (auth.IsFailure) return auth;
+        var job = await _db.JobPayments.SingleOrDefaultAsync(j => j.Id == jobPaymentId, ct);
+        if (job is null || job.Status != JobPaymentStatus.Paid) return Result.Failure("Only a paid job payment can have its payout notification resent.");
+        var originals = await _db.EmailOutboxItems.Where(e => e.RelatedEntityType == "JobPayment" && e.RelatedEntityId == job.Id.ToString() && e.Status != EmailOutboxStatus.SkippedInvalidRecipient).ToListAsync(ct);
+        if (originals.Count == 0) return Result.Failure("No previously authorized payout notification is available to resend.");
+        foreach (var original in originals)
+            _db.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = original.Recipient, Subject = original.Subject, HtmlBody = original.HtmlBody, RelatedEntityType = original.RelatedEntityType, RelatedEntityId = original.RelatedEntityId, IdempotencyKey = $"job-payment-resend:{job.Id}:{Guid.NewGuid():N}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
+        await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_NOTIFICATION_RESEND_QUEUED", job, actorUserId, ct); return Result.Success();
+    }
+
     private async Task RecalculateAsync(JobPayment job, CancellationToken ct)
     {
         var claims = await _db.JobPaymentClaims.Where(x => x.JobPaymentId == job.Id).Select(x => x.Claim.Amount).ToListAsync(ct); var collections = await _db.JobPaymentCollections.Where(x => x.JobPaymentId == job.Id).Select(x => new { x.CollectionTransaction.Amount, x.CollectionTransaction.ProcessingFee }).ToListAsync(ct); var payrolls = await _db.JobPaymentPayrolls.Where(x => x.JobPaymentId == job.Id).Select(x => x.Payroll.NetAmount).ToListAsync(ct); var deductions = await _db.JobPaymentDeductions.Where(x => x.JobPaymentId == job.Id).Select(x => x.Amount).ToListAsync(ct);

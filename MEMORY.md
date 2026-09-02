@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprints 00–03 complete; Sprint 04 Job Payments item 2 complete.
+- **Stage:** Sprints 00–03 complete; Sprint 04 Job Payments item 3 in progress.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
