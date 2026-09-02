@@ -1,6 +1,9 @@
+using ElixomClaim.Lib.Configuration;
+using ElixomClaim.Lib.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ElixomClaim.Lib.Data;
 
@@ -35,6 +38,9 @@ public static class DatabaseMigrationExtensions
             {
                 logger?.LogInformation("Database schema '{Schema}' is up-to-date. No pending migrations.", ApplicationDbContext.DefaultSchema);
             }
+
+            // Seed bootstrap administrator if configured
+            await SeedBootstrapAdminAsync(scope.ServiceProvider, logger, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -46,6 +52,61 @@ public static class DatabaseMigrationExtensions
         finally
         {
             MigrationLock.Release();
+        }
+    }
+
+    public static async Task SeedBootstrapAdminAsync(
+        IServiceProvider serviceProvider,
+        ILogger? logger = null,
+        CancellationToken cancellationToken = default)
+    {
+        var authOptions = serviceProvider.GetService<IOptions<AuthenticationOptions>>()?.Value;
+        var defaultAdminEmail = authOptions?.DefaultAdminEmail;
+
+        if (string.IsNullOrWhiteSpace(defaultAdminEmail))
+        {
+            logger?.LogInformation("No DefaultAdminEmail configured. Skipping bootstrap admin seeding.");
+            return;
+        }
+
+        var dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        var normalizedEmail = defaultAdminEmail.Trim().ToUpperInvariant();
+
+        var existingUser = await dbContext.Users
+            .FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail, cancellationToken);
+
+        if (existingUser == null)
+        {
+            var adminUser = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = defaultAdminEmail.Trim(),
+                NormalizedEmail = normalizedEmail,
+                FullName = "Bootstrap Administrator",
+                Role = UserRole.Administrator,
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            await dbContext.Users.AddAsync(adminUser, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            logger?.LogInformation("Seeded bootstrap administrator account for email '{Email}'.", defaultAdminEmail);
+        }
+        else if (existingUser.Role != UserRole.Administrator || !existingUser.IsActive)
+        {
+            existingUser.Role = UserRole.Administrator;
+            existingUser.IsActive = true;
+            existingUser.UpdatedAtUtc = DateTime.UtcNow;
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            logger?.LogInformation("Promoted existing user '{Email}' to active Administrator.", defaultAdminEmail);
+        }
+        else
+        {
+            logger?.LogInformation("Bootstrap administrator '{Email}' already exists and is active.", defaultAdminEmail);
         }
     }
 }

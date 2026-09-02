@@ -33,7 +33,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | Sprint | State | Note |
 | --- | --- | --- |
 | 00 Foundation | Complete | All 8 items complete. See `sprints/00-foundation.md`. |
-| 01 Identity & security | In progress | Ready for item 1. See `sprints/01-identity-security.md`. |
+| 01 Identity & security | In progress | Item 1 Complete. See `sprints/01-identity-security.md`. |
 | 02 Claims | Planned | See `sprints/02-claims.md`. |
 | 03 Clearing house | Planned | See `sprints/03-clearing-house.md`. |
 | 04 Job payments | Planned | See `sprints/04-job-payments.md`. |

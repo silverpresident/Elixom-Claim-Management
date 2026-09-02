@@ -20,7 +20,7 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | — |
+| 1 | Complete | 2026-09-02 | User entity, UserRole enum, ApplicationDbContext mapping with unique index on NormalizedEmail, AddUserEntity migration, and SeedBootstrapAdminAsync. Command: `dotnet test ElixomClaim.slnx` passed (45 tests total). |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
