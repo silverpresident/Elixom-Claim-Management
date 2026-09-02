@@ -16,8 +16,8 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | — |
-| 2 | Not started | — | — |
-| 3 | Not started | — | — |
-| 4 | Not started | — | — |
-| 5 | Not started | — | — |
+| 1 | Complete | 2026-09-02 | ClaimStatus, ClaimPaymentStatus, Claim and ClaimComment entities, EF Core mappings in dbclaim schema with global soft-delete filters, AddClaimEntities migration. |
+| 2 | Complete | 2026-09-02 | IClaimService and ClaimService with create, edit, submit, accept, reject, soft delete, comments, and audit logging. Registered in DI. |
+| 3 | Complete | 2026-09-02 | ClaimsController and Views/Claims/ (Index, Create, Edit, Details) dashboard UI. |
+| 4 | Complete | 2026-09-02 | ManagerClaimsController and Views/ManagerClaims/ (Index, Details) queue UI with status filters and private comment controls. |
+| 5 | Complete | 2026-09-02 | ClaimServiceTests covering draft lifecycle, state transitions, soft deletion, and private comment visibility. Command: `dotnet test ElixomClaim.slnx` passed (81 tests total). |

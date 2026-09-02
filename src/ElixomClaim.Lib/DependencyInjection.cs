@@ -53,6 +53,28 @@ public static class DependencyInjection
         });
 
         services.AddSingleton<ISystemClock, SystemClock>();
+        services.AddScoped<IAuditService, AuditService>();
+        services.AddScoped<IOAuthService, OAuthService>();
+        services.AddScoped<IClaimService, ClaimService>();
+
+        // Authorization Handlers
+        services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, Authorization.MinimumRoleHandler>();
+        services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, Authorization.ResourceOwnershipHandler>();
+
+        // Authorization Policies
+        services.AddAuthorizationBuilder()
+            .AddPolicy(Authorization.PolicyNames.RequireActiveUser, policy =>
+                policy.Requirements.Add(new Authorization.MinimumRoleRequirement(Entities.UserRole.User)))
+            .AddPolicy(Authorization.PolicyNames.RequireTeller, policy =>
+                policy.Requirements.Add(new Authorization.MinimumRoleRequirement(Entities.UserRole.Teller)))
+            .AddPolicy(Authorization.PolicyNames.RequireManager, policy =>
+                policy.Requirements.Add(new Authorization.MinimumRoleRequirement(Entities.UserRole.Manager)))
+            .AddPolicy(Authorization.PolicyNames.RequireAccountant, policy =>
+                policy.Requirements.Add(new Authorization.MinimumRoleRequirement(Entities.UserRole.Accountant)))
+            .AddPolicy(Authorization.PolicyNames.RequireAdministrator, policy =>
+                policy.Requirements.Add(new Authorization.MinimumRoleRequirement(Entities.UserRole.Administrator)))
+            .AddPolicy(Authorization.PolicyNames.RequireResourceOwnership, policy =>
+                policy.Requirements.Add(new Authorization.ResourceOwnershipRequirement()));
 
         // Add EF Core Health Check
         services.AddHealthChecks()

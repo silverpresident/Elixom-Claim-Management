@@ -1,0 +1,64 @@
+@model IEnumerable<ElixomClaim.Lib.Entities.Claim>
+@{
+    ViewData["Title"] = "Manager Claim Queue";
+    var currentFilter = ViewBag.CurrentStatusFilter as ElixomClaim.Lib.Entities.ClaimStatus?;
+}
+
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Manager Claim Queue</h2>
+        <div class="btn-group" role="group">
+            <a asp-action="Index" asp-route-status="Submitted" class="btn btn-outline-primary @(currentFilter == ElixomClaim.Lib.Entities.ClaimStatus.Submitted ? "active" : "")">Submitted Queue</a>
+            <a asp-action="Index" asp-route-status="Accepted" class="btn btn-outline-success @(currentFilter == ElixomClaim.Lib.Entities.ClaimStatus.Accepted ? "active" : "")">Accepted</a>
+            <a asp-action="Index" asp-route-status="Rejected" class="btn btn-outline-danger @(currentFilter == ElixomClaim.Lib.Entities.ClaimStatus.Rejected ? "active" : "")">Rejected</a>
+            <a asp-action="Index" class="btn btn-outline-secondary @(!currentFilter.HasValue ? "active" : "")">All Claims</a>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card p-5 text-center shadow-sm border-0">
+            <div class="card-body">
+                <p class="text-muted fs-5 mb-0">No claims found in this status queue.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Claim ID</th>
+                                <th>Claimant</th>
+                                <th>Title</th>
+                                <th>Amount (JMD)</th>
+                                <th>Status</th>
+                                <th>Submitted Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var claim in Model)
+                            {
+                                <tr>
+                                    <td>#@claim.Id</td>
+                                    <td>@claim.ClaimantUser?.FullName (@claim.ClaimantUser?.Email)</td>
+                                    <td><strong>@claim.Title</strong></td>
+                                    <td>$@claim.Amount.ToString("N2") JMD</td>
+                                    <td><span class="badge bg-primary">@claim.Status</span></td>
+                                    <td>@claim.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@claim.Id" class="btn btn-sm btn-primary">Review Claim</a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

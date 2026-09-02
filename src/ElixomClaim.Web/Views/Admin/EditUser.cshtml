@@ -1,0 +1,41 @@
+@model ElixomClaim.Lib.Entities.User
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Edit User: @Model.FullName</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="EditUser" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            <input type="text" class="form-control" value="@Model.Email" readonly disabled />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Role</label>
+                            <select name="role" class="form-select" asp-for="Role" asp-items="Html.GetEnumSelectList<ElixomClaim.Lib.Entities.UserRole>()"></select>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="isActive" class="form-check-input" id="isActiveCheck" value="true" @(Model.IsActive ? "checked" : "") />
+                            <label class="form-check-label fw-bold" for="isActiveCheck">Active Account</label>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a asp-action="Users" class="btn btn-outline-secondary">Back to Users</a>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

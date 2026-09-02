@@ -1,0 +1,112 @@
+@model ElixomClaim.Lib.Entities.Claim
+@{
+    ViewData["Title"] = $"Claim #{Model.Id}";
+}
+
+<div class="container my-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <span class="text-muted">Claim #@Model.Id</span>
+                            <h2 class="fw-bold mb-1">@Model.Title</h2>
+                        </div>
+                        <div>
+                            <h3 class="text-primary fw-bold mb-0">$@Model.Amount.ToString("N2") JMD</h3>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <span class="me-2">Status:</span>
+                        @switch (Model.Status)
+                        {
+                            case ElixomClaim.Lib.Entities.ClaimStatus.Draft:
+                                <span class="badge bg-secondary">Draft</span>
+                                break;
+                            case ElixomClaim.Lib.Entities.ClaimStatus.Submitted:
+                                <span class="badge bg-primary">Submitted</span>
+                                break;
+                            case ElixomClaim.Lib.Entities.ClaimStatus.Accepted:
+                                <span class="badge bg-success">Accepted</span>
+                                break;
+                            case ElixomClaim.Lib.Entities.ClaimStatus.Rejected:
+                                <span class="badge bg-danger">Rejected</span>
+                                break;
+                        }
+
+                        <span class="ms-3 me-2">Payment:</span>
+                        <span class="badge bg-info text-dark">@Model.PaymentStatus</span>
+                    </div>
+
+                    @if (Model.Status == ElixomClaim.Lib.Entities.ClaimStatus.Rejected && !string.IsNullOrEmpty(Model.RejectionReason))
+                    {
+                        <div class="alert alert-danger mb-4">
+                            <strong>Rejection Reason:</strong> @Model.RejectionReason
+                        </div>
+                    }
+
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-uppercase text-muted small">Description</h6>
+                        <p class="lead text-dark fs-6" style="white-space: pre-wrap;">@Model.Description</p>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        @if (Model.Status == ElixomClaim.Lib.Entities.ClaimStatus.Draft)
+                        {
+                            <form asp-action="Submit" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-success">Submit Claim</button>
+                            </form>
+
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Edit Draft</a>
+
+                            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Delete this draft claim?');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger">Delete</button>
+                            </form>
+                        }
+                        <a asp-action="Index" class="btn btn-link text-decoration-none">Back to Claims</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comments Timeline -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Activity & Comments</h5>
+                </div>
+                <div class="card-body">
+                    @if (!Model.Comments.Any())
+                    {
+                        <p class="text-muted mb-0">No comments added yet.</p>
+                    }
+                    else
+                    {
+                        <div class="timeline">
+                            @foreach (var comment in Model.Comments)
+                            {
+                                <div class="p-3 bg-light rounded mb-3 border">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <strong>@comment.AuthorUser?.FullName</strong>
+                                        <small class="text-muted">@comment.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</small>
+                                    </div>
+                                    <p class="mb-0">@comment.Content</p>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <form asp-action="AddComment" asp-route-id="@Model.Id" method="post" class="mt-4">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <textarea name="content" class="form-control" rows="2" placeholder="Add a comment..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary btn-sm">Add Comment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

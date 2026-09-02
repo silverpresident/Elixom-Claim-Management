@@ -1,0 +1,94 @@
+@model IEnumerable<ElixomClaim.Lib.Entities.Claim>
+@{
+    ViewData["Title"] = "My Claims";
+}
+
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>My Claims Dashboard</h2>
+        <a asp-action="Create" class="btn btn-primary">+ New Claim</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card p-5 text-center shadow-sm border-0">
+            <div class="card-body">
+                <i class="bi bg-light p-3 rounded-circle fs-1 mb-3 text-muted">📄</i>
+                <h4>No claims found</h4>
+                <p class="text-muted mb-4">You haven't submitted any expense or reimbursement claims yet.</p>
+                <a asp-action="Create" class="btn btn-primary">Create Your First Claim</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Claim ID</th>
+                                <th>Title</th>
+                                <th>Amount (JMD)</th>
+                                <th>Status</th>
+                                <th>Payment State</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var claim in Model)
+                            {
+                                <tr>
+                                    <td>#@claim.Id</td>
+                                    <td><strong>@claim.Title</strong></td>
+                                    <td>$@claim.Amount.ToString("N2") JMD</td>
+                                    <td>
+                                        @switch (claim.Status)
+                                        {
+                                            case ElixomClaim.Lib.Entities.ClaimStatus.Draft:
+                                                <span class="badge bg-secondary">Draft</span>
+                                                break;
+                                            case ElixomClaim.Lib.Entities.ClaimStatus.Submitted:
+                                                <span class="badge bg-primary">Submitted</span>
+                                                break;
+                                            case ElixomClaim.Lib.Entities.ClaimStatus.Accepted:
+                                                <span class="badge bg-success">Accepted</span>
+                                                break;
+                                            case ElixomClaim.Lib.Entities.ClaimStatus.Rejected:
+                                                <span class="badge bg-danger">Rejected</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        @switch (claim.PaymentStatus)
+                                        {
+                                            case ElixomClaim.Lib.Entities.ClaimPaymentStatus.Unpaid:
+                                                <span class="badge bg-outline-secondary text-dark border">Unpaid</span>
+                                                break;
+                                            case ElixomClaim.Lib.Entities.ClaimPaymentStatus.Processing:
+                                                <span class="badge bg-info text-dark">Processing</span>
+                                                break;
+                                            case ElixomClaim.Lib.Entities.ClaimPaymentStatus.Paid:
+                                                <span class="badge bg-success">Paid</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>@claim.CreatedAtUtc.ToString("yyyy-MM-dd")</td>
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@claim.Id" class="btn btn-sm btn-outline-primary">View</a>
+                                        @if (claim.Status == ElixomClaim.Lib.Entities.ClaimStatus.Draft)
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@claim.Id" class="btn btn-sm btn-outline-secondary ms-1">Edit</a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

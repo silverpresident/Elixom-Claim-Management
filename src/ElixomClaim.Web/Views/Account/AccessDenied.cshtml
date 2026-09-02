@@ -1,0 +1,33 @@
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="row justify-content-center my-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow border-danger border-0 rounded-3 text-center">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-danger mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-shield-slash" viewBox="0 0 16 16">
+                        <path d="M1.093 2.093a.5.5 0 0 1 .707 0l12 12a.5.5 0 0 1-.707.707l-12-12a.5.5 0 0 1 0-.707z"/>
+                        <path d="M13.882 12.003A8.6 8.6 0 0 0 14 8c0-3.355-1.92-5.733-3.92-7.234a24.1 24.1 0 0 0-2.022-1.312.5.5 0 0 0-.516 0A24.1 24.1 0 0 0 3.542.766 22 22 0 0 0 2.118 1.94l.805.805A20.9 20.9 0 0 1 3.92 1.766C5.688.441 7.377.03 8 .03c.623 0 2.312.41 4.08 1.736 1.83 1.373 3.42 3.47 3.42 6.234 0 1.253-.327 2.35-.87 3.284l-.748-.748z"/>
+                    </svg>
+                </div>
+                <h1 class="h3 fw-bold text-danger mb-3">Access Denied</h1>
+                <p class="lead mb-4">Your account is either not provisioned or has been blocked.</p>
+
+                <div class="alert alert-warning border-warning text-start mb-4" role="alert">
+                    <p class="mb-1"><strong>Why am I seeing this?</strong></p>
+                    <ul class="mb-0 ps-3">
+                        <li>Your Google account email has not been provisioned in the system.</li>
+                        <li>Your account status is currently marked inactive or blocked.</li>
+                    </ul>
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+                    <a asp-action="Login" class="btn btn-primary btn-lg px-4">Return to Sign In</a>
+                    <a href="mailto:privacy@elixom.com" class="btn btn-outline-secondary btn-lg px-4">Contact Support</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
