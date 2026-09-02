@@ -15,6 +15,8 @@ public interface IJobPaymentService
     Task<Result> SubmitAsync(long jobPaymentId, Guid actorUserId, CancellationToken cancellationToken = default);
     Task<Result> ScheduleAsync(long jobPaymentId, Guid actorUserId, DateTime scheduledAtUtc, CancellationToken cancellationToken = default);
     Task<Result> MarkPaidAsync(long jobPaymentId, Guid actorUserId, DateTime paymentDateUtc, string transactionNumber, CancellationToken cancellationToken = default);
+    Task<Result<JobPayment>> CreateAdjustmentAsync(CreateJobPaymentAdjustmentCommand command, CancellationToken cancellationToken = default);
+    Task<Result> ApproveAdjustmentAsync(long jobPaymentId, Guid actorUserId, CancellationToken cancellationToken = default);
 }
 
 public record CreateJobPaymentCommand(Guid ActorUserId, Guid? PayeeUserId, Guid? CollectionClientId, string? PublicNote, string? InternalNote);
@@ -23,3 +25,4 @@ public record AttachJobPaymentCollectionCommand(Guid ActorUserId, long JobPaymen
 public record RemoveJobPaymentClaimCommand(Guid ActorUserId, long JobPaymentId, long ClaimId);
 public record RemoveJobPaymentCollectionCommand(Guid ActorUserId, long JobPaymentId, long CollectionTransactionId);
 public record AddJobPaymentDeductionCommand(Guid ActorUserId, long JobPaymentId, string Description, decimal Amount);
+public record CreateJobPaymentAdjustmentCommand(Guid ActorUserId, long OriginalJobPaymentId, decimal Amount, string Reason);

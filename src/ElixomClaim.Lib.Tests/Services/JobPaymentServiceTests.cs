@@ -85,6 +85,23 @@ public class JobPaymentServiceTests
         Assert.Single(db.EmailOutboxItems); Assert.True((await service.MarkPaidAsync(job.Id, accountant.Id, DateTime.UtcNow, "TXN-2")).IsFailure);
     }
 
+    [Fact]
+    public async Task AdjustmentWorkflow_PreservesOriginalAndRequiresAdministratorApproval()
+    {
+        await using var db = CreateDb();
+        var accountant = User(UserRole.Accountant, "accountant@anonymized.example.com"); var admin = User(UserRole.Administrator, "admin@anonymized.example.com"); var payee = User(UserRole.User, "payee@anonymized.example.com");
+        var original = new JobPayment { PayeeUserId = payee.Id, Status = JobPaymentStatus.Paid, JobTotal = 500m, TotalPaid = 500m };
+        db.AddRange(accountant, admin, payee, original); await db.SaveChangesAsync(); var service = Service(db);
+
+        var created = await service.CreateAdjustmentAsync(new(accountant.Id, original.Id, -75m, "Overpayment recovery"));
+        Assert.True(created.IsSuccess); var adjustment = created.Value!;
+        Assert.True(adjustment.IsRecoveryReceivable); Assert.Equal(JobPaymentStatus.Paid, original.Status);
+        Assert.True((await service.ScheduleAsync(adjustment.Id, accountant.Id, DateTime.UtcNow)).IsFailure);
+        Assert.True((await service.ApproveAdjustmentAsync(adjustment.Id, admin.Id)).IsSuccess);
+        Assert.True((await service.ScheduleAsync(adjustment.Id, accountant.Id, DateTime.UtcNow)).IsSuccess);
+        Assert.Contains(db.AuditRecords, x => x.Action == "JOB_PAYMENT_ADJUSTMENT_APPROVED");
+    }
+
     private static ApplicationDbContext CreateDb() => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     private static User User(UserRole role, string email) => new() { Email = email, NormalizedEmail = email.ToUpperInvariant(), FullName = "User", Role = role };
     private static JobPaymentService Service(ApplicationDbContext db) => new(db, new AuditService(db, NullLogger<AuditService>.Instance), new SystemClock(), NullLogger<JobPaymentService>.Instance);

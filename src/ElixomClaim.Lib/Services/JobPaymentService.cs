@@ -85,6 +85,7 @@ public class JobPaymentService : IJobPaymentService
         if (scheduledAtUtc.Kind != DateTimeKind.Utc) return Result.Failure("Scheduled time must be UTC.");
         var job = await _db.JobPayments.SingleOrDefaultAsync(j => j.Id == jobPaymentId, ct);
         if (job is null || job.Status != JobPaymentStatus.Submitted) return Result.Failure("Only Submitted job payments can be scheduled.");
+        if (job.IsAdjustment && job.ApprovedAtUtc is null) return Result.Failure("An Administrator must approve an adjustment before it can be scheduled.");
         job.Status = JobPaymentStatus.Scheduled; job.ScheduledAtUtc = scheduledAtUtc; await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_SCHEDULED", job, actorUserId, ct); return Result.Success();
     }
 
@@ -111,6 +112,26 @@ public class JobPaymentService : IJobPaymentService
             await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_PAID", job, actorUserId, ct); if (transaction is not null) await transaction.CommitAsync(ct); return Result.Success();
         }
         catch (DbUpdateConcurrencyException) { if (transaction is not null) await transaction.RollbackAsync(ct); return Result.Failure("The job payment was changed by another operation; refresh and retry."); }
+    }
+
+    public async Task<Result<JobPayment>> CreateAdjustmentAsync(CreateJobPaymentAdjustmentCommand command, CancellationToken ct = default)
+    {
+        var role = await _db.Users.Where(u => u.Id == command.ActorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct);
+        if (role is not { } userRole || !userRole.HasMinimumRole(UserRole.Accountant)) return Result.Failure<JobPayment>("Accountant access is required.");
+        if (command.Amount == 0 || string.IsNullOrWhiteSpace(command.Reason)) return Result.Failure<JobPayment>("An adjustment amount and reason are required.");
+        var original = await _db.JobPayments.SingleOrDefaultAsync(j => j.Id == command.OriginalJobPaymentId, ct);
+        if (original is null || original.Status != JobPaymentStatus.Paid || original.IsAdjustment) return Result.Failure<JobPayment>("Adjustments must link to an original paid payment.");
+        var adjustment = new JobPayment { PayeeUserId = original.PayeeUserId, CollectionClientId = original.CollectionClientId, OriginalJobPaymentId = original.Id, IsAdjustment = true, IsRecoveryReceivable = command.Amount < 0, AdjustmentReason = command.Reason.Trim(), JobTotal = command.Amount, TotalPaid = command.Amount, Currency = "JMD", Status = JobPaymentStatus.Submitted, SubmittedAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow };
+        _db.JobPayments.Add(adjustment); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_ADJUSTMENT_CREATED", adjustment, command.ActorUserId, ct); return Result.Success(adjustment);
+    }
+
+    public async Task<Result> ApproveAdjustmentAsync(long jobPaymentId, Guid actorUserId, CancellationToken ct = default)
+    {
+        var role = await _db.Users.Where(u => u.Id == actorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct);
+        if (role is not UserRole.Administrator) return Result.Failure("Administrator approval is required.");
+        var adjustment = await _db.JobPayments.SingleOrDefaultAsync(j => j.Id == jobPaymentId, ct);
+        if (adjustment is null || !adjustment.IsAdjustment || adjustment.Status != JobPaymentStatus.Submitted || adjustment.ApprovedAtUtc is not null) return Result.Failure("Only an unapproved submitted adjustment can be approved.");
+        adjustment.ApprovedByUserId = actorUserId; adjustment.ApprovedAtUtc = _clock.UtcNow; await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_ADJUSTMENT_APPROVED", adjustment, actorUserId, ct); return Result.Success();
     }
 
     private async Task RecalculateAsync(JobPayment job, CancellationToken ct)

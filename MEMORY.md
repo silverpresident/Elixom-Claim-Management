@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprints 00–03 complete; Sprint 04 Job Payments item 7 complete.
+- **Stage:** Sprint 04 Job Payments complete; Sprint 05 Salary & Payroll in progress.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
@@ -16,6 +16,7 @@
 - **Job lifecycle:** Managers submit valid Processing payments; only Accountants can schedule Submitted payments at a UTC time. Scheduled jobs are immutable because all line commands require Processing status.
 - **Settlement:** only Accountants can mark a Scheduled job paid; it atomically records payment metadata, cascades claims/collections/payrolls to their paid states, queues payout notification records, and writes an audit event.
 - **Accountant queue:** `/job-payments/accountant-queue` exposes Submitted and Scheduled payments for Accountant action; lifecycle, totals, source compatibility, and settlement cascade behavior are covered by focused tests.
+- **Adjustments:** ADR 0002 is implemented through linked adjustment job payments: Accountant creation with a reason, Administrator approval, and Accountant settlement. Negative adjustments are recovery receivables and original paid records remain immutable.
 - **Projects:** `ElixomClaim.Lib`, `ElixomClaim.Web`, and matching Lib/Web xUnit test projects under `src/`.
 - **Frontend:** Razor MVC with Bootstrap 5.3 and jQuery 3.7 from CDN only; printable documents are HTML/CSS only—PDF generation is forbidden.
 
@@ -47,8 +48,8 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 01 Identity & security | Complete | All 8 items complete. See `sprints/01-identity-security.md`. |
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
 | 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
-| 04 Job payments | In progress | Item 4 complete; item 3 workspace is implemented but needs its focused verification, then settlement remains. See `sprints/04-job-payments.md`. |
-| 05 Salary & payroll | Planned | See `sprints/05-salary-payroll.md`. |
+| 04 Job payments | Complete | All 8 items complete; verification recorded in `sprints/04-job-payments.md`. |
+| 05 Salary & payroll | In progress | Ready for item 1. See `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Planned | See `sprints/06-mcp-release.md`. |
 
 ## Open decisions / risks

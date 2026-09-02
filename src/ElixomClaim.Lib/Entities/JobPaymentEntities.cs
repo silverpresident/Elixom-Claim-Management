@@ -52,6 +52,10 @@ public class JobPayment
     public long? OriginalJobPaymentId { get; set; }
     public JobPayment? OriginalJobPayment { get; set; }
     public bool IsAdjustment { get; set; }
+    public bool IsRecoveryReceivable { get; set; }
+    public string? AdjustmentReason { get; set; }
+    public Guid? ApprovedByUserId { get; set; }
+    public DateTime? ApprovedAtUtc { get; set; }
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     public ICollection<JobPaymentClaim> Claims { get; set; } = new List<JobPaymentClaim>();

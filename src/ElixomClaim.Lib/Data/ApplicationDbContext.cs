@@ -358,6 +358,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(j => j.TotalPaid).IsRequired().HasPrecision(18, 2);
             entity.Property(j => j.Currency).IsRequired().HasMaxLength(10).HasDefaultValue("JMD");
             entity.Property(j => j.PaymentTransactionNumber).HasMaxLength(100);
+            entity.Property(j => j.AdjustmentReason).HasMaxLength(1000);
             entity.Property(j => j.RowVersion).IsRowVersion();
             entity.HasOne(j => j.PayeeUser).WithMany().HasForeignKey(j => j.PayeeUserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(j => j.CollectionClient).WithMany().HasForeignKey(j => j.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
