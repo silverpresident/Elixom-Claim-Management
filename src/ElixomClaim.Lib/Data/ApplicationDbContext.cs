@@ -27,6 +27,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<CollectionAmountOption> CollectionAmountOptions => Set<CollectionAmountOption>();
     public DbSet<CollectionTransaction> CollectionTransactions => Set<CollectionTransaction>();
     public DbSet<EmailOutboxItem> EmailOutboxItems => Set<EmailOutboxItem>();
+    public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -307,6 +308,22 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.FailureReason).HasMaxLength(1000);
             entity.HasIndex(e => e.IdempotencyKey).IsUnique();
             entity.HasIndex(e => new { e.Status, e.AvailableAtUtc });
+        });
+
+        modelBuilder.Entity<EmailLog>(entity =>
+        {
+            entity.ToTable("EmailLogs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Recipient).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.Subject).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.HtmlBody).IsRequired();
+            entity.Property(e => e.Provider).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.RelatedEntityType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.RelatedEntityId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
+            entity.Property(e => e.FailureReason).HasMaxLength(1000);
+            entity.HasIndex(e => e.OutboxItemId);
+            entity.HasIndex(e => e.CreatedAtUtc);
         });
     }
 

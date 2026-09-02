@@ -18,8 +18,15 @@ public class NotificationOptions
     [EmailAddress(ErrorMessage = "SystemCopyAddress must be a valid email address.")]
     public string SystemCopyAddress { get; set; } = string.Empty;
 
+    public string? SmtpHost { get; set; }
+    public int SmtpPort { get; set; } = 587;
+    public bool SmtpUseSsl { get; set; } = true;
+    public string? SmtpUserName { get; set; }
+    public string? SmtpPassword { get; set; }
+    public string? AcsConnectionString { get; set; }
+
     public string ToRedactedString()
     {
-        return $"Provider: '{Provider}', FromAddress: '{FromAddress}', SystemCopyAddress: '{SystemCopyAddress}'";
+        return $"Provider: '{Provider}', FromAddress: '{FromAddress}', SystemCopyAddress: '{SystemCopyAddress}', SmtpHost: '{SmtpHost}', SmtpPassword: '[REDACTED]', AcsConnectionString: '[REDACTED]'";
     }
 }

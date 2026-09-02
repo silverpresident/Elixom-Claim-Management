@@ -62,6 +62,37 @@ public class CollectionService : ICollectionService
             _dbContext.CollectionTransactions.Add(collection);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
+            if (collection.PayorEmail is null)
+            {
+                var skippedPayor = new EmailOutboxItem
+                {
+                    Recipient = string.Empty,
+                    Subject = $"Collection receipt #{collection.Id}",
+                    HtmlBody = ComposeReceiptHtml(collection, client, purpose, amountOption),
+                    RelatedEntityType = "CollectionTransaction",
+                    RelatedEntityId = collection.Id.ToString(),
+                    IdempotencyKey = $"collection-receipt:{collection.Id}:PAYOR-MISSING",
+                    Status = EmailOutboxStatus.SkippedInvalidRecipient,
+                    FailureReason = "No optional payor email was supplied.",
+                    AvailableAtUtc = _clock.UtcNow,
+                    CreatedAtUtc = _clock.UtcNow
+                };
+                _dbContext.EmailOutboxItems.Add(skippedPayor);
+                _dbContext.EmailLogs.Add(new EmailLog
+                {
+                    OutboxItemId = skippedPayor.Id,
+                    Recipient = string.Empty,
+                    Subject = skippedPayor.Subject,
+                    HtmlBody = skippedPayor.HtmlBody,
+                    Provider = "NotSent",
+                    RelatedEntityType = skippedPayor.RelatedEntityType,
+                    RelatedEntityId = skippedPayor.RelatedEntityId,
+                    AttemptNumber = 0,
+                    Status = EmailOutboxStatus.SkippedInvalidRecipient,
+                    FailureReason = skippedPayor.FailureReason,
+                    CreatedAtUtc = _clock.UtcNow
+                });
+            }
             var recipients = new[] { collection.PayorEmail, _notificationOptions.SystemCopyAddress }
                 .Concat(await _dbContext.CollectionClientUsers.Where(a => a.CollectionClientId == client.Id && a.User.IsActive).Select(a => a.User.Email).ToListAsync(cancellationToken))
                 .Where(email => !string.IsNullOrWhiteSpace(email)).Distinct(StringComparer.OrdinalIgnoreCase);

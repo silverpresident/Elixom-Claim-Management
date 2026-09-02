@@ -58,6 +58,20 @@ public static class DependencyInjection
         services.AddScoped<IClaimService, ClaimService>();
         services.AddScoped<ICollectionClientAdministrationService, CollectionClientAdministrationService>();
         services.AddScoped<ICollectionService, CollectionService>();
+        services.AddScoped<IOutboxService, OutboxService>();
+        services.AddSingleton<FakeEmailSender>();
+        services.AddScoped<SmtpEmailSender>();
+        services.AddScoped<AcsEmailSender>();
+        services.AddScoped<IEmailSender>(serviceProvider =>
+        {
+            var provider = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<NotificationOptions>>().Value.Provider;
+            return provider switch
+            {
+                "Smtp" => serviceProvider.GetRequiredService<SmtpEmailSender>(),
+                "Acs" => serviceProvider.GetRequiredService<AcsEmailSender>(),
+                _ => serviceProvider.GetRequiredService<FakeEmailSender>()
+            };
+        });
 
         // Authorization Handlers
         services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, Authorization.MinimumRoleHandler>();

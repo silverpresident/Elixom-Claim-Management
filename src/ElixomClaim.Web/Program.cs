@@ -2,6 +2,7 @@ using ElixomClaim.Lib;
 using ElixomClaim.Lib.Configuration;
 using ElixomClaim.Web.Authentication;
 using ElixomClaim.Web.Middleware;
+using ElixomClaim.Web.HostedServices;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 
@@ -34,6 +35,7 @@ builder.Services.AddAuthentication(options =>
 
 // Add MVC controllers with views
 builder.Services.AddControllersWithViews();
+builder.Services.AddHostedService<OutboxDispatchHostedService>();
 
 var app = builder.Build();
 

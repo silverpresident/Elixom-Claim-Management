@@ -25,3 +25,19 @@ public class EmailOutboxItem
     public DateTime? SentAtUtc { get; set; }
     public string? FailureReason { get; set; }
 }
+
+public class EmailLog
+{
+    public long Id { get; set; }
+    public Guid OutboxItemId { get; set; }
+    public string Recipient { get; set; } = string.Empty;
+    public string Subject { get; set; } = string.Empty;
+    public string HtmlBody { get; set; } = string.Empty;
+    public string Provider { get; set; } = string.Empty;
+    public string RelatedEntityType { get; set; } = string.Empty;
+    public string RelatedEntityId { get; set; } = string.Empty;
+    public int AttemptNumber { get; set; }
+    public EmailOutboxStatus Status { get; set; }
+    public string? FailureReason { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
