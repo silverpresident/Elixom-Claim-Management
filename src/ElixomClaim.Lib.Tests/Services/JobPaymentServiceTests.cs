@@ -46,6 +46,25 @@ public class JobPaymentServiceTests
         Assert.Equal(ClaimPaymentStatus.Unpaid, claim.PaymentStatus); Assert.Equal(0m, job.TotalPaid);
     }
 
+    [Fact]
+    public async Task SubmitAndScheduleAsync_RequireLifecycleAndAccountantAuthority()
+    {
+        await using var db = CreateDb();
+        var manager = User(UserRole.Manager, "manager@anonymized.example.com");
+        var accountant = User(UserRole.Accountant, "accountant@anonymized.example.com");
+        var payee = User(UserRole.User, "payee@anonymized.example.com");
+        var job = new JobPayment { PayeeUserId = payee.Id, JobTotal = 100m, TotalPaid = 100m };
+        db.AddRange(manager, accountant, payee, job); await db.SaveChangesAsync();
+        var service = Service(db);
+
+        Assert.True((await service.SubmitAsync(job.Id, manager.Id)).IsSuccess);
+        Assert.Equal(JobPaymentStatus.Submitted, job.Status);
+        Assert.True((await service.ScheduleAsync(job.Id, manager.Id, DateTime.UtcNow)).IsFailure);
+        Assert.True((await service.ScheduleAsync(job.Id, accountant.Id, DateTime.UtcNow)).IsSuccess);
+        Assert.Equal(JobPaymentStatus.Scheduled, job.Status);
+        Assert.Contains(db.AuditRecords, x => x.Action == "JOB_PAYMENT_SCHEDULED");
+    }
+
     private static ApplicationDbContext CreateDb() => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     private static User User(UserRole role, string email) => new() { Email = email, NormalizedEmail = email.ToUpperInvariant(), FullName = "User", Role = role };
     private static JobPaymentService Service(ApplicationDbContext db) => new(db, new AuditService(db, NullLogger<AuditService>.Instance), new SystemClock(), NullLogger<JobPaymentService>.Instance);

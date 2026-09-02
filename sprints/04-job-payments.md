@@ -23,7 +23,7 @@
 | 1a | Complete | 2026-09-02 | Added minimal `Payroll` persistence record and constrained one-payment association required by item 1. It deliberately omits salary definition, entry, and generation behavior, which remains Sprint 05 scope. |
 | 2 | Complete | 2026-09-02 | Added shared Manager-authorized `JobPaymentService`: Processing-only create/attach/remove/deduction commands, accepted-claim/user and Collected-collection/client validation, linked source status updates, and server-side exact totals. Tests: `JobPaymentServiceTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (76). |
 | 3 | In progress | 2026-09-02 | Building Manager job-payment list/detail, compatible collection review and attachment flows, internal-note-safe print view, and controlled payout-notification resend command. |
-| 4 | Not started | — | — |
+| 4 | Complete | 2026-09-02 | Added shared `SubmitAsync` and Accountant-only `ScheduleAsync` commands. Submission requires a non-negative payable total; schedule requires UTC time, transitions only Submitted jobs, locks line edits through existing Processing-only enforcement, and audits both states. Tests: `JobPaymentServiceTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (77). |
 | 5 | Not started | — | — |
 | 6 | Not started | — | — |
 | 7 | Not started | — | — |

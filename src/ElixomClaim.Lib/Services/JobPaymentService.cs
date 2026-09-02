@@ -70,6 +70,24 @@ public class JobPaymentService : IJobPaymentService
         await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_NOTIFICATION_RESEND_QUEUED", job, actorUserId, ct); return Result.Success();
     }
 
+    public async Task<Result> SubmitAsync(long jobPaymentId, Guid actorUserId, CancellationToken ct = default)
+    {
+        var jobResult = await ProcessingJobAsync(actorUserId, jobPaymentId, ct); if (jobResult.IsFailure) return Result.Failure(jobResult.Error);
+        var job = jobResult.Value!;
+        if (job.JobTotal <= 0 || job.TotalPaid < 0) return Result.Failure("A job payment must have a positive total and non-negative payout before submission.");
+        job.Status = JobPaymentStatus.Submitted; job.SubmittedAtUtc = _clock.UtcNow; await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_SUBMITTED", job, actorUserId, ct); return Result.Success();
+    }
+
+    public async Task<Result> ScheduleAsync(long jobPaymentId, Guid actorUserId, DateTime scheduledAtUtc, CancellationToken ct = default)
+    {
+        var role = await _db.Users.Where(u => u.Id == actorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct);
+        if (role is not { } value || !value.HasMinimumRole(UserRole.Accountant)) return Result.Failure("Accountant access is required.");
+        if (scheduledAtUtc.Kind != DateTimeKind.Utc) return Result.Failure("Scheduled time must be UTC.");
+        var job = await _db.JobPayments.SingleOrDefaultAsync(j => j.Id == jobPaymentId, ct);
+        if (job is null || job.Status != JobPaymentStatus.Submitted) return Result.Failure("Only Submitted job payments can be scheduled.");
+        job.Status = JobPaymentStatus.Scheduled; job.ScheduledAtUtc = scheduledAtUtc; await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_SCHEDULED", job, actorUserId, ct); return Result.Success();
+    }
+
     private async Task RecalculateAsync(JobPayment job, CancellationToken ct)
     {
         var claims = await _db.JobPaymentClaims.Where(x => x.JobPaymentId == job.Id).Select(x => x.Claim.Amount).ToListAsync(ct); var collections = await _db.JobPaymentCollections.Where(x => x.JobPaymentId == job.Id).Select(x => new { x.CollectionTransaction.Amount, x.CollectionTransaction.ProcessingFee }).ToListAsync(ct); var payrolls = await _db.JobPaymentPayrolls.Where(x => x.JobPaymentId == job.Id).Select(x => x.Payroll.NetAmount).ToListAsync(ct); var deductions = await _db.JobPaymentDeductions.Where(x => x.JobPaymentId == job.Id).Select(x => x.Amount).ToListAsync(ct);

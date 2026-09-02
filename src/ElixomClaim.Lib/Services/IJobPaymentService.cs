@@ -12,6 +12,8 @@ public interface IJobPaymentService
     Task<Result> RemoveCollectionAsync(RemoveJobPaymentCollectionCommand command, CancellationToken cancellationToken = default);
     Task<Result> AddDeductionAsync(AddJobPaymentDeductionCommand command, CancellationToken cancellationToken = default);
     Task<Result> ResendNotificationAsync(long jobPaymentId, Guid actorUserId, CancellationToken cancellationToken = default);
+    Task<Result> SubmitAsync(long jobPaymentId, Guid actorUserId, CancellationToken cancellationToken = default);
+    Task<Result> ScheduleAsync(long jobPaymentId, Guid actorUserId, DateTime scheduledAtUtc, CancellationToken cancellationToken = default);
 }
 
 public record CreateJobPaymentCommand(Guid ActorUserId, Guid? PayeeUserId, Guid? CollectionClientId, string? PublicNote, string? InternalNote);
