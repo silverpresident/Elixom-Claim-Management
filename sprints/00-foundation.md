@@ -26,8 +26,8 @@ Create a reliable, attractive base that later business work can extend without s
 | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-02 | Solution ElixomClaim.slnx & 4 projects in src/ created; Class1.cs/wwwroot/lib removed; references added. Command: `dotnet test ElixomClaim.slnx` passed (2 tests). |
 | 2 | Complete | 2026-09-02 | Lib DI extension, ApplicationDbContext (dbclaim schema, decimal(18,2) exact JMD), ISystemClock, Result<T>, health checks, and DatabaseMigrationExtensions. Command: `dotnet test ElixomClaim.slnx` passed (9 tests). |
-| 3 | Not started | — | — |
-| 4 | Not started | — | — |
+| 3 | Complete | 2026-09-02 | EF Core InitialCreate migration, dbclaim schema snapshot, migration policy in README.md, and MigrationValidationTests. Command: `dotnet test ElixomClaim.slnx` passed (11 tests). |
+| 4 | Complete | 2026-09-02 | MVC shell, Bootstrap 5.3 & jQuery 3.7 CDN with SRI, SVG favicon, StatusBadgeViewComponent, print CSS, and component tests. Command: `dotnet test ElixomClaim.slnx` passed (22 tests). |
 | 5 | Not started | — | — |
 | 6 | Not started | — | — |
 | 7 | Not started | — | — |
