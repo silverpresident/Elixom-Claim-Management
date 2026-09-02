@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprints 00–03 complete; Sprint 04 Job Payments item 2 in progress.
+- **Stage:** Sprints 00–03 complete; Sprint 04 Job Payments item 2 complete.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
@@ -12,6 +12,7 @@
 - **Teller collections UI:** `/collections` provides the recording teller’s 24-hour queue, entry, review, controlled reissue, and print-ready HTML receipt. Print/email receipts do not include internal processing fees.
 - **Retention configuration:** `Retention:FinancialRecordRetentionYears` defaults to nine and is validated at startup with a four-year minimum.
 - **Job payment schema:** `JobPayments` has an enforced exactly-one payee check (user or collection client), row-version concurrency, exact JMD totals, and unique line associations. `Payrolls` is a minimal locked/generated association prerequisite only; Sprint 05 owns payroll behavior. See `20260902221255_AddJobPaymentEntities`.
+- **Job management:** `JobPaymentService` is the shared Manager+ adapter for Processing-only job creation and line management. It validates compatible source ownership/state and recalculates all stored JMD totals server-side.
 - **Projects:** `ElixomClaim.Lib`, `ElixomClaim.Web`, and matching Lib/Web xUnit test projects under `src/`.
 - **Frontend:** Razor MVC with Bootstrap 5.3 and jQuery 3.7 from CDN only; printable documents are HTML/CSS only—PDF generation is forbidden.
 
@@ -43,7 +44,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 01 Identity & security | Complete | All 8 items complete. See `sprints/01-identity-security.md`. |
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
 | 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
-| 04 Job payments | In progress | Item 2 active: shared Processing job management is implemented; focused test coverage remains before completion. See `sprints/04-job-payments.md`. |
+| 04 Job payments | In progress | Items 1–2 complete; next is Manager job-payment UI and controlled notification resend. See `sprints/04-job-payments.md`. |
 | 05 Salary & payroll | Planned | See `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Planned | See `sprints/06-mcp-release.md`. |
 

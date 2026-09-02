@@ -30,7 +30,7 @@ public class JobPaymentService : IJobPaymentService
         var claim = await _db.Claims.SingleOrDefaultAsync(x => x.Id == c.ClaimId, ct);
         if (claim is null || claim.Status != ClaimStatus.Accepted || claim.ClaimantUserId != job.PayeeUserId) return Result.Failure("Only an accepted claim for the job's user payee can be attached.");
         if (await _db.JobPaymentClaims.AnyAsync(x => x.ClaimId == c.ClaimId, ct)) return Result.Failure("Claim is already attached to a job.");
-        _db.JobPaymentClaims.Add(new() { JobPaymentId = job.Id, ClaimId = claim.Id }); claim.PaymentStatus = ClaimPaymentStatus.Processing; await RecalculateAsync(job, ct); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_CLAIM_ATTACHED", job, c.ActorUserId, ct); return Result.Success();
+        _db.JobPaymentClaims.Add(new() { JobPaymentId = job.Id, ClaimId = claim.Id }); claim.PaymentStatus = ClaimPaymentStatus.Processing; await _db.SaveChangesAsync(ct); await RecalculateAsync(job, ct); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_CLAIM_ATTACHED", job, c.ActorUserId, ct); return Result.Success();
     }
 
     public async Task<Result> AttachCollectionAsync(AttachJobPaymentCollectionCommand c, CancellationToken ct = default)
@@ -39,23 +39,23 @@ public class JobPaymentService : IJobPaymentService
         var collection = await _db.CollectionTransactions.SingleOrDefaultAsync(x => x.Id == c.CollectionTransactionId, ct);
         if (collection is null || collection.Status != CollectionStatus.Collected || collection.CollectionClientId != job.CollectionClientId) return Result.Failure("Only a Collected transaction for the job's client can be attached.");
         if (await _db.JobPaymentCollections.AnyAsync(x => x.CollectionTransactionId == c.CollectionTransactionId, ct)) return Result.Failure("Collection is already attached to a job.");
-        _db.JobPaymentCollections.Add(new() { JobPaymentId = job.Id, CollectionTransactionId = collection.Id }); collection.Status = CollectionStatus.Processing; await RecalculateAsync(job, ct); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_COLLECTION_ATTACHED", job, c.ActorUserId, ct); return Result.Success();
+        _db.JobPaymentCollections.Add(new() { JobPaymentId = job.Id, CollectionTransactionId = collection.Id }); collection.Status = CollectionStatus.Processing; await _db.SaveChangesAsync(ct); await RecalculateAsync(job, ct); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_COLLECTION_ATTACHED", job, c.ActorUserId, ct); return Result.Success();
     }
 
     public async Task<Result> RemoveClaimAsync(RemoveJobPaymentClaimCommand c, CancellationToken ct = default)
     {
         var jobResult = await ProcessingJobAsync(c.ActorUserId, c.JobPaymentId, ct); if (jobResult.IsFailure) return Result.Failure(jobResult.Error); var line = await _db.JobPaymentClaims.Include(x => x.Claim).SingleOrDefaultAsync(x => x.JobPaymentId == c.JobPaymentId && x.ClaimId == c.ClaimId, ct); if (line is null) return Result.Failure("Attached claim was not found.");
-        line.Claim.PaymentStatus = ClaimPaymentStatus.Unpaid; _db.JobPaymentClaims.Remove(line); await RecalculateAsync(jobResult.Value!, ct); await _db.SaveChangesAsync(ct); return Result.Success();
+        line.Claim.PaymentStatus = ClaimPaymentStatus.Unpaid; _db.JobPaymentClaims.Remove(line); await _db.SaveChangesAsync(ct); await RecalculateAsync(jobResult.Value!, ct); await _db.SaveChangesAsync(ct); return Result.Success();
     }
     public async Task<Result> RemoveCollectionAsync(RemoveJobPaymentCollectionCommand c, CancellationToken ct = default)
     {
         var jobResult = await ProcessingJobAsync(c.ActorUserId, c.JobPaymentId, ct); if (jobResult.IsFailure) return Result.Failure(jobResult.Error); var line = await _db.JobPaymentCollections.Include(x => x.CollectionTransaction).SingleOrDefaultAsync(x => x.JobPaymentId == c.JobPaymentId && x.CollectionTransactionId == c.CollectionTransactionId, ct); if (line is null) return Result.Failure("Attached collection was not found.");
-        line.CollectionTransaction.Status = CollectionStatus.Collected; _db.JobPaymentCollections.Remove(line); await RecalculateAsync(jobResult.Value!, ct); await _db.SaveChangesAsync(ct); return Result.Success();
+        line.CollectionTransaction.Status = CollectionStatus.Collected; _db.JobPaymentCollections.Remove(line); await _db.SaveChangesAsync(ct); await RecalculateAsync(jobResult.Value!, ct); await _db.SaveChangesAsync(ct); return Result.Success();
     }
     public async Task<Result> AddDeductionAsync(AddJobPaymentDeductionCommand c, CancellationToken ct = default)
     {
         var jobResult = await ProcessingJobAsync(c.ActorUserId, c.JobPaymentId, ct); if (jobResult.IsFailure) return Result.Failure(jobResult.Error); if (string.IsNullOrWhiteSpace(c.Description) || c.Amount <= 0) return Result.Failure("A deduction description and positive amount are required.");
-        _db.JobPaymentDeductions.Add(new() { JobPaymentId = c.JobPaymentId, Description = c.Description.Trim(), Amount = c.Amount, CreatedAtUtc = _clock.UtcNow }); await RecalculateAsync(jobResult.Value!, ct); await _db.SaveChangesAsync(ct); return Result.Success();
+        _db.JobPaymentDeductions.Add(new() { JobPaymentId = c.JobPaymentId, Description = c.Description.Trim(), Amount = c.Amount, CreatedAtUtc = _clock.UtcNow }); await _db.SaveChangesAsync(ct); await RecalculateAsync(jobResult.Value!, ct); await _db.SaveChangesAsync(ct); return Result.Success();
     }
 
     private async Task RecalculateAsync(JobPayment job, CancellationToken ct)

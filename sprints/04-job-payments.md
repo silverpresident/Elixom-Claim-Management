@@ -21,7 +21,7 @@
 | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-02 | Added `JobPayment`, claim/collection/payroll association entities, deductions, payout fields, exact `decimal(18,2)` JMD totals, lifecycle enum, row-version concurrency, and SQL check/unique constraints. Migration: `20260902221255_AddJobPaymentEntities`. Tests: `JobPaymentModelTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (74). |
 | 1a | Complete | 2026-09-02 | Added minimal `Payroll` persistence record and constrained one-payment association required by item 1. It deliberately omits salary definition, entry, and generation behavior, which remains Sprint 05 scope. |
-| 2 | In progress | 2026-09-02 | Shared `JobPaymentService` now covers Manager authorization, Processing-only creation/claim/collection attachment/removal, deductions, payee/client validation, linked source states, and server-side exact total recalculation. Remaining: focused service tests and verification before completion. |
+| 2 | Complete | 2026-09-02 | Added shared Manager-authorized `JobPaymentService`: Processing-only create/attach/remove/deduction commands, accepted-claim/user and Collected-collection/client validation, linked source status updates, and server-side exact totals. Tests: `JobPaymentServiceTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (76). |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
 | 5 | Not started | — | — |
