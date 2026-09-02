@@ -2,11 +2,12 @@
 
 ## Current baseline
 
-- **Stage:** Sprints 00–02 complete; Sprint 03 Clearing House item 2 complete.
+- **Stage:** Sprints 00–02 complete; Sprint 03 Clearing House item 3 complete.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
 - **Collection configuration:** only the shared `CollectionClientAdministrationService` may create/configure clients, assignments, options, and bank details; it requires an active Administrator and emits redacted audit events. The MVC adapter is `/admin/collection-clients`.
+- **Collection recording:** `CollectionService` requires an active teller or above, validates active options against the selected active client, and persists the JMD collection, receipt queue records, and audit record atomically on relational providers. `EmailOutboxItems` has unique idempotency keys and status scheduling fields; delivery is the next sprint item.
 - **Projects:** `ElixomClaim.Lib`, `ElixomClaim.Web`, and matching Lib/Web xUnit test projects under `src/`.
 - **Frontend:** Razor MVC with Bootstrap 5.3 and jQuery 3.7 from CDN only; printable documents are HTML/CSS only—PDF generation is forbidden.
 
@@ -37,7 +38,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 00 Foundation | Complete | All 8 items complete. See `sprints/00-foundation.md`. |
 | 01 Identity & security | Complete | All 8 items complete. See `sprints/01-identity-security.md`. |
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
-| 03 Clearing house | In progress | Items 1–2 complete; next is the atomic collection service and receipt outbox/audit creation. See `sprints/03-clearing-house.md`. |
+| 03 Clearing house | In progress | Items 1–3 complete; next is durable outbox delivery, logs, retries, and recipient outcomes. See `sprints/03-clearing-house.md`. |
 | 04 Job payments | Planned | See `sprints/04-job-payments.md`. |
 | 05 Salary & payroll | Planned | See `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Planned | See `sprints/06-mcp-release.md`. |

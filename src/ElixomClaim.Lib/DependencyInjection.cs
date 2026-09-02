@@ -57,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<IOAuthService, OAuthService>();
         services.AddScoped<IClaimService, ClaimService>();
         services.AddScoped<ICollectionClientAdministrationService, CollectionClientAdministrationService>();
+        services.AddScoped<ICollectionService, CollectionService>();
 
         // Authorization Handlers
         services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, Authorization.MinimumRoleHandler>();

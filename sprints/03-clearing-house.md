@@ -19,7 +19,7 @@
 | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-02 | Added collection client, assignment, bank-detail, client-scoped purpose/amount option, and collection transaction entities with composite client-option foreign keys, indexes, `decimal(18,2)` JMD values, and lifecycle enums. Migration: `20260902214419_AddCollectionEntities`. Tests: `CollectionModelTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (62). |
 | 2 | Complete | 2026-09-02 | Added shared administrator-only client configuration service and `/admin/collection-clients` MVC configuration routes/views for clients, assignments, options, and bank details. Service independently checks active Administrator role and audits mutations; no client-user self-service routes exist. Tests: `CollectionClientAdministrationServiceTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (64); `dotnet build src/ElixomClaim.Web/ElixomClaim.Web.csproj --no-restore` passed. |
-| 3 | Not started | — | — |
+| 3 | Complete | 2026-09-02 | Added `CollectionService.RecordAsync`: shared active-teller authorization, client-scoped active option validation, fee/date capture, and relational transaction covering collection, receipt outbox, and audit persistence. Added durable `EmailOutboxItems` schema in migration `20260902221153_AddEmailOutbox`. Tests: `CollectionServiceTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (66). |
 | 4 | Not started | — | — |
 | 5 | Not started | — | — |
 | 6 | Not started | — | — |

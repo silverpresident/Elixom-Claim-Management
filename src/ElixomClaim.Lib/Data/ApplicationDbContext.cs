@@ -26,6 +26,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<CollectionPurposeOption> CollectionPurposeOptions => Set<CollectionPurposeOption>();
     public DbSet<CollectionAmountOption> CollectionAmountOptions => Set<CollectionAmountOption>();
     public DbSet<CollectionTransaction> CollectionTransactions => Set<CollectionTransaction>();
+    public DbSet<EmailOutboxItem> EmailOutboxItems => Set<EmailOutboxItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -290,6 +291,22 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(c => new { c.CollectionClientId, c.Status, c.PaymentDateUtc });
             entity.HasIndex(c => new { c.TellerUserId, c.CreatedAtUtc });
+        });
+
+        modelBuilder.Entity<EmailOutboxItem>(entity =>
+        {
+            entity.ToTable("EmailOutboxItems");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Recipient).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.Subject).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.HtmlBody).IsRequired();
+            entity.Property(e => e.RelatedEntityType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.RelatedEntityId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.IdempotencyKey).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
+            entity.Property(e => e.FailureReason).HasMaxLength(1000);
+            entity.HasIndex(e => e.IdempotencyKey).IsUnique();
+            entity.HasIndex(e => new { e.Status, e.AvailableAtUtc });
         });
     }
 
