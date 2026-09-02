@@ -1,4 +1,9 @@
+using ElixomClaim.Lib;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Register library services and options validation
+builder.Services.AddClaimLibraryServices(builder.Configuration);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -24,6 +29,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
-
 
 app.Run();

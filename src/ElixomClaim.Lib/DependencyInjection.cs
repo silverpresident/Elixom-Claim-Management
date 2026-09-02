@@ -1,3 +1,4 @@
+using ElixomClaim.Lib.Configuration;
 using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Services;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,32 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        // Bind & Validate Options with DataAnnotations & ValidateOnStart
+        services.AddOptions<DatabaseOptions>()
+            .Configure(options => configuration.GetSection(DatabaseOptions.SectionName).Bind(options))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<AuthenticationOptions>()
+            .Configure(options => configuration.GetSection(AuthenticationOptions.SectionName).Bind(options))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<GoogleAuthOptions>()
+            .Configure(options => configuration.GetSection(GoogleAuthOptions.SectionName).Bind(options))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<NotificationOptions>()
+            .Configure(options => configuration.GetSection(NotificationOptions.SectionName).Bind(options))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<OAuthOptions>()
+            .Configure(options => configuration.GetSection(OAuthOptions.SectionName).Bind(options))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         var connectionString = configuration.GetConnectionString("ClaimDatabase");
 
         services.AddDbContext<ApplicationDbContext>(options =>
