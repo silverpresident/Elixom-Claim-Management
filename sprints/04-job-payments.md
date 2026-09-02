@@ -19,7 +19,7 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | — |
+| 1 | In progress | 2026-09-02 | Defining job-payment aggregate, line associations, deductions, exact JMD totals, exclusivity/integrity constraints, and concurrency model. |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
