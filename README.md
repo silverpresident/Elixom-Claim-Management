@@ -33,7 +33,8 @@ All database objects use the Azure SQL schema **`dbclaim`**. EF migrations are a
 - `ElixomClaim.Lib` owns entities, the `DbContext`, transaction-aware business services, validation, email composition contracts, and shared authorization-aware operations. It must not depend on MVC controllers or Razor views.
 - `ElixomClaim.Web` owns HTTP, Razor UI, Google sign-in wiring, OAuth endpoint plumbing, MCP transport, and thin hosted-service schedulers.
 - Controllers and MCP tools call the same Lib services. Neither is allowed to reimplement authorization or state-transition rules.
-- Use `decimal(18,2)` for money, UTC timestamps for persisted instants, and a single identifier convention consistently.
+- This is a single-company application; do not add tenant identifiers or tenant-resolution infrastructure.
+- Use `decimal(18,2)` for money, **JMD** as the sole currency, UTC timestamps for persisted instants, and a single identifier convention consistently. Define and test one rounding policy before financial calculations are implemented.
 
 ## Identity, roles, and authorization
 
@@ -51,6 +52,8 @@ Roles are stored as one hierarchical application role, not a collection of unrel
 | Administrator | Full access, including user/client configuration and all audit logs. |
 
 Use policies (for example, `CanCollectPayments`, `CanManageClaims`, `CanManagePayroll`, `CanExecutePayments`) instead of scattering role strings. Ownership checks remain mandatory even after an endpoint has passed a role policy.
+
+Accountants and Administrators may view full bank details and stored email bodies. Managers may see only email-list metadata: recipient, subject, status, and sent date. Apply these restrictions in query projections as well as the UI—do not load sensitive content merely to hide it.
 
 ## Domain and lifecycle rules
 
@@ -89,6 +92,8 @@ Processing ──submit──> Submitted ──accountant schedules──> Sched
 
 Marking a job paid is an atomic domain operation: it records the payment details, marks attached payrolls `Paid`, collections `Transferred`, and claims `Honoured`, then queues the HTML payout summary. The summary includes recipient and bank information, totals, and itemized claims, collections, and deductions. Retries must not duplicate the business transition or receipt; use an outbox/idempotency key.
 
+Paid job payments are immutable. Corrections use a separately auditable reversal or adjustment job payment linked to the original; never edit or delete a paid financial record.
+
 ### Salary and payroll
 
 Salary definitions hold the user, base amount, description, active/start/end bounds, first/last salary date, monthly and daily recurrence, nearest weekday, and benefit/deduction adjustments. The daily scheduler delegates to a testable salary engine; it does not contain calculation logic.
@@ -99,16 +104,17 @@ Payrolls are generated only from salary definitions. Entries are ordered: base f
 
 ## Security, OAuth, and MCP
 
-The web project contains the custom OAuth 2.0 authorization server needed by MCP clients. Implement authorization code flow with mandatory PKCE S256, validated redirect URIs, short-lived access tokens, securely stored/rotated refresh tokens, consent, revocation, scope checks, and abuse protections. Endpoint names are `/oauth/authorize`, `/oauth/token`, and the MCP transport endpoint (for example `/mcp/sse`). Do not treat a bearer token as a password or expose client secrets in source control.
+The web project contains an in-house OAuth 2.0 authorization server for MCP clients—no external authorization-server product/library is the protocol implementation. It supports dynamic client registration, authorization code flow with mandatory PKCE S256, validated redirect URIs, user consent, short-lived access tokens, securely stored/rotated refresh tokens, revocation, scope checks, and abuse protections. Endpoint names are `/oauth/register`, `/oauth/authorize`, `/oauth/token`, `/oauth/revoke`, and the MCP transport endpoint (for example `/mcp/sse`). Use platform cryptographic primitives and constant-time comparisons; do not invent cryptographic algorithms or expose client secrets in source control.
 
 MCP authentication resolves the token to the concrete `User` record and projects that identity and role claims into `HttpContext.User`. An MCP tool has no elevated pseudo-role: it invokes the same domain service and policies as the web UI. Log every token/security event and every MCP invocation with actor, action, target, time, IP/correlation information, and `IsMcp = true`.
 
 ## Notifications, audit, and observability
 
 - Queue emails through a durable outbox and background worker. `IEmailSender` implementations support SMTP and Azure Communication Services, selected by configuration.
-- Persist every composed/send attempt in `EmailLogs`: addressing, subject, HTML body, provider, relation, attempt/status, timestamps, and safe failure metadata. Do not store credentials in this table or logs.
+- Persist every composed/send attempt in `EmailLogs`: addressing, subject, HTML body, provider, relation, attempt/status, timestamps, and safe failure metadata. Do not store credentials in this table or logs. A missing or invalid optional payor email skips only that recipient; client and system-copy receipts continue and the skipped-recipient outcome is recorded.
 - Persist audit events for mutations, access/security events, state changes, role changes, OAuth issuance/revocation, and MCP operations. Include before/after JSON where safe, but redact secrets and sensitive tokens.
 - Inject `ILogger<T>` into controllers, services, and hosted services. Log structured identifiers and outcome—not credentials, access tokens, bank-account numbers, or email bodies.
+- Retain financial records, audit logs, and email records for **nine years**. Make retention configurable, but never permit less than **four years**; expiry/purge must be auditable and legally reviewed.
 
 ## Frontend experience
 
@@ -143,6 +149,8 @@ Secrets belong in user secrets, Azure Key Vault, or deployment configuration—n
 
 The implementation order and definition of done live in [`sprints/README.md`](sprints/README.md). Start with the foundation and security boundaries before building dashboards or email templates. The backlog intentionally makes production hardening and accessibility/release checks explicit rather than treating them as follow-up work.
 
+GitHub Actions is the required CI/CD platform. The delivery backlog covers build/test gates, security scanning, deployment environments, migration execution, and protected release workflow before production release.
+
 ## Project working agreements
 
-Read [`AGENTS.md`](AGENTS.md) before changing the codebase and update [`MEMORY.md`](MEMORY.md) when an enduring decision, implementation fact, or unresolved risk changes. The source documents remain in [`context/`](context/) as input history; this README is the consolidated working specification.
+Read [`AGENTS.md`](AGENTS.md) before changing the codebase and update [`MEMORY.md`](MEMORY.md) when an enduring decision, implementation fact, or unresolved risk changes. Record significant architecture choices in [`adr/`](adr/). The source documents remain in [`context/`](context/) as input history; this README is the consolidated working specification.

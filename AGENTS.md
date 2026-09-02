@@ -28,6 +28,12 @@ Avoid duplicate work by treating progress rows and the Git diff as the reservati
 - Use imperative, scoped messages such as `feat(claims): add draft submission workflow` or `docs(sprint-00): record foundation completion`. Reference the sprint item in the commit body when useful.
 - A schema migration, behavior change, and the tests that prove it belong in the same commit whenever practical. Never claim a sprint item is `Complete` merely because code was committed; its progress evidence must show the verification result.
 
+## Definition of ready and decision records
+
+Before claiming a backlog item, confirm it has a clear outcome, acceptance evidence, dependencies, affected security/data concerns, and a test approach. If any of these are unknown, mark it `Blocked` and ask for or record the missing decision rather than implementing a guess.
+
+Use `adr/` for decisions that materially affect architecture, security, data governance, integrations, or delivery. Each ADR states the context, decision, consequences, date, and status. Add a new ADR rather than rewriting history; supersede an earlier ADR by linking both records. `MEMORY.md` records the current fact and links to the ADR.
+
 ## Non-negotiable architecture
 
 - Target .NET 10, C# 14, ASP.NET Core MVC, EF Core, Azure SQL, and schema `dbclaim`.

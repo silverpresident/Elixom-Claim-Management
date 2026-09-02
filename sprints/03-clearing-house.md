@@ -5,9 +5,9 @@
 1. Add Collection Client, client users, bank details, client-scoped purpose/amount option entities, collection transaction, method/status enums, and indexes/constraints.
 2. Build Admin client configuration and assigned-user management, subject to the confirmed ownership decision.
 3. Implement the shared collection service: validate chosen client options, record teller/UTC payment date, capture transaction fee, and create receipt outbox/audit records in one transaction.
-4. Implement durable outbox processing, SMTP/ACS senders, EmailLog persistence, retry/backoff, and deduplication. Use a development fake sender in tests.
+4. Implement durable outbox processing, SMTP/ACS senders, EmailLog persistence, retry/backoff, deduplication, recipient validation, and a recorded `SkippedInvalidRecipient` outcome. A missing/invalid optional payor email must not block client/system-copy delivery. Use a development fake sender in tests.
 5. Build Teller’s last-24-hour workspace, collection form, review/detail, receipt reissue, and clean HTML print view. Send only to valid configured/entered recipients.
-6. Test client isolation, option validation, recipient construction, fee capture, retry/idempotency, receipt privacy, and print rendering semantics.
+6. Test client isolation, option validation, recipient construction/skipping, fee capture, retry/idempotency, receipt privacy, retention settings, and print rendering semantics.
 
 ## Done when
 
