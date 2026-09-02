@@ -18,7 +18,7 @@
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-02 | Added collection client, assignment, bank-detail, client-scoped purpose/amount option, and collection transaction entities with composite client-option foreign keys, indexes, `decimal(18,2)` JMD values, and lifecycle enums. Migration: `20260902214419_AddCollectionEntities`. Tests: `CollectionModelTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (62). |
-| 2 | Not started | — | — |
+| 2 | Complete | 2026-09-02 | Added shared administrator-only client configuration service and `/admin/collection-clients` MVC configuration routes/views for clients, assignments, options, and bank details. Service independently checks active Administrator role and audits mutations; no client-user self-service routes exist. Tests: `CollectionClientAdministrationServiceTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (64); `dotnet build src/ElixomClaim.Web/ElixomClaim.Web.csproj --no-restore` passed. |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
 | 5 | Not started | — | — |
