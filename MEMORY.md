@@ -51,7 +51,6 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
 2. **Reversal accounting:** document the accounting treatment and authorization workflow for reversal/adjustment payments before Sprint 04 implementation.
-3. **Payroll association prerequisite:** Sprint 04 requires a constrained `Payroll` association before the broader Sprint 05 salary/payroll model exists; only the minimal persistence record needed for referential integrity will be introduced now.
 
 ## Decision log
 
