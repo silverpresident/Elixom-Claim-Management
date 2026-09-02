@@ -14,3 +14,15 @@
 
 - An allow-listed active Google user can sign in; an unprovisioned or blocked identity cannot.
 - OAuth and application security events are auditable without secrets, and authorization tests demonstrate no privilege escalation.
+
+## Progress
+
+| Item | Status | Updated | Scope, evidence, or blocker |
+| --- | --- | --- | --- |
+| 1 | Not started | — | — |
+| 2 | Not started | — | — |
+| 3 | Not started | — | — |
+| 4 | Not started | — | — |
+| 5 | Not started | — | — |
+| 6 | Not started | — | — |
+| 7 | Not started | — | — |

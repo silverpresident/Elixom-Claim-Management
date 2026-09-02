@@ -18,3 +18,15 @@ Create a reliable, attractive base that later business work can extend without s
 
 - The solution builds/tests cleanly, renders the shell on desktop/mobile, and has no local Bootstrap/jQuery or PDF dependency.
 - A migration creates only `dbclaim` objects and configuration failures are understandable without leaking secrets.
+
+## Progress
+
+| Item | Status | Updated | Scope, evidence, or blocker |
+| --- | --- | --- | --- |
+| 1 | Not started | — | — |
+| 2 | Not started | — | — |
+| 3 | Not started | — | — |
+| 4 | Not started | — | — |
+| 5 | Not started | — | — |
+| 6 | Not started | — | — |
+| 7 | Not started | — | — |

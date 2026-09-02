@@ -13,3 +13,15 @@
 ## Done when
 
 - Only accountants can settle an immutable scheduled payment; all linked records and the notification outcome remain consistent after retries/failures.
+
+## Progress
+
+| Item | Status | Updated | Scope, evidence, or blocker |
+| --- | --- | --- | --- |
+| 1 | Not started | — | — |
+| 2 | Not started | — | — |
+| 3 | Not started | — | — |
+| 4 | Not started | — | — |
+| 5 | Not started | — | — |
+| 6 | Not started | — | — |
+| 7 | Not started | — | — |

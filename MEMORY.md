@@ -24,6 +24,8 @@
 
 ## Delivery status
 
+Agents must use the per-sprint `Progress` table as the item-level reservation and evidence log. This table records sprint-level state only; update it when a sprint starts or completes, or when its active item/blocker changes.
+
 | Sprint | State | Note |
 | --- | --- | --- |
 | 00 Foundation | Planned | See `sprints/00-foundation.md`. |

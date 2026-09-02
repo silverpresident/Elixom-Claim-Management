@@ -13,3 +13,15 @@
 ## Done when
 
 - A salary definition creates exactly one correct payroll per eligible period, and its submitted payroll follows the normal job-payment settlement path.
+
+## Progress
+
+| Item | Status | Updated | Scope, evidence, or blocker |
+| --- | --- | --- | --- |
+| 1 | Not started | — | — |
+| 2 | Not started | — | — |
+| 3 | Not started | — | — |
+| 4 | Not started | — | — |
+| 5 | Not started | — | — |
+| 6 | Not started | — | — |
+| 7 | Not started | — | — |

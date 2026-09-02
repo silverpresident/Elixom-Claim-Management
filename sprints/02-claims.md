@@ -11,3 +11,13 @@
 ## Done when
 
 - A claimant can complete the draft-to-submission journey and management can decide it; private notes never leak to claimants.
+
+## Progress
+
+| Item | Status | Updated | Scope, evidence, or blocker |
+| --- | --- | --- | --- |
+| 1 | Not started | — | — |
+| 2 | Not started | — | — |
+| 3 | Not started | — | — |
+| 4 | Not started | — | — |
+| 5 | Not started | — | — |

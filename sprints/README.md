@@ -18,3 +18,7 @@ Execute these sprints in order. A later sprint may refine presentation, but it m
 - All mutable workflows use server-side authorization, validation, transactions, audit logging, and idempotency where they cause external effects.
 - Bootstrap/jQuery are CDN-hosted; no PDF feature is added.
 - Critical lifecycle, permission, and money-calculation paths have automated tests.
+
+## Progress record convention
+
+Each sprint file has a mutable **Progress** table. Before implementation, claim exactly one numbered backlog item by changing it from `Not started` to `In progress`. On completion or handoff, record the date, concise result, affected files/tests, and verification command/outcome. `Blocked` rows must name the blocker and the next safe action. This record, together with `MEMORY.md` and the current Git diff, prevents duplicate or overlapping work.

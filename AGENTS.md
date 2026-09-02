@@ -7,6 +7,27 @@
 3. Inspect the existing code and tests; do not overwrite unrelated user changes.
 4. Implement the smallest coherent vertical slice, test it, and update `MEMORY.md` if the project’s durable state changed.
 
+## Sprint execution and progress control
+
+The `sprints/` directory is the source of truth for delivery order. Work only on the earliest sprint marked **Planned** or **In progress** in `MEMORY.md`; do not begin a later sprint merely because it is convenient.
+
+1. Before editing code, read the current sprint in full and inspect its **Progress** section. Select one numbered backlog item only; do not claim an item already marked `In progress` or `Complete`.
+2. Claim the item by adding/updating its progress row in the current sprint: item number, status, date, agent/branch identifier when known, concise scope, and affected files/areas. Use `In progress` only while active.
+3. Keep the change set focused on the claimed item. If its implementation reveals prerequisite work, record it as `Blocked` with the reason and add a narrowly scoped prerequisite to the current sprint; do not silently implement later-sprint scope.
+4. Before marking an item `Complete`, verify its acceptance behavior, run the relevant tests/build, record the commands and outcome in its progress row, and link the principal files, migration, and tests. A completed item must be usable by the next item without relying on unstated local work.
+5. At every handoff, update the current sprint progress row and `MEMORY.md`: completed work, current active/blocked item, important decisions, schema/configuration changes, verification performed, and remaining risks. Never leave an abandoned `In progress` row.
+6. A sprint advances only when every ordered item is `Complete`, its stated “Done when” checks pass, the sprint’s tests pass, and `MEMORY.md` changes its state to `Complete` and the next sprint to `In progress`. Record the completion date and evidence.
+
+Avoid duplicate work by treating progress rows and the Git diff as the reservation record. If another agent’s ownership/status is unclear, inspect the current worktree and progress record first; coordinate or choose an unclaimed item instead of making overlapping edits. Do not change a `Complete` item without recording a regression/follow-up reason.
+
+### Commit protocol
+
+- Make one focused commit when a claimed backlog item is complete and its relevant verification has passed. Update the sprint Progress row and `MEMORY.md` before committing so the commit is self-describing and handoff-ready.
+- Make an earlier checkpoint commit only when handing work to another agent, before a risky/destructive operation, or when the work is a coherent verified slice that will be continued later. Mark the item `In progress` and state the remaining work in its progress row.
+- Do not commit unverified experiments, unrelated formatting, generated secrets, or another agent’s changes. Keep unrelated work out of the index and preserve a dirty worktree you do not own.
+- Use imperative, scoped messages such as `feat(claims): add draft submission workflow` or `docs(sprint-00): record foundation completion`. Reference the sprint item in the commit body when useful.
+- A schema migration, behavior change, and the tests that prove it belong in the same commit whenever practical. Never claim a sprint item is `Complete` merely because code was committed; its progress evidence must show the verification result.
+
 ## Non-negotiable architecture
 
 - Target .NET 10, C# 14, ASP.NET Core MVC, EF Core, Azure SQL, and schema `dbclaim`.
@@ -38,6 +59,7 @@
 - Include `ILogger<T>` in controllers, services, and hosted services. Use structured, redacted logs.
 - Add/maintain unit tests for services and lifecycle rules and integration tests for authorization, endpoints, and critical persistence behavior.
 - Run the relevant formatter, build, and tests before handoff. Report commands run and limitations honestly.
+- Use the `Result<T>` pattern
 
 ## MEMORY.md protocol
 
