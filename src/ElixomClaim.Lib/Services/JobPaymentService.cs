@@ -93,7 +93,7 @@ public class JobPaymentService : IJobPaymentService
         var role = await _db.Users.Where(u => u.Id == actorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct);
         if (role is not { } userRole || !userRole.HasMinimumRole(UserRole.Accountant)) return Result.Failure("Accountant access is required.");
         if (paymentDateUtc.Kind != DateTimeKind.Utc || string.IsNullOrWhiteSpace(transactionNumber)) return Result.Failure("UTC payment date and transaction number are required.");
-        var job = await _db.JobPayments.Include(j => j.Claims).ThenInclude(x => x.Claim).Include(j => j.Collections).ThenInclude(x => x.CollectionTransaction).Include(j => j.Payrolls).ThenInclude(x => x.Payroll).Include(j => j.PayeeUser).SingleOrDefaultAsync(j => j.Id == jobPaymentId, ct);
+        var job = await _db.JobPayments.Include(j => j.Claims).ThenInclude(x => x.Claim).Include(j => j.Collections).ThenInclude(x => x.CollectionTransaction).Include(j => j.Payrolls).ThenInclude(x => x.Payroll).Include(j => j.Deductions).Include(j => j.PayeeUser).SingleOrDefaultAsync(j => j.Id == jobPaymentId, ct);
         if (job is null || job.Status != JobPaymentStatus.Scheduled) return Result.Failure("Only Scheduled job payments can be marked paid.");
         if (await _db.EmailOutboxItems.AnyAsync(e => e.IdempotencyKey == $"job-payment-paid:{job.Id}", ct)) return Result.Failure("This job payment has already been settled.");
         await using var transaction = _db.Database.IsRelational() ? await _db.Database.BeginTransactionAsync(ct) : null;
@@ -107,7 +107,7 @@ public class JobPaymentService : IJobPaymentService
                 ? new[] { job.PayeeUser.Email }
                 : await _db.CollectionClientUsers.Where(x => x.CollectionClientId == job.CollectionClientId && x.User.IsActive).Select(x => x.User.Email).ToArrayAsync(ct);
             foreach (var recipient in recipients.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
-                _db.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient, Subject = $"Payout summary #{job.Id}", HtmlBody = $"<article><h1>Payout summary</h1><p>Payment #{job.Id}</p><p>Total paid: {job.TotalPaid:N2} JMD</p><p>Transaction: {System.Text.Encodings.Web.HtmlEncoder.Default.Encode(job.PaymentTransactionNumber)}</p></article>", RelatedEntityType = "JobPayment", RelatedEntityId = job.Id.ToString(), IdempotencyKey = $"job-payment-paid:{job.Id}:{recipient.ToUpperInvariant()}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
+                _db.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient, Subject = $"Payout summary #{job.Id}", HtmlBody = ComposePayoutHtml(job), RelatedEntityType = "JobPayment", RelatedEntityId = job.Id.ToString(), IdempotencyKey = $"job-payment-paid:{job.Id}:{recipient.ToUpperInvariant()}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
             await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_PAID", job, actorUserId, ct); if (transaction is not null) await transaction.CommitAsync(ct); return Result.Success();
         }
         catch (DbUpdateConcurrencyException) { if (transaction is not null) await transaction.RollbackAsync(ct); return Result.Failure("The job payment was changed by another operation; refresh and retry."); }
@@ -122,4 +122,13 @@ public class JobPaymentService : IJobPaymentService
     private async Task<Result> AuthorizeAsync(Guid actor, CancellationToken ct) { var role = await _db.Users.Where(u => u.Id == actor && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct); return role is { } r && r.HasMinimumRole(UserRole.Manager) ? Result.Success() : Result.Failure("Manager access is required."); }
     private Task AuditAsync(string action, JobPayment job, Guid actor, CancellationToken ct) => _audit.LogAsync(action, $"JobPayment:{job.Id}", afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid }, actorUserId: actor.ToString(), cancellationToken: ct);
     private static string? Trim(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string ComposePayoutHtml(JobPayment job)
+    {
+        Func<string, string> encode = System.Text.Encodings.Web.HtmlEncoder.Default.Encode;
+        var claims = string.Join("", job.Claims.Select(x => $"<li>{encode(x.Claim.Title)} — {x.Claim.Amount:N2} JMD</li>"));
+        var collections = string.Join("", job.Collections.Select(x => $"<li>Collection #{x.CollectionTransactionId} — {x.CollectionTransaction.Amount:N2} JMD</li>"));
+        var deductions = string.Join("", job.Deductions.Select(x => $"<li>{encode(x.Description)} — {x.Amount:N2} JMD</li>"));
+        var bank = job.PayeeUser is null ? "Collection client payout" : $"Bank account ending {encode(job.PayeeUser.BankAccountNumber?[^Math.Min(4, job.PayeeUser.BankAccountNumber.Length)..] ?? "unavailable")}";
+        return $"<article style=\"font-family:Arial,sans-serif;max-width:720px;margin:auto\"><h1>Payout summary</h1><p>Payment #{job.Id}</p><p>{bank}</p><p>Payment date: {job.PaymentDateUtc:yyyy-MM-dd} UTC<br/>Transaction: {encode(job.PaymentTransactionNumber ?? string.Empty)}</p><h2>Claims</h2><ul>{claims}</ul><h2>Collections</h2><ul>{collections}</ul><h2>Deductions</h2><ul>{deductions}</ul><table><tr><th>Job total</th><td>{job.JobTotal:N2} JMD</td></tr><tr><th>Client fee</th><td>{job.ClientProcessingFee:N2} JMD</td></tr><tr><th>Deductions</th><td>{job.TotalDeductions:N2} JMD</td></tr><tr><th>Total paid</th><td><strong>{job.TotalPaid:N2} JMD</strong></td></tr></table></article>";
+    }
 }
