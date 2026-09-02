@@ -64,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<ICollectionClientAdministrationService, CollectionClientAdministrationService>();
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IOutboxService, OutboxService>();
+        services.AddScoped<IJobPaymentService, JobPaymentService>();
         services.AddSingleton<FakeEmailSender>();
         services.AddScoped<SmtpEmailSender>();
         services.AddScoped<AcsEmailSender>();

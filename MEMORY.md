@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprints 00–03 complete; Sprint 04 Job Payments item 1 in progress.
+- **Stage:** Sprints 00–03 complete; Sprint 04 Job Payments item 2 in progress.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
@@ -43,7 +43,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 01 Identity & security | Complete | All 8 items complete. See `sprints/01-identity-security.md`. |
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
 | 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
-| 04 Job payments | In progress | Item 1 complete; next is shared Processing job management and server-side totals. See `sprints/04-job-payments.md`. |
+| 04 Job payments | In progress | Item 2 active: shared Processing job management is implemented; focused test coverage remains before completion. See `sprints/04-job-payments.md`. |
 | 05 Salary & payroll | Planned | See `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Planned | See `sprints/06-mcp-release.md`. |
 
