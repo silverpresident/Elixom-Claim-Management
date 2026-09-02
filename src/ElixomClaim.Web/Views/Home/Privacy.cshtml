@@ -1,6 +1,98 @@
-﻿@{
+@{
     ViewData["Title"] = "Privacy Policy";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="row justify-content-center my-4">
+    <div class="col-lg-10">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4 p-md-5">
+                <header class="border-bottom pb-3 mb-4">
+                    <h1 class="h2 text-primary fw-bold mb-2">@ViewData["Title"]</h1>
+                    <p class="text-muted mb-0">
+                        <strong>Elixom Claim Management System</strong> &bull; Effective Date: September 2026
+                    </p>
+                </header>
+
+                <div class="alert alert-info border-info d-flex align-items-center gap-3 mb-4" role="alert">
+                    <i class="bi bi-info-circle-fill fs-4 flex-shrink-0"></i>
+                    <div>
+                        <strong>Notice regarding legal review:</strong> This policy governs data processing operations under Jamaican law. Full formal legal review is required prior to initial production deployment.
+                    </div>
+                </div>
+
+                <section class="mb-5">
+                    <h2 class="h4 text-secondary fw-semibold border-start border-4 border-primary ps-3 mb-3">1. Governing Law & Jurisdiction</h2>
+                    <p>
+                        Elixom Claim Management operates in accordance with the laws of <strong>Jamaica</strong>, including the <strong>Data Protection Act, 2020</strong>. We are committed to processing personal data responsibly, lawfully, and transparently, ensuring that data subjects' rights are fully protected.
+                    </p>
+                </section>
+
+                <section class="mb-5">
+                    <h2 class="h4 text-secondary fw-semibold border-start border-4 border-primary ps-3 mb-3">2. Data We Collect</h2>
+                    <p>To provide secure claim management, collection processing, payment distribution, and payroll operations, we process the following categories of data:</p>
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item bg-transparent ps-0">
+                            <strong>Identity & Authentication Data:</strong> Google OpenID Connect profile information (full name, email address) matching pre-provisioned user accounts.
+                        </li>
+                        <li class="list-group-item bg-transparent ps-0">
+                            <strong>Financial & Banking Details:</strong> Payee bank account numbers, branch codes, payout transactions, itemized claim details, and collection records.
+                        </li>
+                        <li class="list-group-item bg-transparent ps-0">
+                            <strong>Contact Information:</strong> Email addresses associated with claimants, collection payors, and client representatives for delivery of electronic receipts and payment summaries.
+                        </li>
+                        <li class="list-group-item bg-transparent ps-0">
+                            <strong>System & Audit Logs:</strong> Timestamped records of user actions, authorization events, state transitions, and MCP (Model Context Protocol) tool executions for auditability and security compliance.
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="mb-5">
+                    <h2 class="h4 text-secondary fw-semibold border-start border-4 border-primary ps-3 mb-3">3. How We Use Your Information</h2>
+                    <p>Personal data is processed strictly for legitimate operational and financial administration purposes:</p>
+                    <ul>
+                        <li>Authenticating users and verifying role-based access permissions.</li>
+                        <li>Processing job payments, collection receipts, and payroll disbursements.</li>
+                        <li>Delivering automated notification emails (HTML receipts and payout statements) through our durable outbox service.</li>
+                        <li>Maintaining append-only, tamper-evident audit trails for regulatory and financial accountability.</li>
+                    </ul>
+                </section>
+
+                <section class="mb-5">
+                    <h2 class="h4 text-secondary fw-semibold border-start border-4 border-primary ps-3 mb-3">4. Data Retention Policy</h2>
+                    <p>
+                        In accordance with statutory accounting and regulatory compliance requirements in Jamaica, all financial records, audit logs, and transactional email logs are retained for <strong>nine (9) years</strong>.
+                    </p>
+                    <p>
+                        System settings enforce a hard retention floor of no less than <strong>four (4) years</strong>. No automated or manual deletion of operational financial history is permitted prior to the expiration of the mandated retention period.
+                    </p>
+                </section>
+
+                <section class="mb-5">
+                    <h2 class="h4 text-secondary fw-semibold border-start border-4 border-primary ps-3 mb-3">5. Data Subject Rights</h2>
+                    <p>Under the Data Protection Act of Jamaica, registered data subjects maintain rights regarding their personal data, including:</p>
+                    <ul>
+                        <li><strong>Right of Access:</strong> Request access to personal data and banking information held within the system.</li>
+                        <li><strong>Right to Rectification:</strong> Request correction of inaccurate or incomplete profile or financial details.</li>
+                        <li><strong>Right to Object & Restrict:</strong> Object to processing where applicable under statutory limits.</li>
+                    </ul>
+                    <p class="text-muted">
+                        Note: Access to sensitive banking details and stored message bodies is restricted to authorized roles (Accountants and Administrators) in accordance with least-privilege principles.
+                    </p>
+                </section>
+
+                <section class="mb-4">
+                    <h2 class="h4 text-secondary fw-semibold border-start border-4 border-primary ps-3 mb-3">6. Support & Privacy Contact</h2>
+                    <p>
+                        For questions, privacy inquiries, or data subject access requests under Jamaican law, please contact our designated privacy team:
+                    </p>
+                    <div class="card bg-light border-0 p-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold">Privacy & Support Email:</span>
+                            <a href="mailto:privacy@elixom.com" class="text-decoration-none font-monospace fw-semibold">privacy@elixom.com</a>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
