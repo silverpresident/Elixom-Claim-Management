@@ -18,7 +18,7 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | — |
+| 1 | In progress | 2026-09-02 | Reconciling the Sprint 04 minimal payroll association with the complete salary-definition, adjustment, and ordered payroll-entry schema. |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
