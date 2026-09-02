@@ -1,31 +1,115 @@
-html {
-  font-size: 14px;
-}
-
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+/* Elixom Claim site styles */
+:root {
+    --primary-color: #0d6efd;
+    --background-color: #f8f9fa;
+    --text-color: #212529;
 }
 
 body {
-  margin-bottom: 60px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text-color);
+    background-color: var(--background-color);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+main {
+    flex: 1 0 auto;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+footer {
+    flex-shrink: 0;
+}
+
+/* Status Badge Component Styles */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35em 0.65em;
+    font-size: 0.85em;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 0.375rem;
+    text-transform: capitalize;
+}
+
+.status-badge-draft { background-color: #e2e3e5; color: #41464b; border: 1px solid #c6c7c8; }
+.status-badge-submitted { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }
+.status-badge-accepted { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+.status-badge-rejected { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+.status-badge-processing { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+.status-badge-collected { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+.status-badge-scheduled { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }
+.status-badge-paid { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+.status-badge-honoured { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+.status-badge-transferred { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+
+/* Empty State Component */
+.empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    background-color: #ffffff;
+    border: 1px dashed #dee2e6;
+    border-radius: 0.5rem;
+    margin: 1.5rem 0;
+}
+
+.empty-state-icon {
+    font-size: 2.5rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+/* Accessibility Focus Ring */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Print Stylesheet (@media print) */
+@media print {
+    /* Hide non-printable navigation, buttons, footers, and internal notes */
+    .no-print,
+    header,
+    footer,
+    .navbar,
+    .btn,
+    .internal-note,
+    .alert-dismissible .btn-close {
+        display: none !important;
+    }
+
+    body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-size: 12pt;
+    }
+
+    .container, .container-fluid {
+        width: 100% !important;
+        max-width: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .card {
+        border: 1px solid #000000 !important;
+        box-shadow: none !important;
+    }
+
+    .table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    .table th, .table td {
+        border: 1px solid #000000 !important;
+        padding: 6pt !important;
+    }
+
+    a[href]:after {
+        content: ""; /* Do not print URL text after links */
+    }
 }
