@@ -11,6 +11,7 @@
 - **Outbox delivery:** `EmailOutboxItems` are dispatched through SMTP, Azure Communication Services, or the development fake sender. `EmailLogs` (`20260902215402_AddEmailLogs`) record every delivery/skipped outcome; failures retry with bounded exponential backoff and invalid optional payor addresses are recorded as skipped without blocking other recipients.
 - **Teller collections UI:** `/collections` provides the recording teller’s 24-hour queue, entry, review, controlled reissue, and print-ready HTML receipt. Print/email receipts do not include internal processing fees.
 - **Retention configuration:** `Retention:FinancialRecordRetentionYears` defaults to nine and is validated at startup with a four-year minimum.
+- **Job payment schema:** `JobPayments` has an enforced exactly-one payee check (user or collection client), row-version concurrency, exact JMD totals, and unique line associations. `Payrolls` is a minimal locked/generated association prerequisite only; Sprint 05 owns payroll behavior. See `20260902221255_AddJobPaymentEntities`.
 - **Projects:** `ElixomClaim.Lib`, `ElixomClaim.Web`, and matching Lib/Web xUnit test projects under `src/`.
 - **Frontend:** Razor MVC with Bootstrap 5.3 and jQuery 3.7 from CDN only; printable documents are HTML/CSS only—PDF generation is forbidden.
 
@@ -42,7 +43,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 01 Identity & security | Complete | All 8 items complete. See `sprints/01-identity-security.md`. |
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
 | 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
-| 04 Job payments | In progress | Item 1: job-payment persistence model. See `sprints/04-job-payments.md`. |
+| 04 Job payments | In progress | Item 1 complete; next is shared Processing job management and server-side totals. See `sprints/04-job-payments.md`. |
 | 05 Salary & payroll | Planned | See `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Planned | See `sprints/06-mcp-release.md`. |
 
@@ -50,6 +51,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
 2. **Reversal accounting:** document the accounting treatment and authorization workflow for reversal/adjustment payments before Sprint 04 implementation.
+3. **Payroll association prerequisite:** Sprint 04 requires a constrained `Payroll` association before the broader Sprint 05 salary/payroll model exists; only the minimal persistence record needed for referential integrity will be introduced now.
 
 ## Decision log
 

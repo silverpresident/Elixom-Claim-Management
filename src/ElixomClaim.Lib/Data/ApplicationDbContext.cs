@@ -28,6 +28,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<CollectionTransaction> CollectionTransactions => Set<CollectionTransaction>();
     public DbSet<EmailOutboxItem> EmailOutboxItems => Set<EmailOutboxItem>();
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+    public DbSet<Payroll> Payrolls => Set<Payroll>();
+    public DbSet<JobPayment> JobPayments => Set<JobPayment>();
+    public DbSet<JobPaymentClaim> JobPaymentClaims => Set<JobPaymentClaim>();
+    public DbSet<JobPaymentCollection> JobPaymentCollections => Set<JobPaymentCollection>();
+    public DbSet<JobPaymentPayroll> JobPaymentPayrolls => Set<JobPaymentPayroll>();
+    public DbSet<JobPaymentDeduction> JobPaymentDeductions => Set<JobPaymentDeduction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -324,6 +330,71 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.FailureReason).HasMaxLength(1000);
             entity.HasIndex(e => e.OutboxItemId);
             entity.HasIndex(e => e.CreatedAtUtc);
+        });
+
+        modelBuilder.Entity<Payroll>(entity =>
+        {
+            entity.ToTable("Payrolls");
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.NetAmount).IsRequired().HasPrecision(18, 2);
+            entity.Property(p => p.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
+            entity.Property(p => p.IsLocked).IsRequired().HasDefaultValue(false);
+            entity.Property(p => p.RowVersion).IsRowVersion();
+            entity.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(p => new { p.UserId, p.Status });
+        });
+
+        modelBuilder.Entity<JobPayment>(entity =>
+        {
+            entity.ToTable("JobPayments", table => table.HasCheckConstraint("CK_JobPayments_ExactlyOnePayee", "([PayeeUserId] IS NOT NULL AND [CollectionClientId] IS NULL) OR ([PayeeUserId] IS NULL AND [CollectionClientId] IS NOT NULL)"));
+            entity.HasKey(j => j.Id);
+            entity.Property(j => j.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
+            entity.Property(j => j.PublicNote).HasMaxLength(4000);
+            entity.Property(j => j.InternalNote).HasMaxLength(4000);
+            entity.Property(j => j.JobTotal).IsRequired().HasPrecision(18, 2);
+            entity.Property(j => j.ClientProcessingFee).IsRequired().HasPrecision(18, 2);
+            entity.Property(j => j.TotalTxnProcessingFee).IsRequired().HasPrecision(18, 2);
+            entity.Property(j => j.TotalDeductions).IsRequired().HasPrecision(18, 2);
+            entity.Property(j => j.TotalPaid).IsRequired().HasPrecision(18, 2);
+            entity.Property(j => j.Currency).IsRequired().HasMaxLength(10).HasDefaultValue("JMD");
+            entity.Property(j => j.PaymentTransactionNumber).HasMaxLength(100);
+            entity.Property(j => j.RowVersion).IsRowVersion();
+            entity.HasOne(j => j.PayeeUser).WithMany().HasForeignKey(j => j.PayeeUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(j => j.CollectionClient).WithMany().HasForeignKey(j => j.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(j => j.OriginalJobPayment).WithMany().HasForeignKey(j => j.OriginalJobPaymentId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(j => new { j.Status, j.ScheduledAtUtc });
+            entity.HasIndex(j => j.PayeeUserId);
+            entity.HasIndex(j => j.CollectionClientId);
+        });
+
+        modelBuilder.Entity<JobPaymentClaim>(entity =>
+        {
+            entity.ToTable("JobPaymentClaims"); entity.HasKey(x => new { x.JobPaymentId, x.ClaimId });
+            entity.HasOne(x => x.JobPayment).WithMany(j => j.Claims).HasForeignKey(x => x.JobPaymentId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Claim).WithMany().HasForeignKey(x => x.ClaimId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => x.ClaimId).IsUnique();
+        });
+        modelBuilder.Entity<JobPaymentCollection>(entity =>
+        {
+            entity.ToTable("JobPaymentCollections"); entity.HasKey(x => new { x.JobPaymentId, x.CollectionTransactionId });
+            entity.HasOne(x => x.JobPayment).WithMany(j => j.Collections).HasForeignKey(x => x.JobPaymentId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CollectionTransaction).WithMany().HasForeignKey(x => x.CollectionTransactionId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => x.CollectionTransactionId).IsUnique();
+        });
+        modelBuilder.Entity<JobPaymentPayroll>(entity =>
+        {
+            entity.ToTable("JobPaymentPayrolls"); entity.HasKey(x => new { x.JobPaymentId, x.PayrollId });
+            entity.HasOne(x => x.JobPayment).WithMany(j => j.Payrolls).HasForeignKey(x => x.JobPaymentId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Payroll).WithMany().HasForeignKey(x => x.PayrollId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => x.PayrollId).IsUnique();
+        });
+        modelBuilder.Entity<JobPaymentDeduction>(entity =>
+        {
+            entity.ToTable("JobPaymentDeductions"); entity.HasKey(x => x.Id);
+            entity.Property(x => x.Description).IsRequired().HasMaxLength(500);
+            entity.Property(x => x.Amount).IsRequired().HasPrecision(18, 2);
+            entity.HasOne(x => x.JobPayment).WithMany(j => j.Deductions).HasForeignKey(x => x.JobPaymentId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(x => x.JobPaymentId);
         });
     }
 

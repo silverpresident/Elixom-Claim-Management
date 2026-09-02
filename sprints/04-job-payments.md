@@ -19,7 +19,8 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | In progress | 2026-09-02 | Defining job-payment aggregate, line associations, deductions, exact JMD totals, exclusivity/integrity constraints, and concurrency model. |
+| 1 | Complete | 2026-09-02 | Added `JobPayment`, claim/collection/payroll association entities, deductions, payout fields, exact `decimal(18,2)` JMD totals, lifecycle enum, row-version concurrency, and SQL check/unique constraints. Migration: `20260902221255_AddJobPaymentEntities`. Tests: `JobPaymentModelTests`; `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` passed (74). |
+| 1a | Complete | 2026-09-02 | Added minimal `Payroll` persistence record and constrained one-payment association required by item 1. It deliberately omits salary definition, entry, and generation behavior, which remains Sprint 05 scope. |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
