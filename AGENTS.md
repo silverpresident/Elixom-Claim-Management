@@ -39,6 +39,8 @@ Use `adr/` for decisions that materially affect architecture, security, data gov
 - Target .NET 10, C# 14, ASP.NET Core MVC, EF Core, Azure SQL, and schema `dbclaim`.
 - Keep business rules, entities, data access, and reusable services in `ElixomClaim.Lib`; keep HTTP/Razor/transport wiring in `ElixomClaim.Web`.
 - Controllers, background workers, and MCP tools are thin adapters over shared services. Do not duplicate business decisions in an adapter.
+- Split MCP tools into related files/classes (`ClaimTools`, `CollectionTools`, `JobPaymentTools`, `PayrollTools`, `EmailTools`, `OperationsTools`) with explicit DTO schemas. Never create a monolithic MCP tool class.
+- MCP email tools may compose approved templates and queue authorized sends through the durable outbox; they must not enable arbitrary-recipient, free-form, bulk, or direct-provider email sending. MCP background-task tools request audited, idempotent domain operations and never invoke worker internals directly.
 - Use async I/O, UTC timestamps, `decimal(18,2)` money, transactions for aggregate state changes, and database constraints for invariants that must survive concurrent requests.
 - Remove default `Class1.cs` files. Do not introduce a local Bootstrap or jQuery distribution.
 

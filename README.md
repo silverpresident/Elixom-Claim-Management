@@ -108,6 +108,10 @@ The web project contains an in-house OAuth 2.0 authorization server for MCP clie
 
 MCP authentication resolves the token to the concrete `User` record and projects that identity and role claims into `HttpContext.User`. An MCP tool has no elevated pseudo-role: it invokes the same domain service and policies as the web UI. Log every token/security event and every MCP invocation with actor, action, target, time, IP/correlation information, and `IsMcp = true`.
 
+MCP tools are grouped into related class files under `ElixomClaim.Web/Mcp/Tools/`, rather than one monolithic server class: `ClaimTools`, `CollectionTools`, `JobPaymentTools`, `PayrollTools`, `EmailTools`, and `OperationsTools`. Tool classes are HTTP/MCP adapters only and call Lib services; tool schemas use explicit request/response DTOs and never expose entities, credentials, tokens, or unrestricted database queries.
+
+`EmailTools` can compose approved receipt/payment-summary templates and return a redacted preview, then queue a send through the durable outbox. It cannot send arbitrary free-form content or add arbitrary recipients. `OperationsTools` may request safe, idempotent background work—not execute worker internals directly: Accountants can request salary-generation preview/run; Administrators can request an outbox dispatch wake-up or other approved maintenance command. Each command has an idempotency key, operation record, authorization/scope check, audit entry, and observable status. Destructive maintenance, credential/key operations, retention purge, and direct bulk email are not MCP tools.
+
 ## Notifications, audit, and observability
 
 - Queue emails through a durable outbox and background worker. `IEmailSender` implementations support SMTP and Azure Communication Services, selected by configuration.

@@ -21,6 +21,7 @@
 - A job payment has either a claimant or a collection client—not both—and only changes line items while Processing.
 - Marking a job Paid atomically updates linked claims, collections, and payrolls and creates an idempotent notification outbox record.
 - Salary generation and payment state changes are domain services called by thin hosted services/controllers/MCP tools.
+- MCP tools are grouped by domain class and include constrained email composition/outbox dispatch and audited background-operation requests; they do not provide arbitrary email or direct worker execution.
 - Paid job payments are immutable; corrections are separately auditable linked reversal/adjustment payments.
 - Accountant and Administrator can see bank details and email bodies; Manager sees email metadata only.
 - Financial, audit, and email records retain for nine years. The configured retention floor is four years.
@@ -59,3 +60,4 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 2026-09-02 | Full bank/email-body access is Accountant/Administrator only; Managers see email metadata. | Least-privilege handling of sensitive financial and message data. |
 | 2026-09-02 | Retain financial, audit, and email records for nine years; configuration may not go below four. | Business retention requirement. |
 | 2026-09-02 | Build the OAuth 2.0 server in-house, including dynamic client registration. | Product requirement; see ADR 0001. |
+| 2026-09-02 | Group MCP tools by domain and expose only constrained email/background-operation commands. | Keeps tool surface maintainable and prevents MCP from bypassing outbox, authorization, and audit controls. |

@@ -6,7 +6,7 @@
 2. Implement and unit-test the due-date calculator, including month boundaries, leap years, nearest-weekday tie-break, start/end inclusivity, inactive definitions, and duplicate prevention.
 3. Implement payroll generation in one transaction: base, benefits, deductions, locks, deterministic ordering, total, and `LastSalaryDate` update.
 4. Add controlled custom entries while Generated; enforce that negative adjustments never make the payroll net negative. Submit locks entries and creates a linked Processing job payment.
-5. Add daily hosted scheduler with distributed-safe/idempotent execution and manual authorized Generate Now action; keep both as calls to the same service.
+5. Add daily hosted scheduler with distributed-safe/idempotent execution, manual authorized Generate Now action, and an Accountant-scoped MCP trigger that supports preview/run and delegates to the same service.
 6. Build Accountant salary/payroll screens with calculation previews, status clarity, validation, and audit history.
 7. Test recurrence, amount calculations, locking, submission, job creation, and paid cascade from Sprint 04.
 
