@@ -30,6 +30,10 @@
                         <li class="nav-item">
                             <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Dashboard</a>
                         </li>
+                        @if (User.IsInRole("Teller") || User.IsInRole("Manager") || User.IsInRole("Accountant") || User.IsInRole("Administrator"))
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-controller="Collections" asp-action="Index">Collections</a></li>
+                        }
                     </ul>
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">

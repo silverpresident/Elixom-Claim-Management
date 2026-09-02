@@ -1,0 +1,5 @@
+@model IEnumerable<ElixomClaim.Lib.Entities.CollectionTransaction>
+@{ ViewData["Title"] = "Collections"; }
+<div class="d-flex justify-content-between align-items-center mb-3"><div><h1>Collections</h1><p class="text-muted mb-0">Your collections recorded in the last 24 hours.</p></div><a class="btn btn-primary" asp-action="Create">Record collection</a></div>
+@if (!Model.Any()) { <div class="alert alert-info">No collections recorded in the last 24 hours.</div> }
+else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Receipt</th><th>Client</th><th>Purpose</th><th>Amount</th><th>Status</th><th>Recorded</th></tr></thead><tbody>@foreach (var item in Model) { <tr><td><a asp-action="Details" asp-route-id="@item.Id">#@item.Id</a></td><td>@item.CollectionClient.Name</td><td>@item.PurposeOption.Name</td><td>@item.Amount.ToString("N2") JMD</td><td><span class="badge text-bg-success">@item.Status</span></td><td>@item.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</td></tr>}</tbody></table></div> }

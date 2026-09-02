@@ -1,0 +1,3 @@
+@model ElixomClaim.Lib.Entities.CollectionTransaction
+@{ Layout = "_Layout"; ViewData["Title"] = $"Receipt #{Model.Id}"; }
+<article class="receipt-print"><header><h1>Elixom Claim</h1><h2>Collection receipt</h2><p>Receipt #@Model.Id</p></header><dl><dt>Client</dt><dd>@Model.CollectionClient.Name</dd><dt>Purpose</dt><dd>@Model.PurposeOption.Name</dd><dt>Amount</dt><dd>@Model.Amount.ToString("N2") JMD</dd><dt>Method</dt><dd>@Model.Method</dd><dt>Payment date</dt><dd>@Model.PaymentDateUtc.ToString("yyyy-MM-dd HH:mm") UTC</dd></dl><p class="no-print"><button class="btn btn-primary" onclick="window.print()">Print</button></p></article>

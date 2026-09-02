@@ -127,6 +127,35 @@ public class CollectionService : ICollectionService
         }
     }
 
+    public async Task<Result> ReissueReceiptAsync(long collectionId, Guid actorUserId, CancellationToken cancellationToken = default)
+    {
+        var actor = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == actorUserId && u.IsActive, cancellationToken);
+        var collection = await _dbContext.CollectionTransactions.Include(c => c.CollectionClient).Include(c => c.PurposeOption).Include(c => c.AmountOption).SingleOrDefaultAsync(c => c.Id == collectionId, cancellationToken);
+        if (actor is null || collection is null || !actor.Role.HasMinimumRole(UserRole.Teller)) return Result.Failure("Collection receipt was not found.");
+        if (actor.Id != collection.TellerUserId && !actor.Role.HasMinimumRole(UserRole.Manager)) return Result.Failure("Only the recording teller or a manager may reissue this receipt.");
+
+        var recipients = await _dbContext.EmailOutboxItems.Where(e => e.RelatedEntityType == "CollectionTransaction" && e.RelatedEntityId == collection.Id.ToString() && e.Status != EmailOutboxStatus.SkippedInvalidRecipient).Select(e => e.Recipient).Distinct().ToListAsync(cancellationToken);
+        if (recipients.Count == 0) return Result.Failure("There are no valid configured receipt recipients.");
+        foreach (var recipient in recipients.Where(IsValidEmail))
+        {
+            _dbContext.EmailOutboxItems.Add(new EmailOutboxItem
+            {
+                Recipient = recipient,
+                Subject = $"Collection receipt reissue #{collection.Id}",
+                HtmlBody = ComposeReceiptHtml(collection, collection.CollectionClient, collection.PurposeOption, collection.AmountOption),
+                RelatedEntityType = "CollectionTransaction",
+                RelatedEntityId = collection.Id.ToString(),
+                IdempotencyKey = $"collection-receipt-reissue:{collection.Id}:{Guid.NewGuid():N}",
+                Status = EmailOutboxStatus.Pending,
+                AvailableAtUtc = _clock.UtcNow,
+                CreatedAtUtc = _clock.UtcNow
+            });
+        }
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _auditService.LogAsync("COLLECTION_RECEIPT_REISSUED", $"CollectionTransaction:{collection.Id}", actorUserId: actor.Id.ToString(), cancellationToken: cancellationToken);
+        return Result.Success();
+    }
+
     private static bool IsValidEmail(string value)
     {
         try { return new MailAddress(value).Address.Equals(value, StringComparison.OrdinalIgnoreCase); }

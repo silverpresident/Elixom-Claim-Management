@@ -1,0 +1,5 @@
+@model ElixomClaim.Lib.Entities.CollectionTransaction
+@{ ViewData["Title"] = $"Collection #{Model.Id}"; }
+<div class="d-flex justify-content-between"><div><h1>Collection #@Model.Id</h1><p class="text-muted">Recorded @Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p></div><span class="badge text-bg-success align-self-start">@Model.Status</span></div>
+<dl class="row"><dt class="col-sm-3">Client</dt><dd class="col-sm-9">@Model.CollectionClient.Name</dd><dt class="col-sm-3">Purpose</dt><dd class="col-sm-9">@Model.PurposeOption.Name</dd><dt class="col-sm-3">Amount</dt><dd class="col-sm-9">@Model.Amount.ToString("N2") JMD</dd><dt class="col-sm-3">Method</dt><dd class="col-sm-9">@Model.Method</dd><dt class="col-sm-3">Payor</dt><dd class="col-sm-9">@Model.PayorName</dd></dl>
+<form method="post" asp-action="Reissue" asp-route-id="@Model.Id" class="d-inline">@Html.AntiForgeryToken()<button class="btn btn-outline-primary">Reissue receipt</button></form> <a class="btn btn-outline-secondary" asp-action="Print" asp-route-id="@Model.Id" target="_blank">Print receipt</a> <a class="btn btn-link" asp-action="Index">Back to collections</a>
