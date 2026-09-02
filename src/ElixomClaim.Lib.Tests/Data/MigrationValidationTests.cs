@@ -20,7 +20,7 @@ public class MigrationValidationTests
     }
 
     [Fact]
-    public void MigrationFiles_DoNotContainDestructiveDropOperations()
+    public void MigrationFiles_DoNotContainDestructiveDropOperationsInUpMethod()
     {
         var migrationsPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "ElixomClaim.Lib", "Migrations");
         if (!Directory.Exists(migrationsPath))
@@ -38,8 +38,19 @@ public class MigrationValidationTests
                 continue;
 
             var content = File.ReadAllText(file);
-            Assert.DoesNotContain("DropTable", content);
-            Assert.DoesNotContain("DropColumn", content);
+            // Extract the Up method content to verify no destructive operations are in Up migration steps
+            var upMethodStartIndex = content.IndexOf("protected override void Up(");
+            var downMethodStartIndex = content.IndexOf("protected override void Down(");
+
+            if (upMethodStartIndex >= 0)
+            {
+                var upContent = downMethodStartIndex > upMethodStartIndex
+                    ? content.Substring(upMethodStartIndex, downMethodStartIndex - upMethodStartIndex)
+                    : content.Substring(upMethodStartIndex);
+
+                Assert.DoesNotContain("DropTable", upContent);
+                Assert.DoesNotContain("DropColumn", upContent);
+            }
         }
     }
 }

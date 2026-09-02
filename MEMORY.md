@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 00 Foundation in progress; .NET 10 solution ElixomClaim.slnx and 4 projects scaffolded under `src/`.
+- **Stage:** Sprint 00 Foundation complete; Sprint 01 Identity & security in progress.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Projects:** `ElixomClaim.Lib`, `ElixomClaim.Web`, and matching Lib/Web xUnit test projects under `src/`.
@@ -32,8 +32,8 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 
 | Sprint | State | Note |
 | --- | --- | --- |
-| 00 Foundation | In progress | Item 4 Complete. See `sprints/00-foundation.md`. |
-| 01 Identity & security | Planned | See `sprints/01-identity-security.md`. |
+| 00 Foundation | Complete | All 8 items complete. See `sprints/00-foundation.md`. |
+| 01 Identity & security | In progress | Item 1 Complete. See `sprints/01-identity-security.md`. |
 | 02 Claims | Planned | See `sprints/02-claims.md`. |
 | 03 Clearing house | Planned | See `sprints/03-clearing-house.md`. |
 | 04 Job payments | Planned | See `sprints/04-job-payments.md`. |

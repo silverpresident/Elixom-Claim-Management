@@ -1,0 +1,43 @@
+name: Build, Test & Security Scan Gates
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    name: Build & Test (.NET 10)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore ElixomClaim.slnx
+
+      - name: Build Solution
+        run: dotnet build ElixomClaim.slnx --configuration Release --no-restore
+
+      - name: Run Tests
+        run: dotnet test ElixomClaim.slnx --configuration Release --no-build --verbosity normal
+
+  security-scan:
+    name: Security & Secret Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify No Stored Secrets
+        run: |
+          echo "Scanning for accidental secret patterns in repository..."
+          ! grep -rn "ClientSecret.*=.*\"[A-Za-z0-9_\-]\{10,\}\"" src/ || exit 1

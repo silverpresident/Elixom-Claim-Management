@@ -157,8 +157,25 @@ Secrets belong in user secrets, Azure Key Vault, or deployment configuration—n
     "Provider": "Acs",
     "FromAddress": "no-reply@example.com",
     "SystemCopyAddress": "operations@example.com"
+  },
+  "OAuth": {
+    "Issuer": "ElixomClaim.OAuth",
+    "AccessTokenLifetimeSeconds": 3600,
+    "RefreshTokenLifetimeSeconds": 1209600
   }
 }
+```
+
+### User Secrets Setup
+For local development, configure sensitive options using .NET User Secrets:
+
+```bash
+dotnet user-secrets set --project src/ElixomClaim.Web "ConnectionStrings:ClaimDatabase" "Server=(localdb)\mssqllocaldb;Database=ElixomClaimDb;Trusted_Connection=True;MultipleActiveResultSets=true"
+dotnet user-secrets set --project src/ElixomClaim.Web "Authentication:Google:ClientId" "your-google-client-id.apps.googleusercontent.com"
+dotnet user-secrets set --project src/ElixomClaim.Web "Authentication:Google:ClientSecret" "your-google-client-secret"
+dotnet user-secrets set --project src/ElixomClaim.Web "Authentication:DefaultAdminEmail" "admin@example.com"
+dotnet user-secrets set --project src/ElixomClaim.Web "Notifications:FromAddress" "no-reply@example.com"
+dotnet user-secrets set --project src/ElixomClaim.Web "Notifications:SystemCopyAddress" "operations@example.com"
 ```
 
 ## Delivery plan
