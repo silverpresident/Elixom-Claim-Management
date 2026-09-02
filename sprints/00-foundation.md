@@ -30,5 +30,5 @@ Create a reliable, attractive base that later business work can extend without s
 | 4 | Complete | 2026-09-02 | MVC shell, Bootstrap 5.3 & jQuery 3.7 CDN with SRI, SVG favicon, StatusBadgeViewComponent, print CSS, and component tests. Command: `dotnet test ElixomClaim.slnx` passed (22 tests). |
 | 5 | Complete | 2026-09-02 | Meaningful Privacy Policy under Jamaican law (Data Protection Act 2020), 9-year retention, 4-year floor, privacy@elixom.com contact, legal review notice. Command: `dotnet test ElixomClaim.slnx` passed (24 tests total). |
 | 6 | Complete | 2026-09-02 | Typed & redacted options (DatabaseOptions, AuthenticationOptions, GoogleAuthOptions, NotificationOptions, OAuthOptions) with DataAnnotations and ValidateOnStart. Documented dotnet user-secrets in README.md. Command: `dotnet test ElixomClaim.slnx` passed (30 tests). |
-| 7 | Not started | — | — |
-| 8 | Not started | — | — |
+| 7 | Complete | 2026-09-02 | CorrelationIdMiddleware (X-Correlation-ID logging scope), /health/live and /health/ready endpoints in Program.cs, anonymized TestDataBuilder. Command: `dotnet test ElixomClaim.slnx` passed (34 tests). |
+| 8 | Complete | 2026-09-02 | ADR template & index (adr/), GitHub Actions workflow (ci.yml), CODEOWNERS, and pull_request_template.md. Command: `dotnet test ElixomClaim.slnx` passed (36 tests total). |

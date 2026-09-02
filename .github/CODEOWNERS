@@ -1,0 +1,9 @@
+# Codeowners
+
+# Default owners for entire repository
+*       @elixom-dev-team
+
+# Architecture & Security Governance
+/adr/                   @elixom-dev-team
+/.github/               @elixom-dev-team
+/src/ElixomClaim.Lib/   @elixom-dev-team
