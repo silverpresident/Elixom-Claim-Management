@@ -2,7 +2,7 @@
 
 ## Ordered backlog
 
-1. Add Job Payment, claim/collection/payroll associations, deductions, payout fields, JMD calculated-total/rounding rules, status enum, source/payee exclusivity constraint, immutability constraints, and concurrency controls.
+1. Add Job Payment, claim/collection/payroll associations, deductions, payout fields, JMD calculated-total rules that preserve exact two-decimal values without additional rounding, status enum, source/payee exclusivity constraint, immutability constraints, and concurrency controls.
 2. Implement shared commands to create/manage Processing jobs, attach accepted claims, attach Collected collections of one client, remove items, and manage deductions. Recalculate totals server-side.
 3. Build Manager job-payment lists/detail, filtered collection review, attachment flows, internal-note-safe print/detail view, and resend-notification command.
 4. Implement submit and Accountant schedule commands; scheduling locks edits and is audited.

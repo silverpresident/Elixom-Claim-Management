@@ -34,11 +34,11 @@ All database objects use the Azure SQL schema **`dbclaim`**. EF migrations are a
 - `ElixomClaim.Web` owns HTTP, Razor UI, Google sign-in wiring, OAuth endpoint plumbing, MCP transport, and thin hosted-service schedulers.
 - Controllers and MCP tools call the same Lib services. Neither is allowed to reimplement authorization or state-transition rules.
 - This is a single-company application; do not add tenant identifiers or tenant-resolution infrastructure.
-- Use `decimal(18,2)` for money, **JMD** as the sole currency, UTC timestamps for persisted instants, and a single identifier convention consistently. Define and test one rounding policy before financial calculations are implemented.
+- Use `decimal(18,2)` for money, **JMD** as the sole currency, UTC timestamps for persisted instants, and a single identifier convention consistently. Preserve exact two-decimal values; do not introduce intermediate, display, or payout rounding beyond the database scale.
 
 ## Identity, roles, and authorization
 
-Human users sign in with Google OpenID Connect only. There is no local password flow. A Google email must match an active `dbclaim.Users` record; a configured `Authentication:DefaultAdminEmail` is seeded/promoted safely so the system cannot be locked out.
+Human users sign in with Google OpenID Connect only. There is no local password flow and no Google Workspace-domain restriction: any Google account may sign in when its email matches an active `dbclaim.Users` record. A configured `Authentication:DefaultAdminEmail` is seeded/promoted safely so the system cannot be locked out.
 
 Roles are stored as one hierarchical application role, not a collection of unrelated permissions. A higher role inherits lower-role capabilities except that `Blocked` has no access.
 
@@ -68,7 +68,7 @@ Draft ──submit──> Submitted ──accept──> Accepted ──attach to
 
 ### Collections and receipts
 
-A teller records a collection against a `CollectionClient`: payor details, client-defined purpose and amount options, collection method (`Cash`, `Pos`, `BankTransfer`, `CreditNote`), payment date, and internal processing fee. On confirmation, persist the collection, queue the responsive HTML receipt to the payor (when supplied), client recipients, and configured system-copy address, and expose a printable HTML route. Never generate PDFs.
+A teller records a collection against a `CollectionClient`: payor details, Administrator-configured purpose and amount options, collection method (`Cash`, `Pos`, `BankTransfer`, `CreditNote`), payment date, and internal processing fee. On confirmation, persist the collection, queue the responsive HTML receipt to the payor (when supplied), client recipients, and configured system-copy address, and expose a printable HTML route. Never generate PDFs.
 
 Collections may only move forward:
 
@@ -128,7 +128,7 @@ The interface is server-rendered Razor plus **Bootstrap 5.3 and jQuery 3.7 from 
 - Use explicit status badges paired with text, clear empty states, and filters that retain their selection.
 - Present payment and receipt details in print-friendly, responsive HTML with `@media print`; internal notes never appear in print or email.
 - Build semantic forms with labels, help/error text, keyboard support, focused validation summaries, and high-contrast state indicators.
-- Provide a real privacy page linked from the footer, describing Google sign-in, financial/contact data, email delivery, audit retention, support contact, and user rights. Legal review is required before production launch.
+- Provide a real privacy page linked from the footer, describing Google sign-in, financial/contact data, email delivery, audit retention, and user rights under the laws of Jamaica. The privacy and support contact is `privacy@elixom.com`. Legal review is required before production launch.
 
 ## Configuration
 

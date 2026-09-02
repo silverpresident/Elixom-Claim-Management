@@ -4,7 +4,7 @@
 
 - **Stage:** specification and delivery planning; no .NET solution has been scaffolded yet.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
-- **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, and persisted instants are UTC.
+- **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Projects:** `ElixomClaim.Lib`, `ElixomClaim.Web`, and matching Lib/Web xUnit test projects under `src/`.
 - **Frontend:** Razor MVC with Bootstrap 5.3 and jQuery 3.7 from CDN only; printable documents are HTML/CSS only—PDF generation is forbidden.
 
@@ -43,10 +43,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
-2. **Google tenancy:** confirm whether sign-in is restricted to a Google Workspace domain or permits any Google account already on the allow-list.
-3. **Client configuration ownership:** confirm whether only Administrators manage collection-client purpose/amount options and client-user assignments.
-4. **Retention/legal:** retention is nine years (four-year minimum); confirm privacy contact and jurisdiction before publishing the production privacy policy.
-5. **Financial policy:** document JMD rounding and reversal/adjustment accounting rules before Sprint 04 implementation.
+2. **Reversal accounting:** document the accounting treatment and authorization workflow for reversal/adjustment payments before Sprint 04 implementation.
 
 ## Decision log
 
@@ -61,3 +58,8 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 2026-09-02 | Retain financial, audit, and email records for nine years; configuration may not go below four. | Business retention requirement. |
 | 2026-09-02 | Build the OAuth 2.0 server in-house, including dynamic client registration. | Product requirement; see ADR 0001. |
 | 2026-09-02 | Group MCP tools by domain and expose only constrained email/background-operation commands. | Keeps tool surface maintainable and prevents MCP from bypassing outbox, authorization, and audit controls. |
+| 2026-09-02 | Permit any Google account that is on the active-user allow-list. | No Workspace-domain restriction. |
+| 2026-09-02 | Restrict Collection Client configuration to Administrators. | Centralized control of client options, assignments, and bank details. |
+| 2026-09-02 | Preserve JMD values to two decimal places with no additional rounding. | Business requirement. |
+| 2026-09-02 | Apply Jamaican law to privacy/legal requirements. | Business requirement. |
+| 2026-09-02 | Use `privacy@elixom.com` as the privacy and support contact. | Published privacy/support contact. |

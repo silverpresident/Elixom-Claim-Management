@@ -3,7 +3,7 @@
 ## Ordered backlog
 
 1. Model `User`, hierarchical role enum, active/blocked state, profile/bank fields, unique normalized email, and safe bootstrap-admin seeding.
-2. Configure Google OpenID Connect sign-in/cookie lifecycle; reject unknown/inactive users with a clear not-provisioned experience; refresh role claims at login.
+2. Configure Google OpenID Connect sign-in/cookie lifecycle without a Workspace-domain restriction; reject unknown/inactive users with a clear not-provisioned experience; refresh role claims at login.
 3. Add policy/ownership services and test every role boundary, including Blocked access and inherited capabilities.
 4. Model append-only audit records and implement a redacting audit service with actor, correlation, IP, action, target, before/after, and MCP flag.
 5. Build the in-house OAuth authorization-server foundation: dynamic client registration with client-authentication policy, registered-client lifecycle, exact redirect URI validation, consent, authorization code storage, PKCE S256 verification, short-lived tokens, refresh rotation/revocation, scopes, throttling, and audit events. Use platform cryptographic primitives; complete the ADR/threat model before code.
