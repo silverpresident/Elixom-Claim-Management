@@ -13,3 +13,4 @@ This directory contains Architectural Decision Records (ADRs) for the Elixom Cla
 | Number | Title | Status | Date |
 | --- | --- | --- | --- |
 | Template | [ADR Template](template.md) | Standard | 2026-09-02 |
+| 0002 | [Reversal and Adjustment Accounting](0002-reversal-adjustment-accounting.md) | Accepted | 2026-09-02 |

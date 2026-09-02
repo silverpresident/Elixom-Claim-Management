@@ -53,7 +53,6 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
-2. **Reversal accounting:** document the accounting treatment and authorization workflow for reversal/adjustment payments before Sprint 04 implementation.
 
 ## Decision log
 
@@ -73,3 +72,4 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 2026-09-02 | Preserve JMD values to two decimal places with no additional rounding. | Business requirement. |
 | 2026-09-02 | Apply Jamaican law to privacy/legal requirements. | Business requirement. |
 | 2026-09-02 | Use `privacy@elixom.com` as the privacy and support contact. | Published privacy/support contact. |
+| 2026-09-02 | Use linked partial/full accounting-only adjustments: Accountant creates, Administrator approves, Accountant settles; originals stay paid and immutable. | Approved reversal workflow; see [ADR 0002](adr/0002-reversal-adjustment-accounting.md). |
