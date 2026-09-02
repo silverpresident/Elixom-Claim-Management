@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprints 00–02 complete; Sprint 03 Clearing House item 5 complete.
+- **Stage:** Sprints 00–03 complete; Sprint 04 Job Payments item 1 in progress.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
@@ -10,6 +10,7 @@
 - **Collection recording:** `CollectionService` requires an active teller or above, validates active options against the selected active client, and persists the JMD collection, receipt queue records, and audit record atomically on relational providers. `EmailOutboxItems` (`20260902214751_AddEmailOutbox`) has unique idempotency keys and status scheduling fields; delivery is the next sprint item.
 - **Outbox delivery:** `EmailOutboxItems` are dispatched through SMTP, Azure Communication Services, or the development fake sender. `EmailLogs` (`20260902215402_AddEmailLogs`) record every delivery/skipped outcome; failures retry with bounded exponential backoff and invalid optional payor addresses are recorded as skipped without blocking other recipients.
 - **Teller collections UI:** `/collections` provides the recording teller’s 24-hour queue, entry, review, controlled reissue, and print-ready HTML receipt. Print/email receipts do not include internal processing fees.
+- **Retention configuration:** `Retention:FinancialRecordRetentionYears` defaults to nine and is validated at startup with a four-year minimum.
 - **Projects:** `ElixomClaim.Lib`, `ElixomClaim.Web`, and matching Lib/Web xUnit test projects under `src/`.
 - **Frontend:** Razor MVC with Bootstrap 5.3 and jQuery 3.7 from CDN only; printable documents are HTML/CSS only—PDF generation is forbidden.
 
@@ -40,8 +41,8 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 00 Foundation | Complete | All 8 items complete. See `sprints/00-foundation.md`. |
 | 01 Identity & security | Complete | All 8 items complete. See `sprints/01-identity-security.md`. |
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
-| 03 Clearing house | In progress | Items 1–5 complete; next is focused acceptance, privacy, and print/retention coverage. See `sprints/03-clearing-house.md`. |
-| 04 Job payments | Planned | See `sprints/04-job-payments.md`. |
+| 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
+| 04 Job payments | In progress | Item 1: job-payment persistence model. See `sprints/04-job-payments.md`. |
 | 05 Salary & payroll | Planned | See `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Planned | See `sprints/06-mcp-release.md`. |
 

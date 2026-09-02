@@ -54,6 +54,46 @@ public class CollectionServiceTests
         Assert.Empty(db.CollectionTransactions);
     }
 
+    [Fact]
+    public async Task RecordAsync_MissingOptionalPayorEmail_IsRecordedAsSkippedWithoutBlockingSystemReceipt()
+    {
+        await using var db = CreateDb();
+        var teller = User(UserRole.Teller, "teller@anonymized.example.com");
+        var client = new CollectionClient { Name = "Acme" };
+        db.AddRange(teller, client);
+        await db.SaveChangesAsync();
+        var purpose = new CollectionPurposeOption { CollectionClientId = client.Id, Name = "Service" };
+        var amount = new CollectionAmountOption { CollectionClientId = client.Id, Name = "Standard", Amount = 500m };
+        db.AddRange(purpose, amount);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RecordAsync(new(teller.Id, client.Id, purpose.Id, amount.Id, "Payor", null, CollectionMethod.Cash, 0m, DateTime.UtcNow));
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(db.EmailOutboxItems, item => item.Status == EmailOutboxStatus.SkippedInvalidRecipient);
+        Assert.Contains(db.EmailOutboxItems, item => item.Recipient == "system@anonymized.example.com" && item.Status == EmailOutboxStatus.Pending);
+        Assert.Contains(db.EmailLogs, log => log.Status == EmailOutboxStatus.SkippedInvalidRecipient);
+    }
+
+    [Fact]
+    public async Task RecordAsync_ReceiptBodyDoesNotExposeInternalProcessingFee()
+    {
+        await using var db = CreateDb();
+        var teller = User(UserRole.Teller, "teller@anonymized.example.com");
+        var client = new CollectionClient { Name = "Acme" };
+        db.AddRange(teller, client);
+        await db.SaveChangesAsync();
+        var purpose = new CollectionPurposeOption { CollectionClientId = client.Id, Name = "Service" };
+        var amount = new CollectionAmountOption { CollectionClientId = client.Id, Name = "Standard", Amount = 500m };
+        db.AddRange(purpose, amount);
+        await db.SaveChangesAsync();
+
+        await CreateService(db).RecordAsync(new(teller.Id, client.Id, purpose.Id, amount.Id, "Payor", "payor@anonymized.example.com", CollectionMethod.Cash, 44.44m, DateTime.UtcNow));
+
+        Assert.All(db.EmailOutboxItems, item => Assert.DoesNotContain("Processing fee", item.HtmlBody, StringComparison.OrdinalIgnoreCase));
+        Assert.All(db.EmailOutboxItems, item => Assert.DoesNotContain("44.44", item.HtmlBody, StringComparison.Ordinal));
+    }
+
     private static ApplicationDbContext CreateDb() => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     private static User User(UserRole role, string email) => new() { Email = email, NormalizedEmail = email.ToUpperInvariant(), FullName = "Anonymized user", Role = role };
     private static CollectionService CreateService(ApplicationDbContext db) => new(db, new AuditService(db, NullLogger<AuditService>.Instance), new SystemClock(), Options.Create(new NotificationOptions { Provider = "Disabled", FromAddress = "no-reply@anonymized.example.com", SystemCopyAddress = "system@anonymized.example.com" }), NullLogger<CollectionService>.Instance);

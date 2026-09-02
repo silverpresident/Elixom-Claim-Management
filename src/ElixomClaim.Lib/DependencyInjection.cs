@@ -39,6 +39,11 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<RetentionOptions>()
+            .Configure(options => configuration.GetSection(RetentionOptions.SectionName).Bind(options))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         var connectionString = configuration.GetConnectionString("ClaimDatabase");
 
         services.AddDbContext<ApplicationDbContext>(options =>
