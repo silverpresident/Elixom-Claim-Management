@@ -24,8 +24,8 @@ Create a reliable, attractive base that later business work can extend without s
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | — |
-| 2 | Not started | — | — |
+| 1 | Complete | 2026-09-02 | Solution ElixomClaim.slnx & 4 projects in src/ created; Class1.cs/wwwroot/lib removed; references added. Command: `dotnet test ElixomClaim.slnx` passed (2 tests). |
+| 2 | Complete | 2026-09-02 | Lib DI extension, ApplicationDbContext (dbclaim schema, decimal(18,2) exact JMD), ISystemClock, Result<T>, health checks, and DatabaseMigrationExtensions. Command: `dotnet test ElixomClaim.slnx` passed (9 tests). |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
 | 5 | Not started | — | — |

@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj" />
+    <Project Path="src/ElixomClaim.Lib/ElixomClaim.Lib.csproj" />
+    <Project Path="src/ElixomClaim.Web.Tests/ElixomClaim.Web.Tests.csproj" />
+    <Project Path="src/ElixomClaim.Web/ElixomClaim.Web.csproj" />
+  </Folder>
+</Solution>
