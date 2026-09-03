@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ElixomClaim.Web",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/ElixomClaim.Web/ElixomClaim.Web.csproj",
+      "launchProfile": "https"
+    }
+  ]
+}
