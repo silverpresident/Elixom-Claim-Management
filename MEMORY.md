@@ -59,6 +59,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
+2. **Sprint 05 item 5 dependency:** the requested Accountant-scoped MCP salary preview/run trigger is blocked on the planned Sprint 06 MCP transport, tool registration, and audited operation infrastructure. No MCP adapter was introduced outside that security boundary.
 
 ## Decision log
 
