@@ -22,7 +22,7 @@
 | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-02 | User entity, UserRole enum, ApplicationDbContext mapping with unique index on NormalizedEmail, AddUserEntity migration, and SeedBootstrapAdminAsync. Command: `dotnet test ElixomClaim.slnx` passed (45 tests total). |
 | 2 | Complete | 2026-09-02 | Google OIDC & Cookie authentication, UserValidationEvents principal validation, AccountController, Login/AccessDenied views. Command: `dotnet test ElixomClaim.slnx` passed (48 tests total). |
-| 3 | Not started | — | — |
+| 3 | Complete | 2026-09-03 | Reconciliation verified shared minimum-role and ownership handlers, the Active User/Teller/Manager/Accountant/Administrator policies, Blocked denial, and inherited role boundaries. Files: `src/ElixomClaim.Lib/Authorization/AuthorizationHandlers.cs`, `PolicyNames.cs`, `DependencyInjection.cs`, `src/ElixomClaim.Lib.Tests/Authorization/AuthorizationTests.cs`. Command: `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore --filter FullyQualifiedName~AuthorizationTests` passed (20). |
 | 4 | Not started | — | — |
 | 5 | Not started | — | — |
 | 6 | Not started | — | — |
