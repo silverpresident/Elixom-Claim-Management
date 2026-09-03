@@ -1,0 +1,33 @@
+
+-  Add `DateOfJob`  on `Claim` and the claim create/edit form and the details.
+- Add   profile and bank-details management route/UI for ordinary users.
+- Add a dashboard lists for  payment-history section.
+-  Add `Description`  on `CollectionClient` and the CollectionClient create/edit form and the details.
+-  Add `Notes`  on `CollectionClient` and the CollectionClient create/edit form and the details. Notes are for internal use only.
+- Add `PerJobProcessingFee`, or `PerTransactionFee` on `CollectionClient` and the CollectionClient create/edit form and the details.
+-  Add `Notes`  on `CollectionClientBankDetail` and the CollectionClientBankDetail create/edit form and the details.  Notes are for internal use only.
+-  Add `PayorTelephone`  on `CollectionTransaction` and the claim create/edit form and the details.  Notes are for internal use only.
+- Job-payment needs to provide user-facing creation, deduction, submission, scheduling, mark-paid, or adjustment approval workflows.
+-  Add `Title`  on `JobPayment` and the JobPayment create/edit form and the details.  Notes are for internal use only.
+- Rename `PublicNotes` to `Description`  on `JobPayment`
+-  Add UI and service command exists to manage Salary adjustments them after definition creation.
+- Custom payroll entries are supported by `SalaryPayrollService` now add  MVC endpoint/view allows an accountant to add them.
+- Access and refresh lifetimes should be configured not hard-coded to one hour and 14 days instead of using the configured `OAuthOptions` values.
+- Add  rate limiting or throttle mechanism is implemented to MVC calls.
+- Consent is displayed but neesd to be persisted as a consent record.
+- Dynamic registration has no redirect-URI shape validation or explicit registration admission policy.
+- `OAuthAuthorizationCode.Code` stores the raw authorization code in addition to its hash.
+- The authorization consent POST does not revalidate the client and redirect URI before redirecting. Form-field tampering therefore needs remediation to prevent an open-redirect path.
+- THe MCP and Api endpoints seem confused. The Controller labelled MCP is actually the Api endpoints. MCP tools were created in the Mcp folder but the Mcp server needs to be registered and those tools added. Use the standard .Net Mcp server library
+- The Home/Index page seems useless, like boilerplate code that has not been removed.
+- Check if there is a dashboard or navbar that allow users to navigate the system.
+- Add data annotations for decimal(18,2)
+- Add data annotations for display name, description, column type and anyother where necessary.
+- The model uses Guid for users/clients and long for most financial records. The specification explicitly asks for one convention. This is a design variation, not a current functional defect. Use Guid.
+- Add `CreatedAtUtc` on Every entity has except  join entities and aggregates.
+- Add `SentAtUtc` to EmailLog
+- Fix this issues: OperationsTools.cs uses a process-local static ConcurrentDictionary and directly calls salary/outbox services. It loses operation history on restart and does not provide the durable operation record required by the project guardrails.
+
+
+- Reset the EF migration. This should be the inital migration.
+- wire up Production migration on startup
