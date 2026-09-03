@@ -12,6 +12,7 @@ public interface ISalaryPayrollService
     Task<Result<Payroll>> GenerateForDefinitionAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
     Task<Result> AddCustomEntryAsync(long payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default);
     Task<Result<JobPayment>> SubmitAsync(long payrollId, Guid actorUserId, CancellationToken cancellationToken = default);
+    Task<int> GenerateDueAsync(DateOnly asOfDate, CancellationToken cancellationToken = default);
 }
 
 public sealed record SalaryPayrollPreview(DateOnly DueDate, SalaryGenerationEligibility Eligibility, decimal ProjectedTotal);
@@ -85,6 +86,29 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
             _logger.LogWarning(exception, "Salary payroll generation conflicted for definition {SalaryDefinitionId}.", salaryDefinitionId);
             return Result.Failure<Payroll>("A payroll for this salary due period already exists.");
         }
+    }
+
+    public async Task<int> GenerateDueAsync(DateOnly asOfDate, CancellationToken cancellationToken = default)
+    {
+        var definitionIds = await _db.SalaryDefinitions.Where(definition => definition.IsActive).Select(definition => definition.Id).ToArrayAsync(cancellationToken);
+        var generated = 0;
+        foreach (var definitionId in definitionIds)
+        {
+            var definition = await _db.SalaryDefinitions.Include(s => s.Adjustments).SingleAsync(s => s.Id == definitionId, cancellationToken);
+            var periods = await _db.Payrolls.Where(p => p.SalaryDefinitionId == definitionId).Select(p => p.PeriodEndingDate).ToArrayAsync(cancellationToken);
+            var plan = _planner.Plan(definition, asOfDate, periods);
+            if (!plan.CanGenerate) continue;
+            try
+            {
+                var payroll = CreatePayroll(definition, plan.DueDate);
+                _db.Payrolls.Add(payroll); definition.LastSalaryDate = plan.DueDate; definition.UpdatedAtUtc = _clock.UtcNow;
+                await _db.SaveChangesAsync(cancellationToken);
+                await _audit.LogAsync("PAYROLL_SCHEDULED_GENERATION", $"Payroll:{payroll.Id}", afterState: new { payroll.Id, payroll.SalaryDefinitionId, payroll.PeriodEndingDate }, cancellationToken: cancellationToken);
+                generated++;
+            }
+            catch (DbUpdateException) { _db.ChangeTracker.Clear(); }
+        }
+        return generated;
     }
 
     public async Task<Result> AddCustomEntryAsync(long payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default)

@@ -38,6 +38,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.PayrollTools>();
 builder.Services.AddHostedService<OutboxDispatchHostedService>();
+builder.Services.AddHostedService<SalaryGenerationHostedService>();
 
 var app = builder.Build();
 
