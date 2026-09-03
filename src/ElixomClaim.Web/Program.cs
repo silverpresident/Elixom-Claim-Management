@@ -25,6 +25,7 @@ builder.Services.AddAuthentication(options =>
     options.LogoutPath = "/Account/Logout";
     options.Events.OnValidatePrincipal = UserValidationEvents.ValidatePrincipalAsync;
 })
+.AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, BearerTokenAuthenticationHandler>(BearerTokenAuthenticationHandler.SchemeName, _ => { })
 .AddGoogle(options =>
 {
     var googleOptions = builder.Configuration.GetSection(GoogleAuthOptions.SectionName).Get<GoogleAuthOptions>();
@@ -35,6 +36,7 @@ builder.Services.AddAuthentication(options =>
 
 // Add MVC controllers with views
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.PayrollTools>();
 builder.Services.AddHostedService<OutboxDispatchHostedService>();
 
 var app = builder.Build();

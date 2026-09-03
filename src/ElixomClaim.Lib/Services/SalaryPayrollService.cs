@@ -8,10 +8,13 @@ namespace ElixomClaim.Lib.Services;
 
 public interface ISalaryPayrollService
 {
+    Task<Result<SalaryPayrollPreview>> PreviewAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
     Task<Result<Payroll>> GenerateForDefinitionAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
     Task<Result> AddCustomEntryAsync(long payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default);
     Task<Result<JobPayment>> SubmitAsync(long payrollId, Guid actorUserId, CancellationToken cancellationToken = default);
 }
+
+public sealed record SalaryPayrollPreview(DateOnly DueDate, SalaryGenerationEligibility Eligibility, decimal ProjectedTotal);
 
 public sealed class SalaryPayrollService : ISalaryPayrollService
 {
@@ -28,6 +31,17 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
         _audit = audit;
         _clock = clock;
         _logger = logger;
+    }
+
+    public async Task<Result<SalaryPayrollPreview>> PreviewAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default)
+    {
+        if (!await IsAccountantAsync(actorUserId, cancellationToken)) return Result.Failure<SalaryPayrollPreview>("Accountant access is required.");
+        var definition = await _db.SalaryDefinitions.Include(s => s.Adjustments).SingleOrDefaultAsync(s => s.Id == salaryDefinitionId, cancellationToken);
+        if (definition is null) return Result.Failure<SalaryPayrollPreview>("Salary definition was not found.");
+        var periods = await _db.Payrolls.Where(p => p.SalaryDefinitionId == salaryDefinitionId).Select(p => p.PeriodEndingDate).ToArrayAsync(cancellationToken);
+        var plan = _planner.Plan(definition, asOfDate, periods);
+        var total = definition.BaseAmount + definition.Adjustments.Where(a => a.Type == SalaryAdjustmentType.Benefit).Sum(a => definition.BaseAmount * a.PercentageRate + a.FixedValue) - definition.Adjustments.Where(a => a.Type == SalaryAdjustmentType.Deduction).Sum(a => definition.BaseAmount * a.PercentageRate + a.FixedValue);
+        return Result.Success(new SalaryPayrollPreview(plan.DueDate, plan.Eligibility, total));
     }
 
     public async Task<Result<Payroll>> GenerateForDefinitionAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default)
