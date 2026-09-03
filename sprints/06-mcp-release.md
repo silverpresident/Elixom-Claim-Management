@@ -27,5 +27,5 @@
 | 5 | Not started | — | — |
 | 6 | Not started | — | — |
 | 7 | Not started | — | — |
-| 8 | Not started | — | — |
-| 9 | Not started | — | — |
+| 8 | Complete | 2026-09-03 | Added operational runbooks in docs/runbooks/ for migration, bootstrap admin recovery, OAuth key rotation, email failure handling, audit review, backup/restore, incident response, and privacy requests. |
+| 9 | Complete | 2026-09-03 | Documented OAuth threat model (docs/oauth-threat-model.md), added ConcurrencyAndSettlementTests, verified /health/live and /health/ready, updated MEMORY.md and sprint completion. |

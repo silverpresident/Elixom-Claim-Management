@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 05 Salary & Payroll complete; Sprint 06 MCP & readiness in progress.
+- **Stage:** Sprint 06 MCP & Release Readiness complete.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
@@ -56,7 +56,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
 | 04 Job payments | Complete | All 8 items complete; verification recorded in `sprints/04-job-payments.md`. |
 | 05 Salary & payroll | Complete | All ordered items complete; Lib/Web test evidence recorded in `sprints/05-salary-payroll.md`. |
-| 06 MCP & readiness | In progress | See `sprints/06-mcp-release.md`. |
+| 06 MCP & readiness | Complete | All 9 items complete; build and 127 tests passed on 2026-09-03. See `sprints/06-mcp-release.md`. |
 
 ## Open decisions / risks
 
