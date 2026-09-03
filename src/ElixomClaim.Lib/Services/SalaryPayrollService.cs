@@ -8,12 +8,15 @@ namespace ElixomClaim.Lib.Services;
 
 public interface ISalaryPayrollService
 {
+    Task<Result<SalaryDefinition>> CreateDefinitionAsync(CreateSalaryDefinitionCommand command, CancellationToken cancellationToken = default);
     Task<Result<SalaryPayrollPreview>> PreviewAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
     Task<Result<Payroll>> GenerateForDefinitionAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
     Task<Result> AddCustomEntryAsync(long payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default);
     Task<Result<JobPayment>> SubmitAsync(long payrollId, Guid actorUserId, CancellationToken cancellationToken = default);
     Task<int> GenerateDueAsync(DateOnly asOfDate, CancellationToken cancellationToken = default);
 }
+
+public sealed record CreateSalaryDefinitionCommand(Guid ActorUserId, Guid UserId, string Description, decimal BaseAmount, DateOnly FirstSalaryDate, DateOnly StartDate, DateOnly? EndDate, int RecurrenceDays, int RecurrenceMonths, DayOfWeek NearestWeekday);
 
 public sealed record SalaryPayrollPreview(DateOnly DueDate, SalaryGenerationEligibility Eligibility, decimal ProjectedTotal);
 
@@ -32,6 +35,17 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
         _audit = audit;
         _clock = clock;
         _logger = logger;
+    }
+
+    public async Task<Result<SalaryDefinition>> CreateDefinitionAsync(CreateSalaryDefinitionCommand command, CancellationToken cancellationToken = default)
+    {
+        if (!await IsAccountantAsync(command.ActorUserId, cancellationToken)) return Result.Failure<SalaryDefinition>("Accountant access is required.");
+        if (string.IsNullOrWhiteSpace(command.Description) || command.BaseAmount <= 0 || command.RecurrenceDays < 0 || command.RecurrenceMonths < 0 || (command.RecurrenceDays == 0 && command.RecurrenceMonths == 0) || command.EndDate is { } end && end < command.StartDate) return Result.Failure<SalaryDefinition>("Salary definition values are invalid.");
+        if (!await _db.Users.AnyAsync(user => user.Id == command.UserId && user.IsActive, cancellationToken)) return Result.Failure<SalaryDefinition>("Active payee user was not found.");
+        var definition = new SalaryDefinition { UserId = command.UserId, Description = command.Description.Trim(), BaseAmount = command.BaseAmount, FirstSalaryDate = command.FirstSalaryDate, LastSalaryDate = command.FirstSalaryDate, StartDate = command.StartDate, EndDate = command.EndDate, RecurrenceDays = command.RecurrenceDays, RecurrenceMonths = command.RecurrenceMonths, NearestWeekday = command.NearestWeekday, CreatedAtUtc = _clock.UtcNow, UpdatedAtUtc = _clock.UtcNow };
+        _db.SalaryDefinitions.Add(definition); await _db.SaveChangesAsync(cancellationToken);
+        await _audit.LogAsync("SALARY_DEFINITION_CREATED", $"SalaryDefinition:{definition.Id}", afterState: new { definition.Id, definition.UserId, definition.BaseAmount }, actorUserId: command.ActorUserId.ToString(), cancellationToken: cancellationToken);
+        return Result.Success(definition);
     }
 
     public async Task<Result<SalaryPayrollPreview>> PreviewAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default)

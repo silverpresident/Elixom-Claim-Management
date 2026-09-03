@@ -4,4 +4,5 @@ public sealed class PayrollWorkspaceViewModel
 {
     public IReadOnlyList<SalaryDefinition> SalaryDefinitions { get; init; } = [];
     public IReadOnlyList<Payroll> Payrolls { get; init; } = [];
+    public IReadOnlyList<AuditRecord> AuditRecords { get; init; } = [];
 }
