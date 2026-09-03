@@ -58,6 +58,7 @@ public static class DependencyInjection
         });
 
         services.AddSingleton<ISystemClock, SystemClock>();
+        services.AddSingleton<ISalaryRecurrencePlanner, SalaryRecurrencePlanner>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IOAuthService, OAuthService>();
         services.AddScoped<IClaimService, ClaimService>();
