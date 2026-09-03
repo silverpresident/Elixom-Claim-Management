@@ -13,7 +13,7 @@ public class JobPaymentModelTests
         using var db = CreateDb();
         var entity = db.Model.FindEntityType(typeof(JobPayment))!;
         var migrationPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "ElixomClaim.Lib", "Migrations"));
-        Assert.Contains("CK_JobPayments_ExactlyOnePayee", File.ReadAllText(Directory.GetFiles(migrationPath, "*AddJobPaymentEntities.cs").Single()));
+        Assert.Contains("CK_JobPayments_ExactlyOnePayee", File.ReadAllText(Directory.GetFiles(migrationPath, "*_InitialCreate.cs").Single()));
         foreach (var property in new[] { nameof(JobPayment.JobTotal), nameof(JobPayment.ClientProcessingFee), nameof(JobPayment.TotalTxnProcessingFee), nameof(JobPayment.TotalDeductions), nameof(JobPayment.TotalPaid) })
         {
             Assert.Equal(18, entity.FindProperty(property)!.GetPrecision());

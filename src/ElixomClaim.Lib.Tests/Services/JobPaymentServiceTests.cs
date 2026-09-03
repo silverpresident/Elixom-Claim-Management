@@ -74,7 +74,7 @@ public class JobPaymentServiceTests
         var client = new CollectionClient { Name = "Client" };
         db.AddRange(accountant, payee, claim, client); await db.SaveChangesAsync();
         var collection = new CollectionTransaction { CollectionClientId = client.Id, TellerUserId = accountant.Id, PurposeOptionId = 1, AmountOptionId = 1, PayorName = "Payor", Amount = 200m, Status = CollectionStatus.Processing, PaymentDateUtc = DateTime.UtcNow };
-        var payroll = new Payroll { UserId = payee.Id, NetAmount = 300m, Status = PayrollStatus.Submitted };
+        var payroll = new Payroll { UserId = payee.Id, PayrollTotal = 300m, Status = PayrollStatus.Submitted };
         var job = new JobPayment { PayeeUserId = payee.Id, Status = JobPaymentStatus.Scheduled, JobTotal = 600m, TotalPaid = 600m };
         db.AddRange(collection, payroll, job); await db.SaveChangesAsync();
         db.AddRange(new JobPaymentClaim { JobPaymentId = job.Id, ClaimId = claim.Id }, new JobPaymentCollection { JobPaymentId = job.Id, CollectionTransactionId = collection.Id }, new JobPaymentPayroll { JobPaymentId = job.Id, PayrollId = payroll.Id }); await db.SaveChangesAsync();

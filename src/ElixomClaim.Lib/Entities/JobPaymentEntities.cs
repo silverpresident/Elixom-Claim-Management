@@ -15,17 +15,82 @@ public enum PayrollStatus
     Paid
 }
 
-/// <summary>Minimal payroll record introduced as the Sprint 04 association prerequisite. Salary calculation belongs to Sprint 05.</summary>
-public class Payroll
+public enum SalaryAdjustmentType
+{
+    Benefit,
+    Deduction
+}
+
+public enum PayrollEntryType
+{
+    Base,
+    Benefit,
+    Deduction,
+    Custom
+}
+
+public class SalaryDefinition
 {
     public long Id { get; set; }
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
-    public decimal NetAmount { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public decimal BaseAmount { get; set; }
+    public DateOnly FirstSalaryDate { get; set; }
+    public DateOnly LastSalaryDate { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }
+    public int RecurrenceDays { get; set; }
+    public int RecurrenceMonths { get; set; }
+    public DayOfWeek NearestWeekday { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    public ICollection<SalaryAdjustment> Adjustments { get; set; } = new List<SalaryAdjustment>();
+    public ICollection<Payroll> Payrolls { get; set; } = new List<Payroll>();
+}
+
+public class SalaryAdjustment
+{
+    public long Id { get; set; }
+    public long SalaryDefinitionId { get; set; }
+    public SalaryDefinition SalaryDefinition { get; set; } = null!;
+    public string Title { get; set; } = string.Empty;
+    public decimal PercentageRate { get; set; }
+    public decimal FixedValue { get; set; }
+    public SalaryAdjustmentType Type { get; set; }
+}
+
+public class Payroll
+{
+    public long Id { get; set; }
+    public long SalaryDefinitionId { get; set; }
+    public SalaryDefinition SalaryDefinition { get; set; } = null!;
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+    public DateOnly PeriodEndingDate { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public decimal PayrollTotal { get; set; }
     public PayrollStatus Status { get; set; } = PayrollStatus.Generated;
     public bool IsLocked { get; set; }
     public DateTime GeneratedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? SubmittedAtUtc { get; set; }
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    public ICollection<PayrollEntry> Entries { get; set; } = new List<PayrollEntry>();
+}
+
+public class PayrollEntry
+{
+    public long Id { get; set; }
+    public long PayrollId { get; set; }
+    public Payroll Payroll { get; set; } = null!;
+    public string Description { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public PayrollEntryType Type { get; set; }
+    public bool IsLocked { get; set; }
+    public int SortOrder { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class JobPayment

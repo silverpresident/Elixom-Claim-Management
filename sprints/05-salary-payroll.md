@@ -18,7 +18,7 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | In progress | 2026-09-02 | Reconciling the Sprint 04 minimal payroll association with the complete salary-definition, adjustment, and ordered payroll-entry schema. |
+| 1 | Complete | 2026-09-03 | Rebased first-implementation EF history into `20260903053340_InitialCreate`, which includes mandatory salary definitions, adjustment ranges, payroll due-period identity, and ordered payroll entries. Updated `JobPaymentService` total field and migration-aware tests. Verified `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` (80 passed) and `dotnet test src/ElixomClaim.Web.Tests/ElixomClaim.Web.Tests.csproj --no-restore` (27 passed). |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |

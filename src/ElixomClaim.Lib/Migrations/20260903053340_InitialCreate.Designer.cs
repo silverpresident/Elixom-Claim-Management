@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ElixomClaim.Lib.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260902214751_AddEmailOutbox")]
-    partial class AddEmailOutbox
+    [Migration("20260903053340_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -439,6 +439,70 @@ namespace ElixomClaim.Lib.Migrations
                     b.ToTable("CollectionTransactions", "dbclaim");
                 });
 
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.EmailLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("HtmlBody")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("OutboxItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("RelatedEntityId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("RelatedEntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("OutboxItemId");
+
+                    b.ToTable("EmailLogs", "dbclaim");
+                });
+
             modelBuilder.Entity("ElixomClaim.Lib.Entities.EmailOutboxItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -503,6 +567,195 @@ namespace ElixomClaim.Lib.Migrations
                     b.HasIndex("Status", "AvailableAtUtc");
 
                     b.ToTable("EmailOutboxItems", "dbclaim");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPayment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AdjustmentReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ApprovedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("ClientProcessingFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("CollectionClientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasDefaultValue("JMD");
+
+                    b.Property<string>("InternalNote")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<bool>("IsAdjustment")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRecoveryReceivable")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("JobTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<long?>("OriginalJobPaymentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("PayeeUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("PaymentDateUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentTransactionNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PublicNote")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("ScheduledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("SubmittedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("TotalDeductions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalTxnProcessingFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CollectionClientId");
+
+                    b.HasIndex("OriginalJobPaymentId");
+
+                    b.HasIndex("PayeeUserId");
+
+                    b.HasIndex("Status", "ScheduledAtUtc");
+
+                    b.ToTable("JobPayments", "dbclaim", t =>
+                        {
+                            t.HasCheckConstraint("CK_JobPayments_ExactlyOnePayee", "([PayeeUserId] IS NOT NULL AND [CollectionClientId] IS NULL) OR ([PayeeUserId] IS NULL AND [CollectionClientId] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentClaim", b =>
+                {
+                    b.Property<long>("JobPaymentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ClaimId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("JobPaymentId", "ClaimId");
+
+                    b.HasIndex("ClaimId")
+                        .IsUnique();
+
+                    b.ToTable("JobPaymentClaims", "dbclaim");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentCollection", b =>
+                {
+                    b.Property<long>("JobPaymentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CollectionTransactionId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("JobPaymentId", "CollectionTransactionId");
+
+                    b.HasIndex("CollectionTransactionId")
+                        .IsUnique();
+
+                    b.ToTable("JobPaymentCollections", "dbclaim");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentDeduction", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("JobPaymentId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobPaymentId");
+
+                    b.ToTable("JobPaymentDeductions", "dbclaim");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentPayroll", b =>
+                {
+                    b.Property<long>("JobPaymentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("PayrollId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("JobPaymentId", "PayrollId");
+
+                    b.HasIndex("PayrollId")
+                        .IsUnique();
+
+                    b.ToTable("JobPaymentPayrolls", "dbclaim");
                 });
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.OAuthAuthorizationCode", b =>
@@ -655,6 +908,221 @@ namespace ElixomClaim.Lib.Migrations
                     b.HasKey("TokenHash");
 
                     b.ToTable("OAuthTokens", "dbclaim");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.Payroll", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("GeneratedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsLocked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<decimal>("PayrollTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateOnly>("PeriodEndingDate")
+                        .HasColumnType("date");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<long>("SalaryDefinitionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("SubmittedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SalaryDefinitionId", "PeriodEndingDate")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("Payrolls", "dbclaim");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.PayrollEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsLocked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<long>("PayrollId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayrollId", "SortOrder")
+                        .IsUnique();
+
+                    b.ToTable("PayrollEntries", "dbclaim");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.SalaryAdjustment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("FixedValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PercentageRate")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<long>("SalaryDefinitionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SalaryDefinitionId", "Type");
+
+                    b.ToTable("SalaryAdjustments", "dbclaim", t =>
+                        {
+                            t.HasCheckConstraint("CK_SalaryAdjustments_Range", "[PercentageRate] >= 0 AND [PercentageRate] <= 1 AND [FixedValue] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.SalaryDefinition", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("BaseAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("FirstSalaryDate")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateOnly>("LastSalaryDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("NearestWeekday")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RecurrenceDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RecurrenceMonths")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "IsActive");
+
+                    b.ToTable("SalaryDefinitions", "dbclaim", t =>
+                        {
+                            t.HasCheckConstraint("CK_SalaryDefinitions_BaseAmount", "[BaseAmount] > 0");
+
+                            t.HasCheckConstraint("CK_SalaryDefinitions_DateRange", "[EndDate] IS NULL OR [EndDate] >= [StartDate]");
+
+                            t.HasCheckConstraint("CK_SalaryDefinitions_NearestWeekday", "[NearestWeekday] >= 0 AND [NearestWeekday] <= 6");
+
+                            t.HasCheckConstraint("CK_SalaryDefinitions_Recurrence", "[RecurrenceDays] >= 0 AND [RecurrenceMonths] >= 0 AND ([RecurrenceDays] > 0 OR [RecurrenceMonths] > 0)");
+                        });
                 });
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.User", b =>
@@ -830,6 +1298,150 @@ namespace ElixomClaim.Lib.Migrations
                     b.Navigation("TellerUser");
                 });
 
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPayment", b =>
+                {
+                    b.HasOne("ElixomClaim.Lib.Entities.CollectionClient", "CollectionClient")
+                        .WithMany()
+                        .HasForeignKey("CollectionClientId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ElixomClaim.Lib.Entities.JobPayment", "OriginalJobPayment")
+                        .WithMany()
+                        .HasForeignKey("OriginalJobPaymentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ElixomClaim.Lib.Entities.User", "PayeeUser")
+                        .WithMany()
+                        .HasForeignKey("PayeeUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CollectionClient");
+
+                    b.Navigation("OriginalJobPayment");
+
+                    b.Navigation("PayeeUser");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentClaim", b =>
+                {
+                    b.HasOne("ElixomClaim.Lib.Entities.Claim", "Claim")
+                        .WithMany()
+                        .HasForeignKey("ClaimId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ElixomClaim.Lib.Entities.JobPayment", "JobPayment")
+                        .WithMany("Claims")
+                        .HasForeignKey("JobPaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Claim");
+
+                    b.Navigation("JobPayment");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentCollection", b =>
+                {
+                    b.HasOne("ElixomClaim.Lib.Entities.CollectionTransaction", "CollectionTransaction")
+                        .WithMany()
+                        .HasForeignKey("CollectionTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ElixomClaim.Lib.Entities.JobPayment", "JobPayment")
+                        .WithMany("Collections")
+                        .HasForeignKey("JobPaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CollectionTransaction");
+
+                    b.Navigation("JobPayment");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentDeduction", b =>
+                {
+                    b.HasOne("ElixomClaim.Lib.Entities.JobPayment", "JobPayment")
+                        .WithMany("Deductions")
+                        .HasForeignKey("JobPaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("JobPayment");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentPayroll", b =>
+                {
+                    b.HasOne("ElixomClaim.Lib.Entities.JobPayment", "JobPayment")
+                        .WithMany("Payrolls")
+                        .HasForeignKey("JobPaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ElixomClaim.Lib.Entities.Payroll", "Payroll")
+                        .WithMany()
+                        .HasForeignKey("PayrollId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("JobPayment");
+
+                    b.Navigation("Payroll");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.Payroll", b =>
+                {
+                    b.HasOne("ElixomClaim.Lib.Entities.SalaryDefinition", "SalaryDefinition")
+                        .WithMany("Payrolls")
+                        .HasForeignKey("SalaryDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ElixomClaim.Lib.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SalaryDefinition");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.PayrollEntry", b =>
+                {
+                    b.HasOne("ElixomClaim.Lib.Entities.Payroll", "Payroll")
+                        .WithMany("Entries")
+                        .HasForeignKey("PayrollId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Payroll");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.SalaryAdjustment", b =>
+                {
+                    b.HasOne("ElixomClaim.Lib.Entities.SalaryDefinition", "SalaryDefinition")
+                        .WithMany("Adjustments")
+                        .HasForeignKey("SalaryDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SalaryDefinition");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.SalaryDefinition", b =>
+                {
+                    b.HasOne("ElixomClaim.Lib.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ElixomClaim.Lib.Entities.Claim", b =>
                 {
                     b.Navigation("Comments");
@@ -844,6 +1456,29 @@ namespace ElixomClaim.Lib.Migrations
                     b.Navigation("BankDetails");
 
                     b.Navigation("PurposeOptions");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPayment", b =>
+                {
+                    b.Navigation("Claims");
+
+                    b.Navigation("Collections");
+
+                    b.Navigation("Deductions");
+
+                    b.Navigation("Payrolls");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.Payroll", b =>
+                {
+                    b.Navigation("Entries");
+                });
+
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.SalaryDefinition", b =>
+                {
+                    b.Navigation("Adjustments");
+
+                    b.Navigation("Payrolls");
                 });
 #pragma warning restore 612, 618
         }

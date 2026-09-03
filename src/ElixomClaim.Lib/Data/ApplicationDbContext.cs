@@ -28,7 +28,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<CollectionTransaction> CollectionTransactions => Set<CollectionTransaction>();
     public DbSet<EmailOutboxItem> EmailOutboxItems => Set<EmailOutboxItem>();
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+    public DbSet<SalaryDefinition> SalaryDefinitions => Set<SalaryDefinition>();
+    public DbSet<SalaryAdjustment> SalaryAdjustments => Set<SalaryAdjustment>();
     public DbSet<Payroll> Payrolls => Set<Payroll>();
+    public DbSet<PayrollEntry> PayrollEntries => Set<PayrollEntry>();
     public DbSet<JobPayment> JobPayments => Set<JobPayment>();
     public DbSet<JobPaymentClaim> JobPaymentClaims => Set<JobPaymentClaim>();
     public DbSet<JobPaymentCollection> JobPaymentCollections => Set<JobPaymentCollection>();
@@ -332,16 +335,61 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.CreatedAtUtc);
         });
 
+        modelBuilder.Entity<SalaryDefinition>(entity =>
+        {
+            entity.ToTable("SalaryDefinitions", table =>
+            {
+                table.HasCheckConstraint("CK_SalaryDefinitions_BaseAmount", "[BaseAmount] > 0");
+                table.HasCheckConstraint("CK_SalaryDefinitions_Recurrence", "[RecurrenceDays] >= 0 AND [RecurrenceMonths] >= 0 AND ([RecurrenceDays] > 0 OR [RecurrenceMonths] > 0)");
+                table.HasCheckConstraint("CK_SalaryDefinitions_DateRange", "[EndDate] IS NULL OR [EndDate] >= [StartDate]");
+                table.HasCheckConstraint("CK_SalaryDefinitions_NearestWeekday", "[NearestWeekday] >= 0 AND [NearestWeekday] <= 6");
+            });
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Description).IsRequired().HasMaxLength(500);
+            entity.Property(s => s.BaseAmount).IsRequired().HasPrecision(18, 2);
+            entity.Property(s => s.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(s => s.RowVersion).IsRowVersion();
+            entity.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(s => new { s.UserId, s.IsActive });
+        });
+
+        modelBuilder.Entity<SalaryAdjustment>(entity =>
+        {
+            entity.ToTable("SalaryAdjustments", table => table.HasCheckConstraint("CK_SalaryAdjustments_Range", "[PercentageRate] >= 0 AND [PercentageRate] <= 1 AND [FixedValue] >= 0"));
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.Title).IsRequired().HasMaxLength(500);
+            entity.Property(a => a.PercentageRate).IsRequired().HasPrecision(18, 3);
+            entity.Property(a => a.FixedValue).IsRequired().HasPrecision(18, 2);
+            entity.Property(a => a.Type).IsRequired().HasConversion<string>().HasMaxLength(20);
+            entity.HasOne(a => a.SalaryDefinition).WithMany(s => s.Adjustments).HasForeignKey(a => a.SalaryDefinitionId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(a => new { a.SalaryDefinitionId, a.Type });
+        });
+
         modelBuilder.Entity<Payroll>(entity =>
         {
             entity.ToTable("Payrolls");
             entity.HasKey(p => p.Id);
-            entity.Property(p => p.NetAmount).IsRequired().HasPrecision(18, 2);
+            entity.Property(p => p.Description).IsRequired().HasMaxLength(500);
+            entity.Property(p => p.PayrollTotal).IsRequired().HasPrecision(18, 2);
             entity.Property(p => p.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(p => p.IsLocked).IsRequired().HasDefaultValue(false);
             entity.Property(p => p.RowVersion).IsRowVersion();
             entity.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.SalaryDefinition).WithMany(s => s.Payrolls).HasForeignKey(p => p.SalaryDefinitionId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(p => new { p.UserId, p.Status });
+            entity.HasIndex(p => new { p.SalaryDefinitionId, p.PeriodEndingDate }).IsUnique();
+        });
+
+        modelBuilder.Entity<PayrollEntry>(entity =>
+        {
+            entity.ToTable("PayrollEntries");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Amount).IsRequired().HasPrecision(18, 2);
+            entity.Property(e => e.Type).IsRequired().HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.IsLocked).IsRequired().HasDefaultValue(false);
+            entity.HasOne(e => e.Payroll).WithMany(p => p.Entries).HasForeignKey(e => e.PayrollId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.PayrollId, e.SortOrder }).IsUnique();
         });
 
         modelBuilder.Entity<JobPayment>(entity =>
