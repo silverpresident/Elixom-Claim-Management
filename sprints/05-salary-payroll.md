@@ -20,7 +20,7 @@
 | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-03 | Rebased first-implementation EF history into `20260903053340_InitialCreate`, which includes mandatory salary definitions, adjustment ranges, payroll due-period identity, and ordered payroll entries. Updated `JobPaymentService` total field and migration-aware tests. Verified `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore` (80 passed) and `dotnet test src/ElixomClaim.Web.Tests/ElixomClaim.Web.Tests.csproj --no-restore` (27 passed). |
 | 2 | Complete | 2026-09-03 | Added shared `SalaryRecurrencePlanner` with a documented earlier-occurrence tie rule, effective-date checks, inactive suppression, and generated-period suppression. `SalaryRecurrencePlannerTests` verifies month boundaries, leap year, start/end inclusivity, inactive definitions, and duplicate prevention. Verified `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore --filter FullyQualifiedName~SalaryRecurrencePlannerTests` (7 passed). |
-| 3 | Not started | — | — |
+| 3 | Complete | 2026-09-03 | Added Accountant-authorized `SalaryPayrollService.GenerateForDefinitionAsync`, which uses `SalaryRecurrencePlanner`, creates locked Base/Benefit/Deduction entries in deterministic order, calculates exact JMD totals, advances `LastSalaryDate`, and audits the transaction. `SalaryPayrollServiceTests` covers generated entries, total, cursor, authority, and duplicate period. Verified `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore --filter FullyQualifiedName~SalaryPayrollServiceTests` (2 passed). |
 | 4 | Not started | — | — |
 | 5 | Not started | — | — |
 | 6 | Not started | — | — |
