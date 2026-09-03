@@ -51,7 +51,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | Sprint | State | Note |
 | --- | --- | --- |
 | 00 Foundation | Complete | All 8 items complete. See `sprints/00-foundation.md`. |
-| 01 Identity & security | In progress | Completion-ledger reconciliation underway: item 3 verified complete on 2026-09-03; items 4–8 remain to be reconciled. See `sprints/01-identity-security.md`. |
+| 01 Identity & security | In progress | Completion-ledger reconciliation underway: item 3 verified complete on 2026-09-03. Item 4 is blocked because `AuditRecords` lacks database-level append-only enforcement; prerequisite 4a is recorded in `sprints/01-identity-security.md`. |
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
 | 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
 | 04 Job payments | Complete | All 8 items complete; verification recorded in `sprints/04-job-payments.md`. |
@@ -61,6 +61,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
+2. **Audit immutability:** `dbclaim.AuditRecords` needs database-level UPDATE/DELETE prevention plus relational verification before Sprint 01 item 4 can be complete; see `sprints/01-identity-security.md` item 4a.
 
 ## Decision log
 
