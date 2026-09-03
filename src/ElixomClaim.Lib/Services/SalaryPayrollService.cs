@@ -9,6 +9,8 @@ namespace ElixomClaim.Lib.Services;
 public interface ISalaryPayrollService
 {
     Task<Result<Payroll>> GenerateForDefinitionAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
+    Task<Result> AddCustomEntryAsync(long payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default);
+    Task<Result<JobPayment>> SubmitAsync(long payrollId, Guid actorUserId, CancellationToken cancellationToken = default);
 }
 
 public sealed class SalaryPayrollService : ISalaryPayrollService
@@ -68,6 +70,47 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
                 await transaction.RollbackAsync(cancellationToken);
             _logger.LogWarning(exception, "Salary payroll generation conflicted for definition {SalaryDefinitionId}.", salaryDefinitionId);
             return Result.Failure<Payroll>("A payroll for this salary due period already exists.");
+        }
+    }
+
+    public async Task<Result> AddCustomEntryAsync(long payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default)
+    {
+        if (!await IsAccountantAsync(actorUserId, cancellationToken)) return Result.Failure("Accountant access is required.");
+        if (string.IsNullOrWhiteSpace(description) || amount == 0) return Result.Failure("A custom entry description and non-zero amount are required.");
+        var payroll = await _db.Payrolls.Include(p => p.Entries).SingleOrDefaultAsync(p => p.Id == payrollId, cancellationToken);
+        if (payroll is null || payroll.Status != PayrollStatus.Generated || payroll.IsLocked) return Result.Failure("Custom entries can only be added to an unlocked generated payroll.");
+        if (amount < 0 && payroll.PayrollTotal + amount < 0) return Result.Failure("A negative custom entry cannot make payroll net pay negative.");
+        payroll.Entries.Add(new PayrollEntry { Description = description.Trim(), Amount = amount, Type = PayrollEntryType.Custom, IsLocked = false, SortOrder = payroll.Entries.Count, CreatedAtUtc = _clock.UtcNow });
+        payroll.PayrollTotal += amount;
+        await _db.SaveChangesAsync(cancellationToken);
+        await _audit.LogAsync("PAYROLL_CUSTOM_ENTRY_ADDED", $"Payroll:{payroll.Id}", afterState: new { payroll.Id, payroll.PayrollTotal }, actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
+        return Result.Success();
+    }
+
+    public async Task<Result<JobPayment>> SubmitAsync(long payrollId, Guid actorUserId, CancellationToken cancellationToken = default)
+    {
+        if (!await IsAccountantAsync(actorUserId, cancellationToken)) return Result.Failure<JobPayment>("Accountant access is required.");
+        var payroll = await _db.Payrolls.Include(p => p.Entries).SingleOrDefaultAsync(p => p.Id == payrollId, cancellationToken);
+        if (payroll is null || payroll.Status != PayrollStatus.Generated || payroll.IsLocked) return Result.Failure<JobPayment>("Only an unlocked generated payroll can be submitted.");
+        if (payroll.PayrollTotal < 0) return Result.Failure<JobPayment>("Payroll net pay cannot be negative.");
+        if (await _db.JobPaymentPayrolls.AnyAsync(link => link.PayrollId == payrollId, cancellationToken)) return Result.Failure<JobPayment>("Payroll is already bound to a job payment.");
+        await using var transaction = _db.Database.IsRelational() ? await _db.Database.BeginTransactionAsync(cancellationToken) : null;
+        try
+        {
+            payroll.Status = PayrollStatus.Submitted; payroll.IsLocked = true; payroll.SubmittedAtUtc = _clock.UtcNow;
+            foreach (var entry in payroll.Entries) entry.IsLocked = true;
+            var jobPayment = new JobPayment { PayeeUserId = payroll.UserId, Status = JobPaymentStatus.Processing, JobTotal = payroll.PayrollTotal, TotalPaid = payroll.PayrollTotal, Currency = "JMD", CreatedAtUtc = _clock.UtcNow };
+            _db.JobPayments.Add(jobPayment); await _db.SaveChangesAsync(cancellationToken);
+            _db.JobPaymentPayrolls.Add(new JobPaymentPayroll { JobPaymentId = jobPayment.Id, PayrollId = payroll.Id }); await _db.SaveChangesAsync(cancellationToken);
+            await _audit.LogAsync("PAYROLL_SUBMITTED", $"Payroll:{payroll.Id}", afterState: new { payroll.Id, payroll.Status, JobPaymentId = jobPayment.Id }, actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
+            if (transaction is not null) await transaction.CommitAsync(cancellationToken);
+            return Result.Success(jobPayment);
+        }
+        catch (DbUpdateException exception)
+        {
+            if (transaction is not null) await transaction.RollbackAsync(cancellationToken);
+            _logger.LogWarning(exception, "Payroll submission conflicted for payroll {PayrollId}.", payrollId);
+            return Result.Failure<JobPayment>("Payroll submission conflicted; refresh and retry.");
         }
     }
 

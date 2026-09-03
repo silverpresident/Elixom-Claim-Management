@@ -47,6 +47,30 @@ public class SalaryPayrollServiceTests
         Assert.True((await service.GenerateForDefinitionAsync(definition.Id, accountant.Id, new(2025, 1, 3))).IsFailure);
     }
 
+    [Fact]
+    public async Task CustomEntriesAndSubmission_KeepNetNonNegativeAndCreateProcessingJob()
+    {
+        await using var db = CreateDb();
+        var accountant = User(UserRole.Accountant); var payee = User(UserRole.User);
+        var definition = new SalaryDefinition { UserId = payee.Id, Description = "Salary", BaseAmount = 100m, FirstSalaryDate = new(2025, 1, 1), LastSalaryDate = new(2025, 1, 2), StartDate = new(2025, 1, 1), RecurrenceDays = 1, NearestWeekday = DayOfWeek.Friday };
+        db.AddRange(accountant, payee, definition); await db.SaveChangesAsync();
+        var service = Service(db);
+        var payroll = (await service.GenerateForDefinitionAsync(definition.Id, accountant.Id, new(2025, 1, 3))).Value!;
+
+        Assert.True((await service.AddCustomEntryAsync(payroll.Id, accountant.Id, "Recovery", -101m)).IsFailure);
+        Assert.True((await service.AddCustomEntryAsync(payroll.Id, accountant.Id, "Allowance", 25m)).IsSuccess);
+        var submitted = await service.SubmitAsync(payroll.Id, accountant.Id);
+
+        Assert.True(submitted.IsSuccess);
+        Assert.Equal(JobPaymentStatus.Processing, submitted.Value!.Status);
+        Assert.Equal(125m, submitted.Value.JobTotal);
+        Assert.Equal(PayrollStatus.Submitted, payroll.Status);
+        Assert.True(payroll.IsLocked);
+        Assert.All(payroll.Entries, entry => Assert.True(entry.IsLocked));
+        Assert.Single(db.JobPaymentPayrolls);
+        Assert.True((await service.AddCustomEntryAsync(payroll.Id, accountant.Id, "Late", 1m)).IsFailure);
+    }
+
     private static SalaryPayrollService Service(ApplicationDbContext db) => new(db, new SalaryRecurrencePlanner(), new AuditService(db, NullLogger<AuditService>.Instance), new SystemClock(), NullLogger<SalaryPayrollService>.Instance);
     private static ApplicationDbContext CreateDb() => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     private static User User(UserRole role) => new() { Email = $"{Guid.NewGuid():N}@anonymized.example.com", NormalizedEmail = Guid.NewGuid().ToString("N"), FullName = "Test User", Role = role };
