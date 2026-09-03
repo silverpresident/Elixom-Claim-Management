@@ -24,6 +24,5 @@
 | 4 | Complete | 2026-09-03 | Added Accountant-only custom-entry and submission operations to `SalaryPayrollService`. Generated entries stay locked; negative custom entries cannot make net pay negative; submission locks all entries and atomically creates one linked Processing `JobPayment`. `SalaryPayrollServiceTests` covers the restriction, locking, job creation, and immutable submitted state. Verified `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore --filter FullyQualifiedName~SalaryPayrollServiceTests` (3 passed). |
 | 5a | Complete | 2026-09-03 | Registered the existing OAuth bearer handler and added Accountant-only `/mcp/payroll/preview` and `/mcp/payroll/run` adapters using explicit DTOs in `Mcp/Tools/PayrollTools.cs`. Both delegate to `ISalaryPayrollService` and write `IsMcpOperation` audit events. Verified `dotnet test src/ElixomClaim.Web.Tests/ElixomClaim.Web.Tests.csproj --no-restore` (27 passed). |
 | 5 | In progress | 2026-09-03 | Codex: completing daily idempotent scheduler and authorized MVC Generate Now adapter over the established payroll service. |
-| 5 | Not started | — | Depends on 5a. |
 | 6 | Not started | — | — |
 | 7 | Not started | — | — |
