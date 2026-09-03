@@ -43,7 +43,15 @@ builder.Services.AddAuthentication(options =>
 
 // Add MVC controllers with views
 builder.Services.AddControllersWithViews();
+
+// Register domain-scoped MCP tool adapters in DI
+builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.ClaimTools>();
+builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.CollectionTools>();
+builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.JobPaymentTools>();
 builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.PayrollTools>();
+builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.EmailTools>();
+builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.OperationsTools>();
+
 builder.Services.AddHostedService<OutboxDispatchHostedService>();
 builder.Services.AddHostedService<SalaryGenerationHostedService>();
 
