@@ -1,15 +1,22 @@
 using ElixomClaim.Lib;
 using ElixomClaim.Lib.Configuration;
 using ElixomClaim.Web.Authentication;
+using ElixomClaim.Web.Configuration;
+using ElixomClaim.Web.Development;
 using ElixomClaim.Web.Middleware;
 using ElixomClaim.Web.HostedServices;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 
 var builder = WebApplication.CreateBuilder(args);
+var developmentTesting = builder.Environment.IsDevelopment()
+    && builder.Configuration.GetValue<bool>($"{DevelopmentTestingOptions.SectionName}:Enabled");
+var developmentDatabaseName = builder.Configuration.GetValue<string>($"{DevelopmentTestingOptions.SectionName}:DatabaseName");
 
 // Register library services, DB context, and options validation
-builder.Services.AddClaimLibraryServices(builder.Configuration);
+builder.Services.AddClaimLibraryServices(builder.Configuration, developmentTesting, developmentDatabaseName);
+builder.Services.AddOptions<DevelopmentTestingOptions>()
+    .Bind(builder.Configuration.GetSection(DevelopmentTestingOptions.SectionName));
 
 // Configure Cookie and Google OpenID Connect Authentication
 builder.Services.AddAuthentication(options =>
@@ -41,6 +48,11 @@ builder.Services.AddHostedService<OutboxDispatchHostedService>();
 builder.Services.AddHostedService<SalaryGenerationHostedService>();
 
 var app = builder.Build();
+
+if (developmentTesting)
+{
+    await DevelopmentDataSeeder.InitializeAsync(app.Services);
+}
 
 // Correlation ID Middleware first to scope all request logging
 app.UseCorrelationId();
@@ -88,3 +100,5 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+public partial class Program;

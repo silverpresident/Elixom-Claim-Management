@@ -11,7 +11,9 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddClaimLibraryServices(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        bool useInMemoryDatabase = false,
+        string? inMemoryDatabaseName = null)
     {
         // Bind & Validate Options with DataAnnotations & ValidateOnStart
         services.AddOptions<DatabaseOptions>()
@@ -48,7 +50,11 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options =>
         {
-            if (!string.IsNullOrWhiteSpace(connectionString))
+            if (useInMemoryDatabase)
+            {
+                options.UseInMemoryDatabase(inMemoryDatabaseName ?? "ElixomClaim-Development");
+            }
+            else if (!string.IsNullOrWhiteSpace(connectionString))
             {
                 options.UseSqlServer(connectionString, sqlOptions =>
                 {

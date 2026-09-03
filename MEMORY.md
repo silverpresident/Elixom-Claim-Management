@@ -51,7 +51,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | Sprint | State | Note |
 | --- | --- | --- |
 | 00 Foundation | Complete | All 8 items complete. See `sprints/00-foundation.md`. |
-| 01 Identity & security | In progress | Completion-ledger reconciliation underway: item 3 verified complete on 2026-09-03. Item 4 is blocked because `AuditRecords` lacks database-level append-only enforcement; prerequisite 4a is recorded in `sprints/01-identity-security.md`. |
+| 01 Identity & security | In progress | Item 4 is blocked because `AuditRecords` lacks database-level append-only enforcement (prerequisite 4a). Item 4b is in progress: Development-only in-memory data and role-selectable testing login. |
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
 | 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
 | 04 Job payments | Complete | All 8 items complete; verification recorded in `sprints/04-job-payments.md`. |
