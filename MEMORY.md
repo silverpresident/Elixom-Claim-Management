@@ -59,11 +59,16 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 05 Salary & payroll | Complete | All ordered items complete; Lib/Web test evidence recorded in `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Complete | All 9 items complete; build and 127 tests passed on 2026-09-03. See `sprints/06-mcp-release.md`. |
 | 07 Development testing | Complete | Development-only in-memory sample data and role-selectable test login completed; full suite passed (130 tests) on 2026-09-03. See `sprints/07-development-testing.md`. |
+| 08 MCP transport & OAuth hardening | Planned | Begins after Sprint 01 item 4a; standard MCP transport, durable operations, OAuth hardening, rate limiting, and threat-model/interoperability evidence. See `sprints/08-mcp-oauth-hardening.md`. |
+| 09 Domain data completion | Planned | Required fields, all-`Guid` identifier conversion (ADR required first), mappings, migrations, and relational coverage. See `sprints/09-domain-data-completion.md`. |
+| 10 Web workflow completion | Planned | Profile/dashboard, collection fields, job lifecycle/deductions, payroll adjustment/custom-entry workflows, and navigation. See `sprints/10-web-workflow-completion.md`. |
+| 11 Deployment & release verification | Planned | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification. See `sprints/11-deployment-and-release-verification.md`. |
 
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
 2. **Audit immutability:** `dbclaim.AuditRecords` needs database-level UPDATE/DELETE prevention plus relational verification before Sprint 01 item 4 can be complete; see `sprints/01-identity-security.md` item 4a.
+3. **2026-09-03 — Remediation delivery plan:** The attached task-list gaps are scheduled after the existing Sprint 01 audit prerequisite in Sprints 08–11. No task-list entry has been removed because no remediation was implemented in this planning change. Affected area: [sprints/08-mcp-oauth-hardening.md](sprints/08-mcp-oauth-hardening.md), [sprints/09-domain-data-completion.md](sprints/09-domain-data-completion.md), [sprints/10-web-workflow-completion.md](sprints/10-web-workflow-completion.md), [sprints/11-deployment-and-release-verification.md](sprints/11-deployment-and-release-verification.md).
 
 ## Decision log
 

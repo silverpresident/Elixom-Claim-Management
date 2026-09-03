@@ -24,7 +24,7 @@
 | 2 | Complete | 2026-09-02 | Google OIDC & Cookie authentication, UserValidationEvents principal validation, AccountController, Login/AccessDenied views. Command: `dotnet test ElixomClaim.slnx` passed (48 tests total). |
 | 3 | Complete | 2026-09-03 | Reconciliation verified shared minimum-role and ownership handlers, the Active User/Teller/Manager/Accountant/Administrator policies, Blocked denial, and inherited role boundaries. Files: `src/ElixomClaim.Lib/Authorization/AuthorizationHandlers.cs`, `PolicyNames.cs`, `DependencyInjection.cs`, `src/ElixomClaim.Lib.Tests/Authorization/AuthorizationTests.cs`. Command: `dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore --filter FullyQualifiedName~AuthorizationTests` passed (20). |
 | 4 | Blocked | 2026-09-03 | Redaction, actor/correlation/IP/MCP metadata, and insert persistence are implemented (`AuditServiceTests`), but `dbclaim.AuditRecords` has no database-level immutability protection against UPDATE/DELETE. This does not meet the required append-only audit invariant. Complete prerequisite 4a, add relational-persistence coverage, then rerun the audit suite. |
-| 4a | Not started | 2026-09-03 | Enforce `AuditRecords` append-only behavior at the database boundary (including migration and relational integration test); document the enforcement mechanism and operational implications. Prerequisite for item 4. |
+| 4a | In progress | 2026-09-03 | `/root` — enforce `AuditRecords` append-only behavior at the Azure SQL boundary, with a migration, verification, and operational documentation. Affected areas: Lib migrations, audit persistence tests, ADR/MEMORY. Prerequisite for item 4. |
 | 5 | Not started | — | — |
 | 6 | Not started | — | — |
 | 7 | Not started | — | — |

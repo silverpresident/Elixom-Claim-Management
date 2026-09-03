@@ -12,6 +12,10 @@ Execute these sprints in order. A later sprint may refine presentation, but it m
 | 05 | [Salary & payroll](05-salary-payroll.md) | Recurrence engine and payroll-to-payment flow. |
 | 06 | [MCP & release readiness](06-mcp-release.md) | User-scoped MCP plus accessible, production-ready release. |
 | 07 | [Development testing](07-development-testing.md) | Safe local in-memory sample data and role-switch testing workflow. |
+| 08 | [MCP transport and OAuth hardening](08-mcp-oauth-hardening.md) | Standard MCP transport, durable operations, and hardened OAuth abuse/security boundaries. |
+| 09 | [Domain data completion](09-domain-data-completion.md) | Complete required fields, identifier consistency, mappings, migrations, and relational coverage. |
+| 10 | [Web workflow completion](10-web-workflow-completion.md) | Complete user, job-payment, payroll, and navigational MVC workflows. |
+| 11 | [Deployment and release verification](11-deployment-and-release-verification.md) | Guarded migration delivery and final end-to-end/release evidence. |
 
 ## Global acceptance bar
 

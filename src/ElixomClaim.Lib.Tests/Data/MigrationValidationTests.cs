@@ -1,5 +1,9 @@
 using ElixomClaim.Lib.Data;
+using ElixomClaim.Lib.Migrations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
+using System.Reflection;
 using Xunit;
 
 namespace ElixomClaim.Lib.Tests.Data;
@@ -52,5 +56,21 @@ public class MigrationValidationTests
                 Assert.DoesNotContain("DropColumn", upContent);
             }
         }
+    }
+
+    [Fact]
+    public void AuditAppendOnlyMigration_CreatesSqlServerTriggerThatRejectsUpdatesAndDeletes()
+    {
+        var migration = new AddAuditRecordAppendOnlyTrigger();
+        var builder = new MigrationBuilder("Microsoft.EntityFrameworkCore.SqlServer");
+        var up = typeof(AddAuditRecordAppendOnlyTrigger).GetMethod("Up", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        Assert.NotNull(up);
+        up!.Invoke(migration, [builder]);
+
+        var operation = Assert.IsType<SqlOperation>(Assert.Single(builder.Operations));
+        Assert.Contains("CREATE TRIGGER [dbclaim].[TR_AuditRecords_PreventMutation]", operation.Sql, StringComparison.Ordinal);
+        Assert.Contains("AFTER UPDATE, DELETE", operation.Sql, StringComparison.Ordinal);
+        Assert.Contains("THROW 51000", operation.Sql, StringComparison.Ordinal);
     }
 }

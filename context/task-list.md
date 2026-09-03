@@ -29,5 +29,4 @@
 - Fix this issues: OperationsTools.cs uses a process-local static ConcurrentDictionary and directly calls salary/outbox services. It loses operation history on restart and does not provide the durable operation record required by the project guardrails.
 
 
-- Reset the EF migration. This should be the inital migration.
 - wire up Production migration on startup
