@@ -20,12 +20,12 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | — |
-| 2 | Not started | — | — |
-| 3 | Not started | — | — |
-| 4 | Not started | — | — |
-| 5 | Not started | — | — |
-| 6 | Not started | — | — |
-| 7 | Not started | — | — |
+| 1 | Complete | 2026-09-03 | Implemented domain-scoped tool classes: ClaimTools, CollectionTools, JobPaymentTools, PayrollTools in src/ElixomClaim.Web/Mcp/Tools/. |
+| 2 | Complete | 2026-09-03 | Implemented EmailTools with template-owned recipients, preview redaction, and outbox-only queueing. |
+| 3 | Complete | 2026-09-03 | Implemented OperationsTools with idempotent operation tracking and status polling. |
+| 4 | Complete | 2026-09-03 | Created McpClaimsController, McpCollectionsController, McpJobPaymentsController, McpEmailController, McpOperationsController, McpPayrollController under /mcp/* with Bearer auth, scope checks, user inheritance, and audit logging. |
+| 5 | Complete | 2026-09-03 | Added McpOAuthSecurityTests covering dynamic registration, PKCE S256, token rotation & replay revocation, scope enforcement, and cross-user isolation. |
+| 6 | Complete | 2026-09-03 | Added McpToolBoundaryTests covering EmailTools preview redaction, template restrictions, outbox-only dispatch, OperationsTools deduplication, status polling, and denial of direct worker execution. |
+| 7 | Complete | 2026-09-03 | Verified Razor accessibility, WCAG contrast focus rings, accessible form controls, color-independent status badges, responsive mobile layout, screen-reader table headers, and print CSS rules (@media print). |
 | 8 | Complete | 2026-09-03 | Added operational runbooks in docs/runbooks/ for migration, bootstrap admin recovery, OAuth key rotation, email failure handling, audit review, backup/restore, incident response, and privacy requests. |
 | 9 | Complete | 2026-09-03 | Documented OAuth threat model (docs/oauth-threat-model.md), added ConcurrencyAndSettlementTests, verified /health/live and /health/ready, updated MEMORY.md and sprint completion. |
