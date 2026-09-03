@@ -11,6 +11,7 @@ Execute these sprints in order. A later sprint may refine presentation, but it m
 | 04 | [Job payments](04-job-payments.md) | Controlled grouping, payout execution, notifications. |
 | 05 | [Salary & payroll](05-salary-payroll.md) | Recurrence engine and payroll-to-payment flow. |
 | 06 | [MCP & release readiness](06-mcp-release.md) | User-scoped MCP plus accessible, production-ready release. |
+| 07 | [Development testing](07-development-testing.md) | Safe local in-memory sample data and role-switch testing workflow. |
 
 ## Global acceptance bar
 

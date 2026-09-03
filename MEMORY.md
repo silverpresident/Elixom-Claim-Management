@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 06 MCP & Release Readiness complete.
+- **Stage:** Sprint 07 Development Testing complete.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
@@ -25,6 +25,7 @@
 - **Adjustments:** ADR 0002 is implemented through linked adjustment job payments: Accountant creation with a reason, Administrator approval, and Accountant settlement. Negative adjustments are recovery receivables and original paid records remain immutable.
 - **Projects:** `ElixomClaim.Lib`, `ElixomClaim.Web`, and matching Lib/Web xUnit test projects under `src/`.
 - **Frontend:** Razor MVC with Bootstrap 5.3 and jQuery 3.7 from CDN only; printable documents are HTML/CSS only—PDF generation is forbidden.
+- **Development testing:** when and only when the host environment is Development and `DevelopmentTesting:Enabled` is true, the application uses a named EF Core InMemory database, seeds deterministic non-sensitive records for every implemented area, and exposes a role-selectable test sign-in for active roles. The Blocked sample account is inactive and cannot sign in. See `sprints/07-development-testing.md` and `src/ElixomClaim.Web/Development/DevelopmentDataSeeder.cs`.
 
 ## Security baseline
 
@@ -51,12 +52,13 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | Sprint | State | Note |
 | --- | --- | --- |
 | 00 Foundation | Complete | All 8 items complete. See `sprints/00-foundation.md`. |
-| 01 Identity & security | In progress | Item 4 is blocked because `AuditRecords` lacks database-level append-only enforcement (prerequisite 4a). Item 4b is in progress: Development-only in-memory data and role-selectable testing login. |
+| 01 Identity & security | In progress | Item 4 is blocked because `AuditRecords` lacks database-level append-only enforcement; prerequisite 4a is recorded in `sprints/01-identity-security.md`. |
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
 | 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
 | 04 Job payments | Complete | All 8 items complete; verification recorded in `sprints/04-job-payments.md`. |
 | 05 Salary & payroll | Complete | All ordered items complete; Lib/Web test evidence recorded in `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Complete | All 9 items complete; build and 127 tests passed on 2026-09-03. See `sprints/06-mcp-release.md`. |
+| 07 Development testing | Complete | Development-only in-memory sample data and role-selectable test login completed; full suite passed (130 tests) on 2026-09-03. See `sprints/07-development-testing.md`. |
 
 ## Open decisions / risks
 

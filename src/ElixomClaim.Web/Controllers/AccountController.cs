@@ -72,11 +72,11 @@ public class AccountController : Controller
 
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.FullName),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
-            new Claim("UserId", user.Id.ToString())
+            new System.Security.Claims.Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new System.Security.Claims.Claim(ClaimTypes.Name, user.FullName),
+            new System.Security.Claims.Claim(ClaimTypes.Email, user.Email),
+            new System.Security.Claims.Claim(ClaimTypes.Role, user.Role.ToString()),
+            new System.Security.Claims.Claim("UserId", user.Id.ToString())
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
