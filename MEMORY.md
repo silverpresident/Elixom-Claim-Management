@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 04 Job Payments complete; Sprint 05 Salary & Payroll in progress.
+- **Stage:** Sprint 05 Salary & Payroll complete; Sprint 06 MCP & readiness in progress.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
@@ -17,7 +17,7 @@
 - **Payroll generation:** `SalaryPayrollService` requires Accountant authority and atomically creates salary-sourced generated payrolls with locked base/benefit/deduction entries, an exact total, an advanced cursor, and an audit record.
 - **Payroll submission:** Accountants may add custom entries only while a payroll is generated and unlocked; negative additions cannot make net pay negative. Submission locks every entry and creates exactly one linked Processing job payment.
 - **Payroll operations:** Daily generation, the Accountant Generate Now action, and constrained OAuth/MCP preview/run adapters all delegate to `ISalaryPayrollService`; unique salary due periods provide idempotency across scheduler instances.
-- **Current Sprint 05 work:** Item 6 is in progress. `/payroll` now provides definition creation, payroll actions, and audit history; it still needs service-backed preview rendering before handoff as complete.
+- **Salary & payroll UI:** Accountants use `/payroll` for salary-definition creation, service-backed due/total previews, lifecycle actions, and scoped payroll audit history.
 - **Job management:** `JobPaymentService` is the shared Manager+ adapter for Processing-only job creation and line management. It validates compatible source ownership/state and recalculates all stored JMD totals server-side.
 - **Job lifecycle:** Managers submit valid Processing payments; only Accountants can schedule Submitted payments at a UTC time. Scheduled jobs are immutable because all line commands require Processing status.
 - **Settlement:** only Accountants can mark a Scheduled job paid; it atomically records payment metadata, cascades claims/collections/payrolls to their paid states, queues payout notification records, and writes an audit event.
@@ -55,8 +55,8 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
 | 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
 | 04 Job payments | Complete | All 8 items complete; verification recorded in `sprints/04-job-payments.md`. |
-| 05 Salary & payroll | In progress | Ready for item 1. See `sprints/05-salary-payroll.md`. |
-| 06 MCP & readiness | Planned | See `sprints/06-mcp-release.md`. |
+| 05 Salary & payroll | Complete | All ordered items complete; Lib/Web test evidence recorded in `sprints/05-salary-payroll.md`. |
+| 06 MCP & readiness | In progress | See `sprints/06-mcp-release.md`. |
 
 ## Open decisions / risks
 
