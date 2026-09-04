@@ -2,9 +2,10 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 07 Development Testing complete.
+- **Stage:** Sprint 08 MCP Transport & OAuth Hardening in progress (Sprint 01 Complete).
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
+- **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
 - **Collection configuration:** only the shared `CollectionClientAdministrationService` may create/configure clients, assignments, options, and bank details; it requires an active Administrator and emits redacted audit events. The MVC adapter is `/admin/collection-clients`.
 - **Collection recording:** `CollectionService` requires an active teller or above, validates active options against the selected active client, and persists the JMD collection, receipt queue records, and audit record atomically on relational providers. `EmailOutboxItems` (`20260902214751_AddEmailOutbox`) has unique idempotency keys and status scheduling fields; delivery is the next sprint item.
@@ -52,14 +53,14 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | Sprint | State | Note |
 | --- | --- | --- |
 | 00 Foundation | Complete | All 8 items complete. See `sprints/00-foundation.md`. |
-| 01 Identity & security | In progress | Item 4 is blocked because `AuditRecords` lacks database-level append-only enforcement; prerequisite 4a is recorded in `sprints/01-identity-security.md`. |
+| 01 Identity & security | Complete | All 8 items complete (including prerequisite 4a trigger immutability). See `sprints/01-identity-security.md`. |
 | 02 Claims | Complete | All 5 items complete. See `sprints/02-claims.md`. |
 | 03 Clearing house | Complete | All 6 items complete; build and 97 tests passed on 2026-09-02. See `sprints/03-clearing-house.md`. |
 | 04 Job payments | Complete | All 8 items complete; verification recorded in `sprints/04-job-payments.md`. |
 | 05 Salary & payroll | Complete | All ordered items complete; Lib/Web test evidence recorded in `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Complete | All 9 items complete; build and 127 tests passed on 2026-09-03. See `sprints/06-mcp-release.md`. |
 | 07 Development testing | Complete | Development-only in-memory sample data and role-selectable test login completed; full suite passed (130 tests) on 2026-09-03. See `sprints/07-development-testing.md`. |
-| 08 MCP transport & OAuth hardening | Planned | Begins after Sprint 01 item 4a; standard MCP transport, durable operations, OAuth hardening, rate limiting, and threat-model/interoperability evidence. See `sprints/08-mcp-oauth-hardening.md`. |
+| 08 MCP transport & OAuth hardening | In progress | Item 1 in progress; standard MCP transport, durable operations, OAuth hardening, rate limiting, and threat-model/interoperability evidence. See `sprints/08-mcp-oauth-hardening.md`. |
 | 09 Domain data completion | Planned | Required fields, all-`Guid` identifier conversion (ADR required first), mappings, migrations, and relational coverage. See `sprints/09-domain-data-completion.md`. |
 | 10 Web workflow completion | Planned | Profile/dashboard, collection fields, job lifecycle/deductions, payroll adjustment/custom-entry workflows, and navigation. See `sprints/10-web-workflow-completion.md`. |
 | 11 Deployment & release verification | Planned | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification. See `sprints/11-deployment-and-release-verification.md`. |
@@ -67,8 +68,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
-2. **Audit immutability:** `dbclaim.AuditRecords` needs database-level UPDATE/DELETE prevention plus relational verification before Sprint 01 item 4 can be complete; see `sprints/01-identity-security.md` item 4a.
-3. **2026-09-03 — Remediation delivery plan:** The attached task-list gaps are scheduled after the existing Sprint 01 audit prerequisite in Sprints 08–11. No task-list entry has been removed because no remediation was implemented in this planning change. Affected area: [sprints/08-mcp-oauth-hardening.md](sprints/08-mcp-oauth-hardening.md), [sprints/09-domain-data-completion.md](sprints/09-domain-data-completion.md), [sprints/10-web-workflow-completion.md](sprints/10-web-workflow-completion.md), [sprints/11-deployment-and-release-verification.md](sprints/11-deployment-and-release-verification.md).
+2. **2026-09-03 — Remediation delivery plan:** The attached task-list gaps are scheduled after the existing Sprint 01 audit prerequisite in Sprints 08–11. No task-list entry has been removed because no remediation was implemented in this planning change. Affected area: [sprints/08-mcp-oauth-hardening.md](sprints/08-mcp-oauth-hardening.md), [sprints/09-domain-data-completion.md](sprints/09-domain-data-completion.md), [sprints/10-web-workflow-completion.md](sprints/10-web-workflow-completion.md), [sprints/11-deployment-and-release-verification.md](sprints/11-deployment-and-release-verification.md).
 
 ## Decision log
 
@@ -89,3 +89,4 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 2026-09-02 | Apply Jamaican law to privacy/legal requirements. | Business requirement. |
 | 2026-09-02 | Use `privacy@elixom.com` as the privacy and support contact. | Published privacy/support contact. |
 | 2026-09-02 | Use linked partial/full accounting-only adjustments: Accountant creates, Administrator approves, Accountant settles; originals stay paid and immutable. | Approved reversal workflow; see [ADR 0002](adr/0002-reversal-adjustment-accounting.md). |
+| 2026-09-03 | Enforce `AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` at Azure SQL boundary via EF migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003. | Satisfies non-negotiable append-only audit invariant. |

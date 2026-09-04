@@ -23,8 +23,8 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | Depends on Sprint 01 item 4a. |
-| 2 | Not started | — | Depends on Sprint 01 item 4a. |
-| 3 | Not started | — | Depends on Sprint 01 item 4a. |
+| 1 | In progress | 2026-09-03 | Jules / `jules-6784970465290902219-ad347328` — Register standard MCP tool services in DI and transport adapter endpoints. Affected areas: `Program.cs`, `DependencyInjection.cs`, `Mcp/Tools/`, controllers, and Web tests. |
+| 2 | Not started | — | — |
+| 3 | Not started | — | — |
 | 4 | Not started | — | — |
 | 5 | Not started | — | — |
