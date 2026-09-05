@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 
@@ -22,23 +21,31 @@ public sealed record OperationResponse(
 
 public sealed class OperationsTools
 {
-    private static readonly ConcurrentDictionary<string, OperationRecordDto> _operationStore = new();
-
     private readonly ISalaryPayrollService _salaryPayrollService;
     private readonly IOutboxService _outboxService;
+    private readonly IOperationRecordService _operationRecordService;
     private readonly IAuditService _audit;
-    private readonly ISystemClock _clock;
 
     public OperationsTools(
         ISalaryPayrollService salaryPayrollService,
         IOutboxService outboxService,
-        IAuditService audit,
-        ISystemClock clock)
+        IOperationRecordService operationRecordService,
+        IAuditService audit)
     {
         _salaryPayrollService = salaryPayrollService;
         _outboxService = outboxService;
+        _operationRecordService = operationRecordService;
         _audit = audit;
-        _clock = clock;
+    }
+
+    private static OperationRecordDto MapToDto(OperationRecord record)
+    {
+        return new OperationRecordDto(
+            record.IdempotencyKey,
+            record.OperationType,
+            record.Status,
+            record.Details,
+            record.ExecutedAtUtc);
     }
 
     public async Task<OperationResponse> RequestSalaryGenerationAsync(User actor, SalaryGenCommandRequest request, CancellationToken ct)
@@ -55,31 +62,40 @@ public sealed class OperationsTools
 
         var key = $"salary-gen:{request.SalaryDefinitionId}:{request.IdempotencyKey.Trim()}";
 
-        if (_operationStore.TryGetValue(key, out var existing))
+        var existing = await _operationRecordService.GetByIdempotencyKeyAsync(key, ct);
+        if (existing != null)
         {
-            return new OperationResponse(true, "Operation already processed (idempotent).", existing);
+            return new OperationResponse(true, "Operation already processed (idempotent).", MapToDto(existing));
         }
 
         try
         {
             var result = await _salaryPayrollService.GenerateForDefinitionAsync(request.SalaryDefinitionId, actor.Id, request.AsOfDate, ct);
-            var record = new OperationRecordDto(
+            var status = result.IsSuccess ? "Completed" : "Failed";
+            var details = result.IsSuccess ? $"Payroll generated with ID {result.Value?.Id}, total {result.Value?.PayrollTotal} JMD." : result.Error;
+
+            var record = await _operationRecordService.RecordOperationAsync(
                 key,
                 "SalaryGeneration",
-                result.IsSuccess ? "Completed" : "Failed",
-                result.IsSuccess ? $"Payroll generated with ID {result.Value?.Id}, total {result.Value?.PayrollTotal} JMD." : result.Error,
-                _clock.UtcNow);
-
-            _operationStore[key] = record;
+                status,
+                details,
+                actor.Id.ToString(),
+                ct);
 
             await _audit.LogAsync("MCP_OPERATIONS_SALARY_GEN", $"SalaryDefinition:{request.SalaryDefinitionId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
-            return new OperationResponse(result.IsSuccess, result.Error, record);
+            return new OperationResponse(result.IsSuccess, result.Error, MapToDto(record));
         }
         catch (Exception ex)
         {
-            var failedRecord = new OperationRecordDto(key, "SalaryGeneration", "Failed", ex.Message, _clock.UtcNow);
-            _operationStore[key] = failedRecord;
-            return new OperationResponse(false, ex.Message, failedRecord);
+            var record = await _operationRecordService.RecordOperationAsync(
+                key,
+                "SalaryGeneration",
+                "Failed",
+                ex.Message,
+                actor.Id.ToString(),
+                ct);
+
+            return new OperationResponse(false, ex.Message, MapToDto(record));
         }
     }
 
@@ -97,9 +113,10 @@ public sealed class OperationsTools
 
         var key = $"outbox-wakeup:{request.IdempotencyKey.Trim()}";
 
-        if (_operationStore.TryGetValue(key, out var existing))
+        var existing = await _operationRecordService.GetByIdempotencyKeyAsync(key, ct);
+        if (existing != null)
         {
-            return new OperationResponse(true, "Operation already processed (idempotent).", existing);
+            return new OperationResponse(true, "Operation already processed (idempotent).", MapToDto(existing));
         }
 
         try
@@ -107,41 +124,45 @@ public sealed class OperationsTools
             int batchSize = Math.Clamp(request.BatchSize ?? 25, 1, 100);
             int processed = await _outboxService.DispatchDueAsync(batchSize, ct);
 
-            var record = new OperationRecordDto(
+            var record = await _operationRecordService.RecordOperationAsync(
                 key,
                 "OutboxWakeUp",
                 "Completed",
                 $"Outbox dispatch executed for batch size {batchSize}; processed {processed} item(s).",
-                _clock.UtcNow);
-
-            _operationStore[key] = record;
+                actor.Id.ToString(),
+                ct);
 
             await _audit.LogAsync("MCP_OPERATIONS_OUTBOX_WAKEUP", $"BatchSize:{batchSize}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
-            return new OperationResponse(true, null, record);
+            return new OperationResponse(true, null, MapToDto(record));
         }
         catch (Exception ex)
         {
-            var failedRecord = new OperationRecordDto(key, "OutboxWakeUp", "Failed", ex.Message, _clock.UtcNow);
-            _operationStore[key] = failedRecord;
-            return new OperationResponse(false, ex.Message, failedRecord);
+            var record = await _operationRecordService.RecordOperationAsync(
+                key,
+                "OutboxWakeUp",
+                "Failed",
+                ex.Message,
+                actor.Id.ToString(),
+                ct);
+
+            return new OperationResponse(false, ex.Message, MapToDto(record));
         }
     }
 
-    public Task<OperationResponse> GetOperationStatusAsync(User actor, OperationStatusRequest request, CancellationToken ct)
+    public async Task<OperationResponse> GetOperationStatusAsync(User actor, OperationStatusRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.IdempotencyKey))
         {
-            return Task.FromResult(new OperationResponse(false, "IdempotencyKey is required.", null));
+            return new OperationResponse(false, "IdempotencyKey is required.", null);
         }
 
-        var key = request.IdempotencyKey.Trim();
-        var match = _operationStore.Values.FirstOrDefault(o => o.IdempotencyKey.Equals(key, StringComparison.OrdinalIgnoreCase) || o.IdempotencyKey.EndsWith($":{key}", StringComparison.OrdinalIgnoreCase));
+        var record = await _operationRecordService.GetByIdempotencyKeyAsync(request.IdempotencyKey.Trim(), ct);
 
-        if (match == null)
+        if (record == null)
         {
-            return Task.FromResult(new OperationResponse(false, "Operation record not found.", null));
+            return new OperationResponse(false, "Operation record not found.", null);
         }
 
-        return Task.FromResult(new OperationResponse(true, null, match));
+        return new OperationResponse(true, null, MapToDto(record));
     }
 }

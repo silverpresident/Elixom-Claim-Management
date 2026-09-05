@@ -2,11 +2,12 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 08 MCP Transport & OAuth Hardening in progress (Sprint 08 Item 1 Complete).
+- **Stage:** Sprint 08 MCP Transport & OAuth Hardening in progress (Sprint 08 Item 2 Complete).
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
 - **MCP Transport:** Standard .NET MCP Server transport (`ModelContextProtocol.AspNetCore` 2.2.0) registered at `/mcp` with mandatory Bearer authentication (`BearerTokenAuthenticationHandler`) and `mcp:access` scope validation via `IMcpActorResolver`. Legacy bespoke `/mcp/*` REST controllers retired per ADR 0004. Domain-scoped tool classes (`ClaimTools`, `CollectionTools`, `JobPaymentTools`, `PayrollTools`, `EmailTools`, `OperationsTools`) are annotated with `[McpServerToolType]` and `[McpServerTool]`.
+- **Durable MCP Operation Tracking:** MCP operations and idempotency keys are durably stored in the `dbclaim.OperationRecords` table via `IOperationRecordService` and migration `20260903100000_AddOperationRecordsTable`, ensuring operation tracking survives application restarts.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
 - **Collection configuration:** only the shared `CollectionClientAdministrationService` may create/configure clients, assignments, options, and bank details; it requires an active Administrator and emits redacted audit events. The MVC adapter is `/admin/collection-clients`.
 - **Collection recording:** `CollectionService` requires an active teller or above, validates active options against the selected active client, and persists the JMD collection, receipt queue records, and audit record atomically on relational providers. `EmailOutboxItems` (`20260902214751_AddEmailOutbox`) has unique idempotency keys and status scheduling fields; delivery is the next sprint item.

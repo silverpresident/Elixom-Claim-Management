@@ -37,6 +37,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<JobPaymentCollection> JobPaymentCollections => Set<JobPaymentCollection>();
     public DbSet<JobPaymentPayroll> JobPaymentPayrolls => Set<JobPaymentPayroll>();
     public DbSet<JobPaymentDeduction> JobPaymentDeductions => Set<JobPaymentDeduction>();
+    public DbSet<OperationRecord> OperationRecords => Set<OperationRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -444,6 +445,19 @@ public class ApplicationDbContext : DbContext
             entity.Property(x => x.Amount).IsRequired().HasPrecision(18, 2);
             entity.HasOne(x => x.JobPayment).WithMany(j => j.Deductions).HasForeignKey(x => x.JobPaymentId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(x => x.JobPaymentId);
+        });
+
+        modelBuilder.Entity<OperationRecord>(entity =>
+        {
+            entity.ToTable("OperationRecords");
+            entity.HasKey(o => o.Id);
+            entity.Property(o => o.IdempotencyKey).IsRequired().HasMaxLength(250);
+            entity.Property(o => o.OperationType).IsRequired().HasMaxLength(100);
+            entity.Property(o => o.Status).IsRequired().HasMaxLength(50);
+            entity.Property(o => o.Details).HasMaxLength(2000);
+            entity.Property(o => o.ActorUserId).IsRequired().HasMaxLength(450);
+            entity.Property(o => o.ExecutedAtUtc).IsRequired();
+            entity.HasIndex(o => o.IdempotencyKey).IsUnique();
         });
     }
 
