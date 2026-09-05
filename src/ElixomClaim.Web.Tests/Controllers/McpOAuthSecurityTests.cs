@@ -71,6 +71,58 @@ public class McpOAuthSecurityTests
     }
 
     [Fact]
+    public async Task AuthorizeConsent_RevalidatesParameters_AndPersistsConsent()
+    {
+        var db = CreateInMemoryDbContext();
+        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
+        var oauth = new OAuthService(db, audit, NullLogger<OAuthService>.Instance);
+        var controller = new OAuthController(oauth, NullLogger<OAuthController>.Instance);
+
+        var reg = await oauth.RegisterClientAsync("Client", new[] { "https://app.com/callback" });
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "user@test.com",
+            FullName = "User Test",
+            Role = UserRole.User,
+            IsActive = true
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var httpContext = new DefaultHttpContext();
+        var identity = new ClaimsIdentity(new[]
+        {
+            new System.Security.Claims.Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new System.Security.Claims.Claim(ClaimTypes.Email, user.Email)
+        }, "TestAuth");
+        httpContext.User = new ClaimsPrincipal(identity);
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        // Invalid client on consent POST
+        var badClientRes = await controller.AuthorizeConsent("nonexistent", "https://app.com/callback", "mcp:access", "s", "c", "S256", "Approve");
+        Assert.IsType<BadRequestObjectResult>(badClientRes);
+
+        // Invalid redirect URI on consent POST
+        var badRedirectRes = await controller.AuthorizeConsent(reg.ClientId, "https://attacker.com/callback", "mcp:access", "s", "c", "S256", "Approve");
+        Assert.IsType<BadRequestObjectResult>(badRedirectRes);
+
+        // Valid consent POST -> redirects with authorization code and records consent
+        var validRes = await controller.AuthorizeConsent(reg.ClientId, "https://app.com/callback", "mcp:access", "state123", "challenge123", "S256", "Approve");
+        var redirectRes = Assert.IsType<RedirectResult>(validRes);
+        Assert.Contains("code=", redirectRes.Url);
+        Assert.Contains("state=state123", redirectRes.Url);
+
+        Assert.True(await oauth.HasConsentAsync(user.Id.ToString(), reg.ClientId, "mcp:access"));
+
+        // Subsequent GET /oauth/authorize should auto-bypass consent view because consent is recorded
+        var getAuthRes = await controller.Authorize("code", reg.ClientId, "https://app.com/callback", "mcp:access", "state123", "challenge123", "S256");
+        var autoRedirectRes = Assert.IsType<RedirectResult>(getAuthRes);
+        Assert.Contains("code=", autoRedirectRes.Url);
+    }
+
+    [Fact]
     public async Task RefreshTokenReplay_RevokesEntireTokenFamily()
     {
         var db = CreateInMemoryDbContext();

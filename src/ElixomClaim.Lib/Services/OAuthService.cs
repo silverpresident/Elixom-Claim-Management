@@ -1,10 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using ElixomClaim.Lib.Configuration;
 using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ElixomClaim.Lib.Services;
 
@@ -13,25 +15,83 @@ public class OAuthService : IOAuthService
     private readonly ApplicationDbContext _dbContext;
     private readonly IAuditService _auditService;
     private readonly ILogger<OAuthService> _logger;
+    private readonly OAuthOptions _oauthOptions;
 
-    public OAuthService(ApplicationDbContext dbContext, IAuditService auditService, ILogger<OAuthService> logger)
+    public OAuthService(
+        ApplicationDbContext dbContext,
+        IAuditService auditService,
+        ILogger<OAuthService> logger,
+        IOptions<OAuthOptions>? oauthOptions = null)
     {
         _dbContext = dbContext;
         _auditService = auditService;
         _logger = logger;
+        _oauthOptions = oauthOptions?.Value ?? new OAuthOptions();
     }
 
     public async Task<OAuthClientRegistrationResult> RegisterClientAsync(string clientName, IEnumerable<string> redirectUris, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(clientName) || clientName.Trim().Length > 100)
+        {
+            throw new ArgumentException("Client name is required and must be 100 characters or less.");
+        }
+
+        if (redirectUris == null || !redirectUris.Any())
+        {
+            throw new ArgumentException("At least one redirect URI is required.");
+        }
+
+        var urisList = redirectUris.Distinct().ToList();
+        if (urisList.Count > 10)
+        {
+            throw new ArgumentException("A maximum of 10 redirect URIs is allowed.");
+        }
+
+        foreach (var uriStr in urisList)
+        {
+            if (string.IsNullOrWhiteSpace(uriStr))
+            {
+                throw new ArgumentException("Redirect URI cannot be empty.");
+            }
+
+            if (!Uri.TryCreate(uriStr, UriKind.Absolute, out var uri))
+            {
+                throw new ArgumentException($"Invalid redirect URI format: '{uriStr}'.");
+            }
+
+            if (!string.IsNullOrEmpty(uri.Fragment))
+            {
+                throw new ArgumentException($"Redirect URI must not contain fragment identifier: '{uriStr}'.");
+            }
+
+            if (uri.Host.Contains('*') || uriStr.Contains('*'))
+            {
+                throw new ArgumentException($"Wildcard redirect URIs are prohibited: '{uriStr}'.");
+            }
+
+            if (uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
+            {
+                // valid HTTPS URI
+            }
+            else if (uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) &&
+                     (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)))
+            {
+                // valid HTTP URI for localhost development / native apps
+            }
+            else
+            {
+                throw new ArgumentException($"Redirect URI must use HTTPS or HTTP on localhost/127.0.0.1: '{uriStr}'.");
+            }
+        }
+
         var clientId = "client_" + RandomNumberGenerator.GetHexString(16);
         var clientSecret = "secret_" + RandomNumberGenerator.GetHexString(32);
         var clientSecretHash = HashString(clientSecret);
-        var urisList = redirectUris.Distinct().ToList();
 
         var client = new OAuthClient
         {
             ClientId = clientId,
-            ClientName = clientName,
+            ClientName = clientName.Trim(),
             ClientSecretHash = clientSecretHash,
             RedirectUrisJson = JsonSerializer.Serialize(urisList),
             AllowedGrantTypes = "authorization_code,refresh_token",
@@ -46,14 +106,19 @@ public class OAuthService : IOAuthService
         await _auditService.LogAsync(
             action: "OAUTH_CLIENT_REGISTERED",
             target: $"OAuthClient:{clientId}",
-            afterState: new { clientId, clientName, redirectUris = urisList },
+            afterState: new { clientId, clientName = client.ClientName, redirectUris = urisList },
             cancellationToken: cancellationToken);
 
-        return new OAuthClientRegistrationResult(clientId, clientSecret, clientName, urisList);
+        return new OAuthClientRegistrationResult(clientId, clientSecret, client.ClientName, urisList);
     }
 
     public async Task<OAuthClient?> GetClientAsync(string clientId, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return null;
+        }
+
         return await _dbContext.OAuthClients.FirstOrDefaultAsync(c => c.ClientId == clientId && c.IsActive, cancellationToken);
     }
 
@@ -73,6 +138,11 @@ public class OAuthService : IOAuthService
 
     public async Task<bool> ValidateRedirectUriAsync(string clientId, string redirectUri, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(redirectUri))
+        {
+            return false;
+        }
+
         var client = await GetClientAsync(clientId, cancellationToken);
         if (client == null)
         {
@@ -81,6 +151,55 @@ public class OAuthService : IOAuthService
 
         var uris = JsonSerializer.Deserialize<List<string>>(client.RedirectUrisJson) ?? [];
         return uris.Contains(redirectUri, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public async Task RecordConsentAsync(string userId, string clientId, string scope, CancellationToken cancellationToken = default)
+    {
+        var consent = await _dbContext.OAuthConsents
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == clientId, cancellationToken);
+
+        if (consent == null)
+        {
+            consent = new OAuthConsent
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                UserId = userId,
+                ClientId = clientId,
+                Scope = scope,
+                GrantedAtUtc = DateTime.UtcNow
+            };
+            _dbContext.OAuthConsents.Add(consent);
+        }
+        else
+        {
+            consent.Scope = scope;
+            consent.GrantedAtUtc = DateTime.UtcNow;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _auditService.LogAsync(
+            action: "OAUTH_CONSENT_GRANTED",
+            target: $"OAuthClient:{clientId}",
+            actorUserId: userId,
+            afterState: new { clientId, scope },
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> HasConsentAsync(string userId, string clientId, string requestedScope, CancellationToken cancellationToken = default)
+    {
+        var consent = await _dbContext.OAuthConsents
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == clientId, cancellationToken);
+
+        if (consent == null)
+        {
+            return false;
+        }
+
+        var grantedScopes = consent.Scope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var reqScopes = requestedScope.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return reqScopes.All(r => grantedScopes.Contains(r, StringComparer.OrdinalIgnoreCase));
     }
 
     public async Task<string> CreateAuthorizationCodeAsync(
@@ -97,7 +216,6 @@ public class OAuthService : IOAuthService
 
         var authCode = new OAuthAuthorizationCode
         {
-            Code = code,
             CodeHash = codeHash,
             ClientId = clientId,
             UserId = userId,
@@ -169,8 +287,8 @@ public class OAuthService : IOAuthService
         var familyId = "fam_" + RandomNumberGenerator.GetHexString(16);
 
         var now = DateTime.UtcNow;
-        var accessExpires = now.AddHours(1);
-        var refreshExpires = now.AddDays(14);
+        var accessExpires = now.AddSeconds(_oauthOptions.AccessTokenLifetimeSeconds);
+        var refreshExpires = now.AddSeconds(_oauthOptions.RefreshTokenLifetimeSeconds);
 
         var tokenRecord = new OAuthToken
         {
@@ -211,7 +329,7 @@ public class OAuthService : IOAuthService
             afterState: new { clientId, scope = authCode.Scope, familyId },
             cancellationToken: cancellationToken);
 
-        return new OAuthTokenResult(accessToken, "Bearer", 3600, refreshToken, authCode.Scope);
+        return new OAuthTokenResult(accessToken, "Bearer", _oauthOptions.AccessTokenLifetimeSeconds, refreshToken, authCode.Scope);
     }
 
     public async Task<OAuthTokenResult?> RefreshTokenAsync(
@@ -256,8 +374,8 @@ public class OAuthService : IOAuthService
         var newRefreshTokenHash = HashString(newRefreshToken);
 
         var now = DateTime.UtcNow;
-        var accessExpires = now.AddHours(1);
-        var refreshExpires = now.AddDays(14);
+        var accessExpires = now.AddSeconds(_oauthOptions.AccessTokenLifetimeSeconds);
+        var refreshExpires = now.AddSeconds(_oauthOptions.RefreshTokenLifetimeSeconds);
 
         var newAccessRecord = new OAuthToken
         {
@@ -298,7 +416,7 @@ public class OAuthService : IOAuthService
             afterState: new { clientId, scope = tokenRecord.Scope, familyId = tokenRecord.RefreshTokenFamilyId },
             cancellationToken: cancellationToken);
 
-        return new OAuthTokenResult(newAccessToken, "Bearer", 3600, newRefreshToken, tokenRecord.Scope);
+        return new OAuthTokenResult(newAccessToken, "Bearer", _oauthOptions.AccessTokenLifetimeSeconds, newRefreshToken, tokenRecord.Scope);
     }
 
     public async Task<bool> RevokeTokenAsync(string token, CancellationToken cancellationToken = default)

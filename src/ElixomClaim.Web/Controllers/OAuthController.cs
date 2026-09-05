@@ -28,18 +28,25 @@ public class OAuthController : Controller
             return BadRequest(new { error = "invalid_client_metadata", error_description = "client_name and redirect_uris are required" });
         }
 
-        var result = await _oauthService.RegisterClientAsync(request.client_name, request.redirect_uris);
-
-        return Created("", new
+        try
         {
-            client_id = result.ClientId,
-            client_secret = result.ClientSecret,
-            client_name = result.ClientName,
-            redirect_uris = result.RedirectUris,
-            grant_types = new[] { "authorization_code", "refresh_token" },
-            response_types = new[] { "code" },
-            token_endpoint_auth_method = "client_secret_post"
-        });
+            var result = await _oauthService.RegisterClientAsync(request.client_name, request.redirect_uris);
+
+            return Created("", new
+            {
+                client_id = result.ClientId,
+                client_secret = result.ClientSecret,
+                client_name = result.ClientName,
+                redirect_uris = result.RedirectUris,
+                grant_types = new[] { "authorization_code", "refresh_token" },
+                response_types = new[] { "code" },
+                token_endpoint_auth_method = "client_secret_post"
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = "invalid_client_metadata", error_description = ex.Message });
+        }
     }
 
     [HttpGet("authorize")]
@@ -75,10 +82,27 @@ public class OAuthController : Controller
             return BadRequest(new { error = "invalid_request", error_description = "PKCE S256 code_challenge is required" });
         }
 
+        var reqScope = scope ?? "openid profile email mcp:access";
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId) && await _oauthService.HasConsentAsync(userId, clientId, reqScope))
+        {
+            var code = await _oauthService.CreateAuthorizationCodeAsync(
+                clientId, userId, redirectUri, reqScope, codeChallenge, codeChallengeMethod);
+
+            var redirectUrl = $"{redirectUri}?code={code}";
+            if (!string.IsNullOrEmpty(state))
+            {
+                redirectUrl += $"&state={Uri.EscapeDataString(state)}";
+            }
+
+            return Redirect(redirectUrl);
+        }
+
         ViewBag.ClientName = client.ClientName;
         ViewBag.ClientId = clientId;
         ViewBag.RedirectUri = redirectUri;
-        ViewBag.Scope = scope ?? "openid profile email mcp:access";
+        ViewBag.Scope = reqScope;
         ViewBag.State = state;
         ViewBag.CodeChallenge = codeChallenge;
         ViewBag.CodeChallengeMethod = codeChallengeMethod;
@@ -98,6 +122,23 @@ public class OAuthController : Controller
         [FromForm] string codeChallengeMethod,
         [FromForm] string submitAction)
     {
+        var client = await _oauthService.GetClientAsync(clientId);
+        if (client == null)
+        {
+            return BadRequest(new { error = "invalid_client" });
+        }
+
+        var isValidRedirect = await _oauthService.ValidateRedirectUriAsync(clientId, redirectUri);
+        if (!isValidRedirect)
+        {
+            return BadRequest(new { error = "invalid_redirect_uri" });
+        }
+
+        if (string.IsNullOrWhiteSpace(codeChallenge) || !string.Equals(codeChallengeMethod, "S256", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { error = "invalid_request", error_description = "PKCE S256 code_challenge is required" });
+        }
+
         if (submitAction != "Approve")
         {
             return Redirect($"{redirectUri}?error=access_denied&state={Uri.EscapeDataString(state ?? "")}");
@@ -109,8 +150,11 @@ public class OAuthController : Controller
             return Unauthorized();
         }
 
+        var reqScope = scope ?? "openid profile email mcp:access";
+        await _oauthService.RecordConsentAsync(userId, clientId, reqScope);
+
         var code = await _oauthService.CreateAuthorizationCodeAsync(
-            clientId, userId, redirectUri, scope ?? "openid profile email mcp:access", codeChallenge, codeChallengeMethod);
+            clientId, userId, redirectUri, reqScope, codeChallenge, codeChallengeMethod);
 
         var redirectUrl = $"{redirectUri}?code={code}";
         if (!string.IsNullOrEmpty(state))

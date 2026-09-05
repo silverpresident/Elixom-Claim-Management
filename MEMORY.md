@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 08 MCP Transport & OAuth Hardening in progress (Sprint 08 Item 2 Complete).
+- **Stage:** Sprint 08 MCP Transport & OAuth Hardening in progress (Sprint 08 Item 3 Complete).
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
@@ -62,7 +62,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 05 Salary & payroll | Complete | All ordered items complete; Lib/Web test evidence recorded in `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Complete | All 9 items complete; build and 127 tests passed on 2026-09-03. See `sprints/06-mcp-release.md`. |
 | 07 Development testing | Complete | Development-only in-memory sample data and role-selectable test login completed; full suite passed (130 tests) on 2026-09-03. See `sprints/07-development-testing.md`. |
-| 08 MCP transport & OAuth hardening | In progress | Item 1 complete; standard MCP transport, durable operations, OAuth hardening, rate limiting, and threat-model/interoperability evidence. See `sprints/08-mcp-oauth-hardening.md`. |
+| 08 MCP transport & OAuth hardening | In progress | Item 3 complete; standard MCP transport, durable operations, OAuth hardening, rate limiting, and threat-model/interoperability evidence. See `sprints/08-mcp-oauth-hardening.md`. |
 | 09 Domain data completion | Planned | Required fields, all-`Guid` identifier conversion (ADR required first), mappings, migrations, and relational coverage. See `sprints/09-domain-data-completion.md`. |
 | 10 Web workflow completion | Planned | Profile/dashboard, collection fields, job lifecycle/deductions, payroll adjustment/custom-entry workflows, and navigation. See `sprints/10-web-workflow-completion.md`. |
 | 11 Deployment & release verification | Planned | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification. See `sprints/11-deployment-and-release-verification.md`. |
@@ -93,3 +93,4 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 2026-09-02 | Use linked partial/full accounting-only adjustments: Accountant creates, Administrator approves, Accountant settles; originals stay paid and immutable. | Approved reversal workflow; see [ADR 0002](adr/0002-reversal-adjustment-accounting.md). |
 | 2026-09-03 | Enforce `AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` at Azure SQL boundary via EF migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003. | Satisfies non-negotiable append-only audit invariant. |
 | 2026-09-03 | Standardize MCP transport using `ModelContextProtocol.AspNetCore` mapped at `/mcp` with Bearer auth and `mcp:access` scope validation. Retire bespoke `/mcp/*` REST controllers per ADR 0004. | Compliance with standard MCP server specification and interoperability with conforming MCP client agents. |
+| 2026-09-03 | Persist OAuth consents in dbclaim.OAuthConsents, enforce strict redirect URI shape/scheme rules during dynamic client registration and authorization, stop retaining raw authorization codes in database, and revalidate client and redirect URI on consent POST. | OAuth 2.0 hardening requirements under Sprint 08 Item 3. |

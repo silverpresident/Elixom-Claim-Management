@@ -18,6 +18,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<OAuthClient> OAuthClients => Set<OAuthClient>();
     public DbSet<OAuthAuthorizationCode> OAuthAuthorizationCodes => Set<OAuthAuthorizationCode>();
     public DbSet<OAuthToken> OAuthTokens => Set<OAuthToken>();
+    public DbSet<OAuthConsent> OAuthConsents => Set<OAuthConsent>();
     public DbSet<Claim> Claims => Set<Claim>();
     public DbSet<ClaimComment> ClaimComments => Set<ClaimComment>();
     public DbSet<CollectionClient> CollectionClients => Set<CollectionClient>();
@@ -147,7 +148,6 @@ public class ApplicationDbContext : DbContext
             entity.ToTable("OAuthAuthorizationCodes");
             entity.HasKey(c => c.CodeHash);
             entity.Property(c => c.CodeHash).HasMaxLength(256);
-            entity.Property(c => c.Code).HasMaxLength(256);
             entity.Property(c => c.ClientId).IsRequired().HasMaxLength(100);
             entity.Property(c => c.UserId).IsRequired().HasMaxLength(450);
             entity.Property(c => c.RedirectUri).IsRequired().HasMaxLength(2000);
@@ -157,6 +157,18 @@ public class ApplicationDbContext : DbContext
             entity.Property(c => c.IsUsed).IsRequired().HasDefaultValue(false);
             entity.Property(c => c.ExpiresAtUtc).IsRequired();
             entity.Property(c => c.CreatedAtUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<OAuthConsent>(entity =>
+        {
+            entity.ToTable("OAuthConsents");
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Id).HasMaxLength(100);
+            entity.Property(c => c.UserId).IsRequired().HasMaxLength(450);
+            entity.Property(c => c.ClientId).IsRequired().HasMaxLength(100);
+            entity.Property(c => c.Scope).IsRequired().HasMaxLength(500);
+            entity.Property(c => c.GrantedAtUtc).IsRequired();
+            entity.HasIndex(c => new { c.UserId, c.ClientId }).IsUnique();
         });
 
         modelBuilder.Entity<OAuthToken>(entity =>

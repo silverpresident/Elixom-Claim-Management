@@ -14,7 +14,6 @@ public class OAuthClient
 
 public class OAuthAuthorizationCode
 {
-    public string Code { get; set; } = string.Empty;
     public string CodeHash { get; set; } = string.Empty;
     public string ClientId { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
@@ -39,4 +38,13 @@ public class OAuthToken
     public bool IsRevoked { get; set; } = false;
     public DateTime ExpiresAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class OAuthConsent
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string UserId { get; set; } = string.Empty;
+    public string ClientId { get; set; } = string.Empty;
+    public string Scope { get; set; } = string.Empty;
+    public DateTime GrantedAtUtc { get; set; } = DateTime.UtcNow;
 }
