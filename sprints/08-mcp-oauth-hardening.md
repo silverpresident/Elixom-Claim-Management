@@ -23,7 +23,7 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | In progress | 2026-09-03 | Jules / `jules-6784970465290902219-ad347328` — Register standard MCP tool services in DI and transport adapter endpoints. Affected areas: `Program.cs`, `DependencyInjection.cs`, `Mcp/Tools/`, controllers, and Web tests. |
+| 1 | Complete | 2026-09-03 | Jules / `jules-799593014151799790-53fa79f4` — Registered standard MCP server transport (`ModelContextProtocol.AspNetCore`) at `/mcp` with Bearer authorization and `mcp:access` scope validation via `IMcpActorResolver`. Annotated domain tools, retired bespoke `Mcp*Controllers`, created ADR 0004. Verification: `dotnet test ElixomClaim.slnx` passed 135 tests (94 Lib, 41 Web). Affected files: `Program.cs`, `adr/0004-standard-mcp-transport-and-rest-adapter-retirement.md`, `Mcp/IMcpActorResolver.cs`, `Mcp/McpActorResolver.cs`, `Mcp/Tools/`, `Controllers/Mcp*.cs` (deleted), `McpStandardTransportIntegrationTests.cs`. |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
