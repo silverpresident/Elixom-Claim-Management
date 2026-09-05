@@ -2,14 +2,17 @@ using ElixomClaim.Lib.Authorization;
 using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
+using ElixomClaim.Web.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ElixomClaim.Web.Controllers;
 
 [Authorize(Policy = PolicyNames.RequireManager)]
 [Route("admin")]
+[EnableRateLimiting(RateLimitingConfiguration.MvcPolicy)]
 public class AdminController : Controller
 {
     private readonly ApplicationDbContext _dbContext;

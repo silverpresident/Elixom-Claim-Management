@@ -10,8 +10,11 @@ using ElixomClaim.Web.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
+using Microsoft.AspNetCore.RateLimiting;
+
 namespace ElixomClaim.Web.Controllers;
 
+[EnableRateLimiting(RateLimitingConfiguration.MvcPolicy)]
 public class AccountController : Controller
 {
     private readonly ApplicationDbContext _dbContext;

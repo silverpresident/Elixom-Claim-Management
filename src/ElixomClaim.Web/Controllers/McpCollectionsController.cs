@@ -3,13 +3,16 @@ using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Web.Authentication;
 using ElixomClaim.Web.Mcp.Tools;
+using ElixomClaim.Web.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ElixomClaim.Web.Controllers;
 
 [ApiController, Route("mcp/collections")]
+[EnableRateLimiting(RateLimitingConfiguration.McpPolicy)]
 [Authorize(AuthenticationSchemes = BearerTokenAuthenticationHandler.SchemeName)]
 public sealed class McpCollectionsController : ControllerBase
 {

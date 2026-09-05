@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 08 MCP Transport & OAuth Hardening in progress (Sprint 08 Item 3 Complete).
+- **Stage:** Sprint 08 Complete. Next sprint: Sprint 09 Domain Data Completion.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
@@ -14,6 +14,7 @@
 - **Outbox delivery:** `EmailOutboxItems` are dispatched through SMTP, Azure Communication Services, or the development fake sender. `EmailLogs` (`20260902215402_AddEmailLogs`) record every delivery/skipped outcome; failures retry with bounded exponential backoff and invalid optional payor addresses are recorded as skipped without blocking other recipients.
 - **Teller collections UI:** `/collections` provides the recording teller’s 24-hour queue, entry, review, controlled reissue, and print-ready HTML receipt. Print/email receipts do not include internal processing fees.
 - **Retention configuration:** `Retention:FinancialRecordRetentionYears` defaults to nine and is validated at startup with a four-year minimum.
+- **Rate Limiting:** Application-level rate limiting middleware (`Microsoft.AspNetCore.RateLimiting`) configured with policies for OAuth (`oauth`: 20 req/min), MCP (`mcp`: 60 req/min), and MVC (`mvc`: 100 req/min). Partition keys safely extract User ID or Remote IP without leaking sensitive information on 429 response.
 - **Database baseline:** EF history is deliberately reset for this first implementation. `20260903053340_InitialCreate` is now the sole migration and creates every current `dbclaim` object.
 - **Salary and payroll schema:** `SalaryDefinitions`, typed percentage/fixed `SalaryAdjustments`, salary-backed `Payrolls` with unique due-period identity, and ordered `PayrollEntries` are available. Payrolls require their source salary definition; see `20260903053340_InitialCreate` and `SalaryPayrollModelTests`.
 - **Salary recurrence:** `SalaryRecurrencePlanner` is the shared, pure source of due-date eligibility. It adds months then days to `LastSalaryDate`, picks the nearest configured weekday (earlier occurrence on a tie), applies inclusive definition bounds, and suppresses existing due periods.
@@ -62,8 +63,8 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 05 Salary & payroll | Complete | All ordered items complete; Lib/Web test evidence recorded in `sprints/05-salary-payroll.md`. |
 | 06 MCP & readiness | Complete | All 9 items complete; build and 127 tests passed on 2026-09-03. See `sprints/06-mcp-release.md`. |
 | 07 Development testing | Complete | Development-only in-memory sample data and role-selectable test login completed; full suite passed (130 tests) on 2026-09-03. See `sprints/07-development-testing.md`. |
-| 08 MCP transport & OAuth hardening | In progress | Item 3 complete; standard MCP transport, durable operations, OAuth hardening, rate limiting, and threat-model/interoperability evidence. See `sprints/08-mcp-oauth-hardening.md`. |
-| 09 Domain data completion | Planned | Required fields, all-`Guid` identifier conversion (ADR required first), mappings, migrations, and relational coverage. See `sprints/09-domain-data-completion.md`. |
+| 08 MCP transport & OAuth hardening | Complete | All 5 items complete; standard MCP transport, durable operations, OAuth hardening, rate limiting, and updated threat model/security test suite (145 tests passed) on 2026-09-03. See `sprints/08-mcp-oauth-hardening.md`. |
+| 09 Domain data completion | In progress | Required fields, all-`Guid` identifier conversion (ADR required first), mappings, migrations, and relational coverage. See `sprints/09-domain-data-completion.md`. |
 | 10 Web workflow completion | Planned | Profile/dashboard, collection fields, job lifecycle/deductions, payroll adjustment/custom-entry workflows, and navigation. See `sprints/10-web-workflow-completion.md`. |
 | 11 Deployment & release verification | Planned | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification. See `sprints/11-deployment-and-release-verification.md`. |
 
