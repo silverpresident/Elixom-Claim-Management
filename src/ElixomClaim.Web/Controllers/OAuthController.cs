@@ -1,11 +1,14 @@
 using System.Security.Claims;
 using ElixomClaim.Lib.Services;
+using ElixomClaim.Web.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ElixomClaim.Web.Controllers;
 
 [Route("oauth")]
+[EnableRateLimiting(RateLimitingConfiguration.OAuthPolicy)]
 public class OAuthController : Controller
 {
     private readonly IOAuthService _oauthService;

@@ -123,6 +123,49 @@ public class McpOAuthSecurityTests
     }
 
     [Fact]
+    public async Task AuthorizationCode_IsNotStoredInPlainText_OnlyCodeHashInDatabase()
+    {
+        var db = CreateInMemoryDbContext();
+        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
+        var oauth = new OAuthService(db, audit, NullLogger<OAuthService>.Instance);
+
+        var client = await oauth.RegisterClientAsync("Client", new[] { "https://app.com/cb" });
+        var verifier = "secret_code_verifier_1234567890_abcdef";
+        var challenge = CalculateS256Challenge(verifier);
+
+        var rawCode = await oauth.CreateAuthorizationCodeAsync(client.ClientId, Guid.NewGuid().ToString(), "https://app.com/cb", "mcp:access", challenge);
+
+        var storedCodeRecord = await db.OAuthAuthorizationCodes.FirstOrDefaultAsync(c => c.ClientId == client.ClientId);
+        Assert.NotNull(storedCodeRecord);
+        // Verify that rawCode is NOT stored directly in database entity
+        Assert.NotEqual(rawCode, storedCodeRecord.CodeHash);
+        Assert.False(string.IsNullOrWhiteSpace(storedCodeRecord.CodeHash));
+    }
+
+    [Fact]
+    public async Task RevokeToken_RevokesTokenAndPreventsExchange()
+    {
+        var db = CreateInMemoryDbContext();
+        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
+        var oauth = new OAuthService(db, audit, NullLogger<OAuthService>.Instance);
+
+        var client = await oauth.RegisterClientAsync("Client", new[] { "https://app.com/cb" });
+        var verifier = "secret_code_verifier_1234567890_abcdef";
+        var challenge = CalculateS256Challenge(verifier);
+
+        var code = await oauth.CreateAuthorizationCodeAsync(client.ClientId, Guid.NewGuid().ToString(), "https://app.com/cb", "mcp:access", challenge);
+        var tokens = await oauth.ExchangeCodeForTokensAsync(code, client.ClientId, client.ClientSecret, "https://app.com/cb", verifier);
+        Assert.NotNull(tokens);
+
+        // Revoke the refresh token
+        await oauth.RevokeTokenAsync(tokens.RefreshToken);
+
+        // Attempting to refresh with revoked token must fail
+        var reattempt = await oauth.RefreshTokenAsync(tokens.RefreshToken, client.ClientId, client.ClientSecret);
+        Assert.Null(reattempt);
+    }
+
+    [Fact]
     public async Task RefreshTokenReplay_RevokesEntireTokenFamily()
     {
         var db = CreateInMemoryDbContext();

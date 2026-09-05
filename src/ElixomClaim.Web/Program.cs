@@ -44,6 +44,9 @@ builder.Services.AddAuthentication(options =>
 // Add MVC controllers with views
 builder.Services.AddControllersWithViews();
 
+// Configure Application Rate Limiting / Throttling
+builder.Services.AddApplicationRateLimiting();
+
 // Register domain-scoped MCP tool adapters in DI
 builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.ClaimTools>();
 builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.CollectionTools>();
@@ -79,6 +82,7 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // Map Health & Readiness endpoints
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
