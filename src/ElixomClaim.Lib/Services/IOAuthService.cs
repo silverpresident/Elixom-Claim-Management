@@ -13,6 +13,9 @@ public interface IOAuthService
     Task<bool> ValidateClientSecretAsync(string clientId, string clientSecret, CancellationToken cancellationToken = default);
     Task<bool> ValidateRedirectUriAsync(string clientId, string redirectUri, CancellationToken cancellationToken = default);
 
+    Task RecordConsentAsync(string userId, string clientId, string scope, CancellationToken cancellationToken = default);
+    Task<bool> HasConsentAsync(string userId, string clientId, string requestedScope, CancellationToken cancellationToken = default);
+
     Task<string> CreateAuthorizationCodeAsync(
         string clientId,
         string userId,
