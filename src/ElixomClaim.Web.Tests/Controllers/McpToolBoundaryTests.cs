@@ -120,10 +120,12 @@ public class McpToolBoundaryTests
     public async Task OperationsTools_OutboxWakeUp_RequiresAdmin_And_Deduplicates()
     {
         var db = CreateInMemoryDbContext();
+        var clock = new SystemClock();
         var audit = new AuditService(db, NullLogger<AuditService>.Instance);
-        var outbox = new OutboxService(db, new FakeEmailSender(), new SystemClock(), NullLogger<OutboxService>.Instance);
-        var salary = new SalaryPayrollService(db, new SalaryRecurrencePlanner(), audit, new SystemClock(), NullLogger<SalaryPayrollService>.Instance);
-        var opsTools = new OperationsTools(salary, outbox, audit, new SystemClock());
+        var outbox = new OutboxService(db, new FakeEmailSender(), clock, NullLogger<OutboxService>.Instance);
+        var salary = new SalaryPayrollService(db, new SalaryRecurrencePlanner(), audit, clock, NullLogger<SalaryPayrollService>.Instance);
+        var opsRecordService = new OperationRecordService(db, clock);
+        var opsTools = new OperationsTools(salary, outbox, opsRecordService, audit);
 
         var user = new User { Id = Guid.NewGuid(), Email = "user@elixom.com", FullName = "User", Role = UserRole.User, IsActive = true };
         var admin = new User { Id = Guid.NewGuid(), Email = "admin@elixom.com", FullName = "Admin", Role = UserRole.Administrator, IsActive = true };
