@@ -1,138 +1,97 @@
 # Gemini Specification Completeness Report
 
-**Reviewed:** 2026-09-03  
-**Source specification:** [`context/gemini-specs.md`](../context/gemini-specs.md)  
-**Scope:** Read-only comparison of the current repository implementation, tests, sprint ledger, and runtime wiring. This report does not alter application behavior.
+**Re-evaluated:** 2026-09-06
+
+**Source specification:** [`context/gemini-specs.md`](../context/gemini-specs.md)
+
+**Method:** Code, migration, runtime-wiring, package, sprint-ledger, and automated-test review. This report reflects the current checkout rather than the 2026-09-03 assessment.
 
 ## Executive conclusion
 
-The core domain services and data model are substantially implemented, but the application is **not complete against the Gemini specification**. The strongest coverage is in claims, collection recording, payment settlement, payroll generation, durable email delivery, and basic OAuth token lifecycle behavior.
+The implementation is now **substantially complete for the core business application**. The earlier functional gaps in profile/bank management, claim job date, collection telephone, job-payment UI, salary adjustment UI, payroll custom-entry UI, audit immutability, rate limiting, OAuth consent persistence, and migration startup have been addressed.
 
-Material gaps remain in MCP transport, audit immutability, production migration startup, several user-facing workflows, OAuth hardening, and the in-progress Development testing experience. The repository also has an unbuildable Web test project at the reviewed revision.
+It is **not fully complete against `gemini-specs.md`**, chiefly because no actual MCP server transport is registered or mapped. The project includes the `ModelContextProtocol.AspNetCore` package, but no `AddMcpServer`, `MapMcp`, MCP tool annotation, actor resolver, or `/mcp`/`/mcp/sse` endpoint exists in the runtime. The legacy bearer-authenticated REST controllers under `/mcp/*` remain the live integration surface.
 
-## Implemented requirements
+## Requirement coverage
 
-| Requirement area | Assessment | Principal implementation evidence |
+| Requirement area | Status | Evidence |
 | --- | --- | --- |
-| .NET 10 MVC solution, Lib/Web/test split, `dbclaim` schema, JMD `decimal(18,2)` values | Implemented | [`ApplicationDbContext.cs`](../src/ElixomClaim.Lib/Data/ApplicationDbContext.cs), [`DependencyInjection.cs`](../src/ElixomClaim.Lib/DependencyInjection.cs) |
-| Google-based allow-listed active-user access and hierarchical roles | Implemented | [`UserValidationEvents.cs`](../src/ElixomClaim.Web/Authentication/UserValidationEvents.cs), [`UserRoleExtensions.cs`](../src/ElixomClaim.Lib/Entities/UserRoleExtensions.cs) |
-| Claim lifecycle, ownership enforcement, soft delete, public/private comments | Mostly implemented | [`ClaimService.cs`](../src/ElixomClaim.Lib/Services/ClaimService.cs), [`ClaimEntities.cs`](../src/ElixomClaim.Lib/Entities/ClaimEntities.cs) |
-| Collection clients, client-scoped options, collection recording, HTML receipts and reissue | Mostly implemented | [`CollectionService.cs`](../src/ElixomClaim.Lib/Services/CollectionService.cs), [`CollectionsController.cs`](../src/ElixomClaim.Web/Controllers/CollectionsController.cs) |
-| Durable SMTP/ACS/fake email delivery, retry and email logs | Implemented | [`OutboxService.cs`](../src/ElixomClaim.Lib/Services/OutboxService.cs), [`EmailSenders.cs`](../src/ElixomClaim.Lib/Services/EmailSenders.cs) |
-| Job payment source constraints, total calculations, scheduling/settlement service logic, paid-state cascade | Mostly implemented | [`JobPaymentService.cs`](../src/ElixomClaim.Lib/Services/JobPaymentService.cs) |
-| Salary recurrence, generated payrolls, custom-entry bounds and payroll-to-job submission | Mostly implemented | [`SalaryPayrollService.cs`](../src/ElixomClaim.Lib/Services/SalaryPayrollService.cs), [`SalaryRecurrencePlanner.cs`](../src/ElixomClaim.Lib/Services/SalaryRecurrencePlanner.cs) |
-| OAuth endpoints, PKCE S256, token hashing, refresh rotation/revocation, bearer user projection | Partially implemented | [`OAuthController.cs`](../src/ElixomClaim.Web/Controllers/OAuthController.cs), [`OAuthService.cs`](../src/ElixomClaim.Lib/Services/OAuthService.cs), [`BearerTokenAuthenticationHandler.cs`](../src/ElixomClaim.Web/Authentication/BearerTokenAuthenticationHandler.cs) |
-| Domain-scoped MCP-style adapters, constrained template email and operation commands | Partially implemented | [`Mcp/Tools`](../src/ElixomClaim.Web/Mcp/Tools), [`McpClaimsController.cs`](../src/ElixomClaim.Web/Controllers/McpClaimsController.cs) |
-| Bootstrap/jQuery CDN usage, SVG favicon, privacy page, HTML-only printing | Implemented | [`_Layout.cshtml`](../src/ElixomClaim.Web/Views/Shared/_Layout.cshtml), [`Privacy.cshtml`](../src/ElixomClaim.Web/Views/Home/Privacy.cshtml) |
+| .NET 10 MVC, Lib/Web/test split, EF Core, Azure SQL `dbclaim`, JMD money precision | Implemented | [`ApplicationDbContext.cs`](../src/ElixomClaim.Lib/Data/ApplicationDbContext.cs), [`DependencyInjection.cs`](../src/ElixomClaim.Lib/DependencyInjection.cs) |
+| Google allow-list authentication, blocked-user denial, hierarchical application roles | Implemented | [`UserValidationEvents.cs`](../src/ElixomClaim.Web/Authentication/UserValidationEvents.cs), [`AuthorizationHandlers.cs`](../src/ElixomClaim.Lib/Authorization/AuthorizationHandlers.cs) |
+| Claims lifecycle, soft deletion, job date, comments, claimant dashboard/history | Mostly implemented | [`ClaimEntities.cs`](../src/ElixomClaim.Lib/Entities/ClaimEntities.cs), [`ClaimsController.cs`](../src/ElixomClaim.Web/Controllers/ClaimsController.cs) |
+| Profile and bank-detail management with masked display and audit logging | Implemented | [`ProfileController.cs`](../src/ElixomClaim.Web/Controllers/ProfileController.cs), [`Profile/Index.cshtml`](../src/ElixomClaim.Web/Views/Profile/Index.cshtml) |
+| Collections, client options/fees, payor email/telephone, receipts, HTML print/reissue | Implemented | [`CollectionEntities.cs`](../src/ElixomClaim.Lib/Entities/CollectionEntities.cs), [`CollectionService.cs`](../src/ElixomClaim.Lib/Services/CollectionService.cs) |
+| Durable SMTP/ACS outbox, retries, idempotency, email logs, HTML-only notifications | Implemented | [`OutboxService.cs`](../src/ElixomClaim.Lib/Services/OutboxService.cs), [`EmailSenders.cs`](../src/ElixomClaim.Lib/Services/EmailSenders.cs) |
+| Job creation, attachment/removal, deductions, metadata, submit/schedule/settle, adjustment workflow | Implemented | [`JobPaymentService.cs`](../src/ElixomClaim.Lib/Services/JobPaymentService.cs), [`JobPaymentsController.cs`](../src/ElixomClaim.Web/Controllers/JobPaymentsController.cs) |
+| Salary definitions, adjustments, recurrence engine, payroll custom entries and payroll-to-job flow | Implemented | [`SalaryPayrollService.cs`](../src/ElixomClaim.Lib/Services/SalaryPayrollService.cs), [`PayrollController.cs`](../src/ElixomClaim.Web/Controllers/PayrollController.cs) |
+| Audit redaction and database-level append-only protection | Implemented | [`AddAuditRecordAppendOnlyTrigger.cs`](../src/ElixomClaim.Lib/Migrations/20260903090000_AddAuditRecordAppendOnlyTrigger.cs) |
+| OAuth authorization code + PKCE, consent persistence, token rotation/revocation, configured lifetimes and rate limiting | Mostly implemented | [`OAuthService.cs`](../src/ElixomClaim.Lib/Services/OAuthService.cs), [`OAuthController.cs`](../src/ElixomClaim.Web/Controllers/OAuthController.cs), [`RateLimitingConfiguration.cs`](../src/ElixomClaim.Web/Configuration/RateLimitingConfiguration.cs) |
+| Guarded application-start migration execution | Implemented with deployment qualification | [`Program.cs`](../src/ElixomClaim.Web/Program.cs), [`DatabaseMigrationExtensions.cs`](../src/ElixomClaim.Lib/Data/DatabaseMigrationExtensions.cs) |
+| Standard MCP server transport and tool discovery/invocation | **Not implemented** | Package reference only in [`ElixomClaim.Web.csproj`](../src/ElixomClaim.Web/ElixomClaim.Web.csproj); legacy REST controllers remain in [`Controllers`](../src/ElixomClaim.Web/Controllers) |
+| CDN Bootstrap/jQuery, SVG favicon, responsive HTML print, privacy page | Implemented | [`_Layout.cshtml`](../src/ElixomClaim.Web/Views/Shared/_Layout.cshtml), [`Privacy.cshtml`](../src/ElixomClaim.Web/Views/Home/Privacy.cshtml) |
 
-## Material differences and missing requirements
+## Remaining differences and risks
 
-### 1. MCP transport is not implemented as specified
+### 1. MCP transport is absent
 
-The Gemini specification requires an MCP transport endpoint such as `/mcp/sse`. The repository has custom authenticated REST endpoints under `/mcp/claims`, `/mcp/collections`, `/mcp/email`, `/mcp/job-payments`, `/mcp/operations`, and `/mcp/payroll`, but no SSE endpoint or standard MCP server transport.
+This is the primary remaining implementation gap.
 
-**Impact:** MCP clients expecting the specified transport cannot connect. The current endpoints provide MCP-adjacent capabilities rather than a verified MCP protocol implementation.
+- The Gemini specification requires Model Context Protocol interaction through an MCP transport endpoint, exemplified as `/mcp/sse`.
+- The project references `ModelContextProtocol.AspNetCore` 2.2.0, but no source code calls MCP registration or mapping APIs.
+- None of the six tool classes have MCP server tool annotations.
+- No `IMcpActorResolver` or equivalent standard-transport identity bridge exists.
+- The runtime instead exposes legacy REST adapters at `/mcp/claims`, `/mcp/collections`, `/mcp/email`, `/mcp/job-payments`, `/mcp/operations`, and `/mcp/payroll`.
 
-### 2. Audit records are not database-append-only
+The REST adapters do enforce bearer authentication and mostly enforce the `mcp:access` scope, but they are not a discoverable/invocable standard MCP server. This also contradicts the completion claims in Sprint 08 and `MEMORY.md`; those records should be reconciled with the actual runtime wiring.
 
-Audit service redaction and persistence exist, but `AuditRecords` has no database-level prevention of `UPDATE` or `DELETE`. The model and initial migration contain no trigger, restricted database permission boundary, or equivalent immutable-write mechanism.
+### 2. Claim comments are not threaded
 
-This is also recorded as blocked in [`sprints/01-identity-security.md`](../sprints/01-identity-security.md).
+`ClaimComment` has claim and author references but no parent-comment/thread reference. The application supports chronological public and private comments, satisfying the newer README requirement, but not Gemini's explicit "threaded comments" requirement.
 
-**Impact:** The audit accountability invariant can be bypassed by a database actor, so the audit requirement is incomplete.
+### 3. OAuth policy enforcement remains incomplete
 
-### 3. Production migration startup is not wired
+The hardening improvements are real: redirect URI validation, persisted consent, PKCE S256, raw-code non-retention, configured lifetimes, replay revocation, and rate limiting are present.
 
-The specification calls for migrations to be applied on startup. The repository contains [`DatabaseMigrationExtensions.cs`](../src/ElixomClaim.Lib/Data/DatabaseMigrationExtensions.cs), but [`Program.cs`](../src/ElixomClaim.Web/Program.cs) does not invoke the migration extension.
+Two policy boundaries remain unclear or absent in code:
 
-**Impact:** A deployed application does not automatically apply pending migrations as specified.
+- Requested authorization scopes are not checked against `OAuthClient.AllowedScopes` before consent/code issuance.
+- The token endpoint describes `client_secret_post` during registration, but code/refresh exchanges treat the client secret as optional. That can be valid for explicitly configured public clients with PKCE, but the application currently has no explicit public-versus-confidential client policy.
 
-### 4. Claim data and claimant experience are incomplete
+These are protocol-hardening issues rather than missing business workflows.
 
-The following Gemini requirements are absent:
+### 4. Migration locking is process-local
 
-- `DateOfJob` is not present on `Claim` or the claim create/edit form.
-- Comments are append-only but not threaded; `ClaimComment` has no parent/comment-thread relationship.
-- There is no profile or bank-details management route/UI for ordinary users.
-- The claim dashboard lists claims and their payment state, but has no separate payment-history section.
+`ApplyDatabaseMigrationsAsync()` is wired on non-Development startup and honours `AutoApplyMigrations`, but its `SemaphoreSlim` prevents concurrent migration attempts only within one process. It does not coordinate multiple deployed instances. Production safety therefore still depends on the documented external single-runner deployment topology.
 
-The implemented claim state transitions, ownership checks, soft delete, and management comments are otherwise present.
+### 5. Release and documentation risks
 
-### 5. Collection capture omits payor telephone
+- `dotnet list ... package --vulnerable --include-transitive` reports a **high-severity** transitive `SSH.NET` vulnerability (`GHSA-q939-rpr3-3284`) in `ElixomClaim.Lib.Tests`.
+- The top-level README still says the implementation "has not yet been scaffolded," which is materially outdated.
+- `MEMORY.md` and Sprint 08 assert a standard MCP implementation that the current source does not contain.
+- The independent OAuth security review remains an open risk in `MEMORY.md`; no code-only review can close it.
 
-The Gemini collection workflow requires optional payor telephone. `CollectionTransaction`, `RecordCollectionCommand`, and the collection form provide payor name and email but no telephone field.
-
-**Impact:** The record cannot preserve all required collection contact data.
-
-### 6. Job-payment service coverage exceeds its UI coverage
-
-The shared service supports creation, attachments, deductions, submission, scheduling, settlement, and adjustment operations. The MVC controller/views expose list/detail, collection review/attachment, print, accountant queue, and payout resend, but do not provide user-facing creation, deduction, submission, scheduling, mark-paid, or adjustment approval workflows.
-
-The model also differs from the specification: it has `PublicNote` and `InternalNote`, but no job title or separately modelled public description.
-
-**Impact:** Important payment mechanics are callable in code but not fully operable through the specified Manager and Accountant dashboards.
-
-### 7. Salary and payroll administration is incomplete
-
-- Salary adjustments are represented and used during generation, but no UI or service command exists to manage them after definition creation.
-- The salary definition create form does not expose the entity's `EndDate` field.
-- Custom payroll entries are supported by `SalaryPayrollService`, but no MVC endpoint/view allows an accountant to add them.
-
-**Impact:** The implemented payroll engine cannot be fully configured or operated through the intended web experience.
-
-### 8. OAuth implementation needs additional hardening
-
-The OAuth service covers several high-value controls, including PKCE S256, exact redirect matching in the authorization GET path, token hashing, rotation, replay-family revocation, and bearer identity projection. It does not yet meet all stated requirements:
-
-- Access and refresh lifetimes are hard-coded to one hour and 14 days instead of using the configured `OAuthOptions` values.
-- No rate limiting or throttle mechanism is implemented.
-- Consent is displayed but not persisted as a consent record.
-- Dynamic registration has no redirect-URI shape validation or explicit registration admission policy.
-- `OAuthAuthorizationCode.Code` stores the raw authorization code in addition to its hash.
-- The authorization consent POST does not revalidate the client and redirect URI before redirecting. Form-field tampering therefore needs remediation to prevent an open-redirect path.
-
-**Impact:** This remains a high-risk protocol surface and should not be treated as production-ready without the missing controls, interoperability verification, and independent review.
-
-### 9. Development-testing work is incomplete and currently breaks the Web test build
-
-Sprint 07 is explicitly `In progress`. Development-only in-memory seeding and role-selectable sign-in work are present, but the Web test file has syntax errors at lines 77 and 79 of [`AccountControllerTests.cs`](../src/ElixomClaim.Web.Tests/Controllers/AccountControllerTests.cs).
-
-**Impact:** The full solution test suite cannot compile or pass at the reviewed revision, and the sprint's required verification is not complete.
-
-## Intentional or acceptable variations from Gemini
+## Intentional and acceptable variations
 
 | Gemini specification | Current implementation | Assessment |
 | --- | --- | --- |
-| `AuditLogs` name | `AuditRecords` | Naming variation; the important missing part is immutability, not the table name. |
-| In-memory `Channel<T>` email queue | Durable database outbox plus hosted dispatcher | Improvement: supports retries and idempotency across process restarts. |
-| MCP content in the shared library | MCP adapters in Web, domain decisions in Lib | Aligns with the repository's later layering rule. |
+| `AuditLogs` | `AuditRecords` | Naming variation; append-only trigger now provides the required integrity control. |
+| In-memory `Channel<T>` email queue | Durable database outbox and hosted dispatcher | Stronger reliability and idempotency model. |
 | `/Teller/PrintReceipt/{id}` | `/collections/{id}/print` | Equivalent feature under a different route. |
-| No paid-record correction process defined | Linked accounting adjustment/reversal flow | Additional protection and auditability beyond the Gemini baseline. |
+| No adjustment process specified for paid records | Linked, audited adjustment/reversal workflow | Additional financial safeguard. |
+| Older numeric-style identifiers implied by examples | Uniform Guid identifiers | Valid implementation choice with an ADR and migration strategy. |
 
-## Delivery governance observations
-
-The sprint ledger is inconsistent with the repository's ordered-delivery protocol:
-
-- Sprint 01 remains `In progress`, with OAuth and several security items marked `Not started`.
-- Sprint 06 claims MCP/OAuth readiness work is complete.
-- Later sprints are marked complete despite Sprint 01 still being active.
-
-This does not necessarily mean the code is absent, but it makes completion evidence and remaining security work difficult to rely on.
-
-## Verification performed
-
-Command run:
+## Verification performed on 2026-09-06
 
 ```bash
 dotnet test ElixomClaim.slnx --no-restore
+dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore --verbosity normal
+dotnet list ElixomClaim.slnx package --vulnerable --include-transitive
 ```
 
-Outcome:
-
-- `ElixomClaim.Lib.Tests`: **92 passed**.
-- `ElixomClaim.Web.Tests`: did not compile because of the two syntax errors described above.
-- Build emitted two non-blocking `NU1510` package-pruning warnings in `ElixomClaim.Lib.csproj`.
+- The full solution test command exited successfully; the Web suite reported **60 passed**.
+- The detailed Lib run completed without test failures in the observed output; it exercised domain, OAuth, migration, outbox, settlement, and relational-audit coverage.
+- Build/test warnings remain for the vulnerable transitive `SSH.NET` test dependency and two unnecessary `Microsoft.Extensions.Options` package references.
 
 ## Overall assessment
 
-The repository is a strong service-layer foundation with many critical lifecycle rules covered by tests. It should, however, be considered **partially implemented rather than complete** against `gemini-specs.md` until the protocol/security gaps and missing end-user workflows are resolved and the full test suite is restored.
+The product is now **functionally close to complete** against the Gemini business specification. All material web/domain workflow gaps identified in the prior report have been addressed. It should not be represented as fully MCP-compliant or production-release complete until a real authenticated standard MCP transport is registered, the legacy REST surface is retired or explicitly retained as a supported compatibility API, OAuth client/scope policy is made explicit, and the outstanding dependency/security-review risks are resolved.
