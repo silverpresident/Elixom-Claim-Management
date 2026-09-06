@@ -2,12 +2,12 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 11 Deployment and Release Verification Complete. Roadmap complete.
+- **Stage:** Sprint 12 Standard MCP Server and Versioned Operations API planned.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
 - **All-Guid Identifier Convention:** Standardized all entity primary keys and foreign key references across `dbclaim` schema to `Guid` per ADR 0004. Service DTOs, MVC route constraints (`{id:guid}`), MCP tool request schemas, `DevelopmentDataSeeder`, and test suites adopt `Guid` keys.
-- **MCP Transport:** Standard .NET MCP Server transport (`ModelContextProtocol.AspNetCore` 2.2.0) registered at `/mcp` with mandatory Bearer authentication (`BearerTokenAuthenticationHandler`) and `mcp:access` scope validation via `IMcpActorResolver`. Domain-scoped tool classes (`ClaimTools`, `CollectionTools`, `JobPaymentTools`, `PayrollTools`, `EmailTools`, `OperationsTools`) are annotated with `[McpServerToolType]` and `[McpServerTool]`.
+- **MCP transport follow-up:** `ModelContextProtocol.AspNetCore` 2.2.0 is referenced, but the current host does not register/map a standard MCP endpoint and still exposes bespoke `/mcp/*` MVC controllers. Sprint 12 will map the standard transport at `/mcp`, expose the domain-scoped tools, and replace the misleading controllers with a separately scoped `/api/v1` REST API. See `sprints/12-standard-mcp-and-api.md`.
 - **Durable MCP Operation Tracking:** MCP operations and idempotency keys are durably stored in the `dbclaim.OperationRecords` table via `IOperationRecordService` and migration `20260903100000_AddOperationRecordsTable`, ensuring operation tracking survives application restarts.
 - **Collections schema:** `CollectionClients`, client-user assignments, client bank details, client-scoped purpose/amount options, and `CollectionTransactions` are in the `dbclaim` schema. Composite foreign keys prevent a transaction from pairing options with a different client. See `20260902214419_AddCollectionEntities`.
 - **Collection configuration:** only the shared `CollectionClientAdministrationService` may create/configure clients, assignments, options, and bank details; it requires an active Administrator and emits redacted audit events. The MVC adapter is `/admin/collection-clients`.
@@ -68,10 +68,12 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 09 Domain data completion | Complete | All 6 items complete; EF migration 20260903120000_DomainDataCompletion applied; build & 159 tests passed on 2026-09-03. See `sprints/09-domain-data-completion.md`. |
 | 10 Web workflow completion | Complete | All 7 items complete; build & 170 tests passed on 2026-09-03. See `sprints/10-web-workflow-completion.md`. |
 | 11 Deployment & release verification | Complete | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification matrix (176 tests passing). See `sprints/11-deployment-and-release-verification.md`. |
+| 12 Standard MCP server & API | Planned | Resolve the post-release MCP transport gap: standard .NET MCP endpoint, shared actor boundary, durable operation semantics, a separately scoped `/api/v1` REST API, retirement of bespoke `/mcp/*` controllers, and transport/contract coverage. See `sprints/12-standard-mcp-and-api.md`. |
 
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
+2. **MCP transport regression:** the ledger previously described a mapped standard MCP server, but `src/ElixomClaim.Web/Program.cs` currently only registers MVC routes while `Mcp*Controller` classes serve bespoke `/mcp/*` JSON endpoints. Sprint 12 is the corrective delivery plan; do not remove the remaining task-list entry until its acceptance evidence is complete.
 
 ## Decision log
 

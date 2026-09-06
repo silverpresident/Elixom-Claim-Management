@@ -1,0 +1,69 @@
+# Sprint 12 — Standard MCP Server and Versioned Operations API
+
+## Purpose
+
+Replace the current MCP-labelled MVC controller surface with two deliberate transports over the same application services:
+
+- a standards-conformant .NET MCP server at `/mcp` for MCP clients; and
+- a useful, documented, versioned REST API at `/api/v1` for non-MCP integrations.
+
+The existing `ModelContextProtocol.AspNetCore` package is referenced, but the current host does not call the SDK registration/mapping APIs and the active `/mcp/*` routes are MVC JSON endpoints. This sprint corrects that transport gap without changing domain rules or granting an MCP/API caller more authority than its authenticated user has.
+
+## Definition of ready
+
+- The target is .NET 10 and the currently referenced official `ModelContextProtocol.AspNetCore` SDK. Pin/upgrade its version only after checking the SDK release notes and recording compatibility evidence.
+- An ADR must establish the transport and compatibility contract before code changes: `/mcp` is reserved for MCP protocol traffic; `/api/v1` is the REST surface; legacy `/mcp/*` controller routes are removed rather than left as ambiguous MCP lookalikes. If an externally deployed consumer requires a transition, use a time-bounded, deprecated `/api/v1` alias rather than retaining a second MCP protocol.
+- OAuth scope ownership is explicit: `mcp:access` authorizes the MCP endpoint only. The REST API receives a separate least-privilege `api:access` scope (or a documented narrower resource/action scope); an MCP token must not automatically authorize REST API access.
+- The implementation uses the existing in-house OAuth authorization server, bearer handler, policy/ownership services, append-only audit service, durable operation records, and Lib-domain services. It does not introduce a second authorization server, local credential flow, a monolithic tool class, or tool access to worker internals.
+- Before changing any public route, inventory any deployment/client dependency and document the migration notice in the ADR/runbook. In the absence of a deployed dependency, no backwards-compatibility route is required.
+
+## Ordered backlog
+
+1. **Record the transport and API contract.** Create an ADR and API/MCP contract document covering endpoint ownership, SDK version, authentication schemes, scopes, correlation IDs, error envelope/status mapping, idempotency headers/keys, pagination/filtering conventions, deprecation/removal plan for `/mcp/*`, and an explicit list of operations intentionally not exposed. Update OAuth dynamic-client scope validation/consent text and operational documentation to match the new `mcp:access` and API scope contract.
+2. **Build a shared authenticated-actor boundary.** Add a transport-neutral request/actor resolver that validates the bearer token, resolves the active concrete `User`, validates the required resource scope, supplies correlation/IP context, and produces safe authorization failures. Make it available to MCP and REST adapters through DI; do not repeat database user lookup or string-split scope checks in each endpoint. Ensure audit writes distinguish MCP (`IsMcp = true`) from REST API (`IsMcp = false`) while retaining actor, action, target, correlation, and redacted metadata.
+3. **Register and map the standard MCP server.** Configure the official SDK service registration, HTTP transport, and a single authenticated `/mcp` endpoint after authentication/authorization/rate-limiting middleware. Apply the `mcp` rate-limit policy and require the bearer authentication scheme plus `mcp:access` at the endpoint. Verify normal protocol lifecycle behavior (initialize, tool discovery, tool invocation, cancellation/error handling as supported by the selected SDK version) rather than treating controller JSON actions as MCP.
+4. **Expose domain-scoped MCP tools.** Adapt/register `ClaimTools`, `CollectionTools`, `JobPaymentTools`, `PayrollTools`, `EmailTools`, and `OperationsTools` with the SDK's tool discovery mechanism and explicit request/response schemas. Keep one class per domain and make the discovered tool names/descriptions stable and non-sensitive. Tool invocation must resolve the current actor from the shared boundary, call shared Lib services for authorization/lifecycle decisions, honor cancellation, return safe structured failures, and never expose entities, tokens, raw bank data, internal notes, email bodies, stack traces, or unrestricted queries.
+5. **Harden MCP operation semantics.** Refactor operations so MCP requests create/query durable, actor-owned, idempotent operation records and request approved work through domain services or a durable command boundary. MCP tools may preview/run authorized salary generation and request an outbox wake-up only as approved operations; they must not call hosted-service internals, permit destructive maintenance, key/credential operations, retention purge, arbitrary bulk email, or arbitrary recipients/free-form email. Define status, retry, duplicate-key, cancellation, and restart-recovery behavior and audit every request/result.
+6. **Replace the bespoke controllers with a versioned REST API.** Rename/reuse the current MVC controller intent under `Controllers/Api/` and `/api/v1`, with REST-oriented resources/actions, explicit DTOs, validation, authorization, and Problem Details responses. At minimum, provide only the already-approved capabilities: claims list/detail/submit; collection list/detail; job-payment list/detail; constrained email preview/queue; payroll preview/run; and operation request/status. Use conventional HTTP methods/statuses, page/filter limits, idempotency for commands, and resource-level ownership checks. Keep REST DTOs separate from MCP tool schemas where their protocol/error requirements differ; both adapters call the same services.
+7. **Retire the misleading routes safely.** Delete the six `Mcp*Controller` classes and remove all `/mcp/*` controller routing/tests after their equivalent REST API tests exist. Confirm no route shadows `/mcp`, no unauthenticated fallback is reachable, and no endpoint presents an MCP name while speaking a proprietary REST contract. Update navigation, API documentation, runbooks, threat model, and health/operations guidance with the final endpoint inventory.
+8. **Verify transport, security, and compatibility end to end.** Add integration tests using a real in-process standard MCP client/transport where the SDK supports it, covering bearer authentication, missing/wrong/revoked/expired token, missing `mcp:access`, tool discovery, each registered tool, cancellation, correlation/audit classification, user ownership, role boundaries, redaction, lifecycle denial, durable-operation deduplication/restart recovery, rate limits, and no direct worker execution. Add REST API integration/OpenAPI contract tests for all `/api/v1` endpoints, `api:access` separation, validation/Problem Details, idempotency, pagination limits, and legacy `/mcp/*` route removal. Run relational tests for audit/operation persistence and full build/format/test verification.
+
+## REST API resource outline
+
+The detailed request/response schema is part of item 1. This outline fixes the intended boundary and prevents the MCP routes from merely being renamed without becoming useful API resources.
+
+| Resource | Minimum `/api/v1` capability | Security boundary |
+| --- | --- | --- |
+| Claims | list, read, submit owned draft | active user; ownership; `api:access` |
+| Collections | list, read permitted collections | Teller+; client/role projection; `api:access` |
+| Job payments | list, read permitted payment records | payee ownership or Manager+; sensitive projection only Accountant+ |
+| Email templates | redacted preview and approved-template queue request | template-owned recipients; no arbitrary content/recipients; durable outbox only |
+| Payroll | authorized preview/run | Accountant+; shared salary service; `api:access` |
+| Operations | approved request/status | actor-owned durable records; Accountant/Administrator operation rules |
+
+## Non-goals
+
+- No arbitrary database-query tool, generic CRUD API, bulk export, direct SMTP/ACS provider endpoint, direct hosted-worker invocation, PDF generation, or public anonymous API.
+- No new business workflow, entity schema redesign, role change, or bypass of existing MVC/domain authorization. Those require separately claimed backlog work.
+- No indefinite legacy `/mcp/*` compatibility layer.
+
+## Done when
+
+- `/mcp` is the only MCP protocol endpoint and uses the official .NET SDK's standard HTTP transport with authenticated `mcp:access` users.
+- The six domain tool groups are discoverable and callable by a conforming MCP client, preserve shared service authorization/lifecycle behavior, and produce correctly attributed/redacted audit records.
+- `/api/v1` is a documented, useful REST API with its own explicit scope contract and no MCP-labelled proprietary controller routes remain.
+- Durable operations survive restart and remain idempotent/auditable; no MCP/API path can directly execute worker internals or unsafe email/maintenance actions.
+- Automated integration, contract, relational, and full-suite evidence covers the transport, authorization, scope separation, route retirement, and sensitive-data boundaries. `MEMORY.md`, runbooks, threat model, and the task list are updated; remove the task-list item only after this evidence is recorded.
+
+## Progress
+
+| Item | Status | Updated | Scope, evidence, or blocker |
+| --- | --- | --- | --- |
+| 1 | Not started | — | — |
+| 2 | Not started | — | — |
+| 3 | Not started | — | — |
+| 4 | Not started | — | — |
+| 5 | Not started | — | — |
+| 6 | Not started | — | — |
+| 7 | Not started | — | — |
+| 8 | Not started | — | — |
