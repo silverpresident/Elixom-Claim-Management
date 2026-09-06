@@ -50,6 +50,7 @@ public class CollectionService : ICollectionService
                 TellerUserId = teller.Id,
                 PayorName = command.PayorName.Trim(),
                 PayorEmail = string.IsNullOrWhiteSpace(command.PayorEmail) ? null : command.PayorEmail.Trim(),
+                PayorTelephone = string.IsNullOrWhiteSpace(command.PayorTelephone) ? null : command.PayorTelephone.Trim(),
                 ReferenceNumber = string.IsNullOrWhiteSpace(command.ReferenceNumber) ? null : command.ReferenceNumber.Trim(),
                 Method = command.Method,
                 Status = CollectionStatus.Collected,

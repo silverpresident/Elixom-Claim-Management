@@ -1,3 +1,85 @@
 @model IEnumerable<ElixomClaim.Lib.Entities.JobPayment>
-@{ ViewData["Title"] = "Accountant payment queue"; }
-<h1>Accountant payment queue</h1><p class="text-muted">Submitted payments await scheduling; scheduled payments await settlement.</p><table class="table"><thead><tr><th>Payment</th><th>Payee</th><th>Status</th><th>Scheduled</th><th>Total</th></tr></thead><tbody>@foreach(var job in Model){<tr><td><a asp-action="Details" asp-route-id="@job.Id">#@job.Id</a></td><td>@(job.PayeeUser?.FullName ?? job.CollectionClient?.Name)</td><td>@job.Status</td><td>@(job.ScheduledAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "Awaiting schedule")</td><td>@job.TotalPaid.ToString("N2") JMD</td></tr>}</tbody></table>
+@{ ViewData["Title"] = "Accountant Payment Queue"; }
+
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Accountant Payment Settlement Queue</h2>
+            <p class="text-muted mb-0">Submitted payments await scheduling; scheduled payments await final settlement & outbox notification.</p>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card p-4 text-center shadow-sm border-0">
+            <div class="card-body">
+                <p class="text-muted mb-0">No job payments currently in the Accountant queue.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Payment Ref</th>
+                                <th>Payee / Client</th>
+                                <th>Payout Bank Snapshot</th>
+                                <th>Status</th>
+                                <th>Scheduled Time (UTC)</th>
+                                <th>Total Paid (JMD)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var job in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@job.Id" class="fw-bold text-decoration-none">#@job.Id</a>
+                                        @if (job.IsAdjustment)
+                                        {
+                                            <div><span class="badge bg-warning text-dark">Adjustment</span></div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <strong>@(job.PayeeUser?.FullName ?? job.CollectionClient?.Name)</strong>
+                                        <div class="small text-muted">@(job.PayeeUser?.Email ?? "Collection Client")</div>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(job.PayoutBankName))
+                                        {
+                                            <small>@job.PayoutBankName (Acct: <code>@job.PayoutBankAccountNumber</code>)</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-muted">Direct Client Payout</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (job.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Submitted)
+                                        {
+                                            <span class="badge bg-info text-dark">Submitted</span>
+                                        }
+                                        else if (job.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Scheduled)
+                                        {
+                                            <span class="badge bg-warning text-dark">Scheduled</span>
+                                        }
+                                    </td>
+                                    <td>@(job.ScheduledAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+                                    <td class="fw-bold">$@job.TotalPaid.ToString("N2") JMD</td>
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@job.Id" class="btn btn-sm btn-outline-primary">Action / Settle</a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

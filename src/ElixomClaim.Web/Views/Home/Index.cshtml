@@ -1,8 +1,114 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model ElixomClaim.Web.Controllers.HomeDashboardViewModel
+@using ElixomClaim.Lib.Entities
+@{
+    ViewData["Title"] = "Dashboard";
+    var role = Model.CurrentUser?.Role ?? UserRole.User;
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container my-4">
+    <div class="p-4 mb-4 bg-light rounded-3 shadow-sm border">
+        <div class="container-fluid py-2">
+            <h1 class="display-6 fw-bold text-primary mb-2">Welcome, @(Model.CurrentUser?.FullName ?? "User")!</h1>
+            <p class="fs-5 text-muted mb-0">Role: <span class="badge bg-secondary">@role</span> | Elixom Claim &amp; Payment Operations Portal</p>
+        </div>
+    </div>
+
+    <!-- Role-Aware Work Queue Cards -->
+    <div class="row g-4">
+        <!-- User Claims Dashboard Card -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title fw-bold mb-0">My Claims</h5>
+                        <span class="badge bg-primary fs-6">@Model.UserClaimsCount</span>
+                    </div>
+                    <p class="card-text text-muted">Submit reimbursement claims, view status updates, and track payment history.</p>
+                    <a asp-controller="Claims" asp-action="Index" class="btn btn-outline-primary btn-sm w-100 fw-semibold">Go to My Claims &rarr;</a>
+                </div>
+            </div>
+        </div>
+
+        @if (role.HasMinimumRole(UserRole.Teller))
+        {
+            <!-- Teller Collections Queue Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title fw-bold mb-0">Teller Collections</h5>
+                            <span class="badge bg-success fs-6">@Model.ActiveCollections24hCount (24h)</span>
+                        </div>
+                        <p class="card-text text-muted">Record payments, manage payor references, and reissue customer receipts.</p>
+                        <a asp-controller="Collections" asp-action="Index" class="btn btn-outline-success btn-sm w-100 fw-semibold">Open Collections &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (role.HasMinimumRole(UserRole.Manager))
+        {
+            <!-- Manager Job Payments Work Queue Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title fw-bold mb-0">Manager Job Payments</h5>
+                            <span class="badge bg-warning text-dark fs-6">@Model.ProcessingJobsCount Processing</span>
+                        </div>
+                        <p class="card-text text-muted">Create job payments, attach claims &amp; collections, manage line deductions, and submit for settlement.</p>
+                        <a asp-controller="JobPayments" asp-action="Index" class="btn btn-outline-warning btn-sm text-dark w-100 fw-semibold">Manage Job Payments &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (role.HasMinimumRole(UserRole.Accountant))
+        {
+            <!-- Accountant Queue Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title fw-bold mb-0">Accountant Settlement Queue</h5>
+                            <span class="badge bg-info text-dark fs-6">@Model.SubmittedJobsCount Queue</span>
+                        </div>
+                        <p class="card-text text-muted">Schedule submitted job payments, mark payments as paid, and create linked adjustments.</p>
+                        <a asp-controller="JobPayments" asp-action="AccountantQueue" class="btn btn-outline-info btn-sm text-dark w-100 fw-semibold">Open Accountant Queue &rarr;</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accountant Salary & Payroll Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title fw-bold mb-0">Salary &amp; Payroll</h5>
+                            <span class="badge bg-primary fs-6">@Model.GeneratedPayrollsCount Generated</span>
+                        </div>
+                        <p class="card-text text-muted">Configure salary definitions, benefits/deductions, generate payroll runs, and add custom entries.</p>
+                        <a asp-controller="Payroll" asp-action="Index" class="btn btn-outline-primary btn-sm w-100 fw-semibold">Open Payroll Workspace &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (role == UserRole.Administrator)
+        {
+            <!-- Administrator Controls Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title fw-bold mb-0">System Administration</h5>
+                            <span class="badge bg-danger fs-6">Admin</span>
+                        </div>
+                        <p class="card-text text-muted">Manage user roles/status, configure collection clients and fee schedules, and inspect audit logs.</p>
+                        <a asp-controller="Admin" asp-action="Users" class="btn btn-outline-danger btn-sm w-100 fw-semibold">Admin Dashboard &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 </div>

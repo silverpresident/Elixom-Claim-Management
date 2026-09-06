@@ -1,10 +1,229 @@
 @model ElixomClaim.Web.Models.PayrollWorkspaceViewModel
+@using ElixomClaim.Lib.Entities
 @{ ViewData["Title"] = "Salary & Payroll"; }
-<h1>Salary &amp; Payroll</h1><p><a asp-action="Create" class="btn btn-primary">Create salary definition</a></p>
-@if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success" role="status">@success</div> }
-@if (TempData["ErrorMessage"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
-<section aria-labelledby="salary-definitions"><h2 id="salary-definitions">Salary definitions</h2>
-@if (!Model.SalaryDefinitions.Any()) { <p class="text-muted">No salary definitions are configured.</p> } else { <div class="table-responsive"><table class="table"><thead><tr><th>Person</th><th>Description</th><th>Base</th><th>Next due preview</th><th></th></tr></thead><tbody>@foreach (var definition in Model.SalaryDefinitions) { <tr><td>@definition.User.FullName</td><td>@definition.Description</td><td>@definition.BaseAmount.ToString("N2") JMD</td><td>@if (Model.Previews.TryGetValue(definition.Id, out var preview)) { @preview.DueDate.ToString("yyyy-MM-dd") <span class="text-muted">(@preview.Eligibility; @preview.ProjectedTotal.ToString("N2") JMD)</span> }</td><td><form method="post" action="/payroll/salary-definitions/@definition.Id/generate"><button class="btn btn-primary" type="submit">Generate now</button></form></td></tr> }</tbody></table></div> }
-</section>
-<section aria-labelledby="payroll-audit"><h2 id="payroll-audit">Recent audit history</h2><ul class="list-group">@foreach (var audit in Model.AuditRecords) { <li class="list-group-item"><time datetime="@audit.TimestampUtc.ToString("O")">@audit.TimestampUtc.ToString("u")</time> — @audit.Action (@audit.Target)</li> }</ul></section>
-<section aria-labelledby="payrolls"><h2 id="payrolls">Recent payrolls</h2><div class="table-responsive"><table class="table"><thead><tr><th>Person</th><th>Period</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>@foreach (var payroll in Model.Payrolls) { <tr><td>@payroll.User.FullName</td><td>@payroll.PeriodEndingDate.ToString("yyyy-MM-dd")</td><td>@payroll.PayrollTotal.ToString("N2") JMD</td><td>@payroll.Status</td><td>@if (payroll.Status == ElixomClaim.Lib.Entities.PayrollStatus.Generated) { <form method="post" action="/payroll/@payroll.Id/submit"><button class="btn btn-outline-primary" type="submit">Submit</button></form> }</td></tr> }</tbody></table></div></section>
+
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Salary &amp; Payroll Workspace</h2>
+        <a asp-action="Create" class="btn btn-primary">+ Create Salary Definition</a>
+    </div>
+
+    @if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+    @if (TempData["ErrorMessage"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+
+    <!-- Salary Definitions Section -->
+    <section aria-labelledby="salary-definitions" class="card shadow-sm border-0 mb-5">
+        <div class="card-header bg-primary text-white">
+            <h5 id="salary-definitions" class="mb-0">Active Salary Definitions</h5>
+        </div>
+        <div class="card-body p-0">
+            @if (!Model.SalaryDefinitions.Any())
+            {
+                <div class="p-4 text-center text-muted">No salary definitions are configured.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Employee</th>
+                                <th>Description</th>
+                                <th>Base Amount</th>
+                                <th>Adjustments</th>
+                                <th>Next Due Preview</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var definition in Model.SalaryDefinitions)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@definition.User.FullName</strong>
+                                        <div class="small text-muted">@definition.User.Email</div>
+                                    </td>
+                                    <td>@definition.Description</td>
+                                    <td class="fw-bold">$@definition.BaseAmount.ToString("N2") JMD</td>
+                                    <td>
+                                        @if (definition.Adjustments.Any())
+                                        {
+                                            <ul class="list-unstyled mb-0 small">
+                                                @foreach (var adj in definition.Adjustments)
+                                                {
+                                                    <li>
+                                                        <span class="badge @(adj.Type == SalaryAdjustmentType.Benefit ? "bg-success" : "bg-danger")">@adj.Type</span>
+                                                        @adj.Title (@(adj.PercentageRate > 0 ? $"{adj.PercentageRate * 100:N0}%" : $"${adj.FixedValue:N2} JMD"))
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">None</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (Model.Previews.TryGetValue(definition.Id, out var preview))
+                                        {
+                                            <div><strong>@preview.DueDate.ToString("yyyy-MM-dd")</strong></div>
+                                            <small class="text-muted">(@preview.Eligibility; Projected: $@preview.ProjectedTotal.ToString("N2") JMD)</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            <form method="post" action="/payroll/salary-definitions/@definition.Id/generate">
+                                                @Html.AntiForgeryToken()
+                                                <button class="btn btn-sm btn-primary w-100" type="submit">Generate Now</button>
+                                            </form>
+                                            <!-- Add Adjustment Modal Trigger or Inline Form -->
+                                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#adjForm-@definition.Id">
+                                                + Add Adjustment
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="collapse bg-light" id="adjForm-@definition.Id">
+                                    <td colspan="6" class="p-3">
+                                        <form method="post" action="/payroll/salary-definitions/@definition.Id/adjustments" class="row g-2 align-items-center">
+                                            @Html.AntiForgeryToken()
+                                            <div class="col-md-3">
+                                                <input type="text" name="title" class="form-control form-control-sm" placeholder="Adjustment Title (e.g. Health Allowance)" required />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select name="type" class="form-select form-control-sm">
+                                                    <option value="Benefit">Benefit (+)</option>
+                                                    <option value="Deduction">Deduction (-)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="number" name="percentageRate" step="0.01" min="0" max="1" class="form-control form-control-sm" placeholder="Rate (e.g. 0.05)" />
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="number" name="fixedValue" step="0.01" min="0" class="form-control form-control-sm" placeholder="Fixed JMD" />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <button type="submit" class="btn btn-sm btn-success w-100">Save Adjustment</button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- Recent Payrolls Section -->
+    <section aria-labelledby="payrolls" class="card shadow-sm border-0 mb-5">
+        <div class="card-header bg-primary text-white">
+            <h5 id="payrolls" class="mb-0">Generated Payroll Runs</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Employee</th>
+                            <th>Period Ending</th>
+                            <th>Itemized Entries</th>
+                            <th>Payroll Total</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var payroll in Model.Payrolls)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@payroll.User.FullName</strong>
+                                    <div class="small text-muted">@payroll.User.Email</div>
+                                </td>
+                                <td>@payroll.PeriodEndingDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <ul class="list-unstyled mb-0 small">
+                                        @foreach (var entry in payroll.Entries.OrderBy(e => e.SortOrder))
+                                        {
+                                            <li>
+                                                <code>[@entry.Type]</code> @entry.Description: <strong>$@entry.Amount.ToString("N2") JMD</strong>
+                                            </li>
+                                        }
+                                    </ul>
+                                </td>
+                                <td class="fw-bold fs-6">$@payroll.PayrollTotal.ToString("N2") JMD</td>
+                                <td>
+                                    @if (payroll.Status == PayrollStatus.Generated)
+                                    {
+                                        <span class="badge bg-info text-dark">Generated</span>
+                                    }
+                                    else if (payroll.Status == PayrollStatus.Submitted)
+                                    {
+                                        <span class="badge bg-primary">Submitted</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">Paid</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (payroll.Status == PayrollStatus.Generated)
+                                    {
+                                        <div class="d-flex flex-column gap-1">
+                                            <form method="post" action="/payroll/@payroll.Id/submit">
+                                                @Html.AntiForgeryToken()
+                                                <button class="btn btn-sm btn-success w-100" type="submit">Submit to Job</button>
+                                            </form>
+                                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#customEntryForm-@payroll.Id">
+                                                + Custom Entry
+                                            </button>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                            @if (payroll.Status == PayrollStatus.Generated)
+                            {
+                                <tr class="collapse bg-light" id="customEntryForm-@payroll.Id">
+                                    <td colspan="6" class="p-3">
+                                        <form method="post" action="/payroll/@payroll.Id/custom-entries" class="row g-2 align-items-center">
+                                            @Html.AntiForgeryToken()
+                                            <div class="col-md-5">
+                                                <input type="text" name="description" class="form-control form-control-sm" placeholder="Custom Entry Description (e.g. Overtime / Discretionary Adjustment)" required />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <input type="number" name="amount" step="0.01" class="form-control form-control-sm" placeholder="Amount (+ or - JMD)" required />
+                                            </div>
+                                            <div class="col-md-3">
+                                                <button type="submit" class="btn btn-sm btn-primary w-100">Add Entry</button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Audit History -->
+    <section aria-labelledby="payroll-audit" class="card shadow-sm border-0">
+        <div class="card-header bg-light">
+            <h5 id="payroll-audit" class="mb-0">Payroll Audit Events</h5>
+        </div>
+        <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+                @foreach (var audit in Model.AuditRecords)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>@audit.Action</strong> — <small class="text-muted">@audit.Target</small></span>
+                        <time datetime="@audit.TimestampUtc.ToString("O")" class="small text-muted">@audit.TimestampUtc.ToString("yyyy-MM-dd HH:mm") UTC</time>
+                    </li>
+                }
+            </ul>
+        </div>
+    </section>
+</div>

@@ -1,5 +1,59 @@
 @model ElixomClaim.Lib.Entities.CollectionTransaction
 @{ ViewData["Title"] = $"Collection #{Model.Id}"; }
-<div class="d-flex justify-content-between"><div><h1>Collection #@Model.Id</h1><p class="text-muted">Recorded @Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p></div><span class="badge text-bg-success align-self-start">@Model.Status</span></div>
-<dl class="row"><dt class="col-sm-3">Client</dt><dd class="col-sm-9">@Model.CollectionClient.Name</dd><dt class="col-sm-3">Purpose</dt><dd class="col-sm-9">@Model.PurposeOption.Name</dd><dt class="col-sm-3">Amount</dt><dd class="col-sm-9">@Model.Amount.ToString("N2") JMD</dd><dt class="col-sm-3">Method</dt><dd class="col-sm-9">@Model.Method</dd><dt class="col-sm-3">Payor</dt><dd class="col-sm-9">@Model.PayorName</dd></dl>
-<form method="post" asp-action="Reissue" asp-route-id="@Model.Id" class="d-inline">@Html.AntiForgeryToken()<button class="btn btn-outline-primary">Reissue receipt</button></form> <a class="btn btn-outline-secondary" asp-action="Print" asp-route-id="@Model.Id" target="_blank">Print receipt</a> <a class="btn btn-link" asp-action="Index">Back to collections</a>
+
+<div class="container my-4">
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h2 class="fw-bold mb-1">Collection #@Model.Id</h2>
+                    <p class="text-muted mb-0">Recorded @Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+                </div>
+                <span class="badge bg-success fs-6">@Model.Status</span>
+            </div>
+
+            <hr />
+
+            <dl class="row g-3 fs-6">
+                <dt class="col-sm-3 text-muted">Collection Client</dt>
+                <dd class="col-sm-9 fw-bold">@Model.CollectionClient.Name</dd>
+
+                <dt class="col-sm-3 text-muted">Purpose</dt>
+                <dd class="col-sm-9">@Model.PurposeOption.Name</dd>
+
+                <dt class="col-sm-3 text-muted">Collected Amount</dt>
+                <dd class="col-sm-9 text-primary fw-bold">$@Model.Amount.ToString("N2") JMD</dd>
+
+                <dt class="col-sm-3 text-muted">Internal Processing Fee</dt>
+                <dd class="col-sm-9">$@Model.ProcessingFee.ToString("N2") JMD</dd>
+
+                <dt class="col-sm-3 text-muted">Payment Method</dt>
+                <dd class="col-sm-9"><span class="badge bg-secondary">@Model.Method</span></dd>
+
+                <dt class="col-sm-3 text-muted">Payor Name</dt>
+                <dd class="col-sm-9 fw-semibold">@Model.PayorName</dd>
+
+                <dt class="col-sm-3 text-muted">Payor Email</dt>
+                <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(Model.PayorEmail) ? "—" : Model.PayorEmail)</dd>
+
+                <dt class="col-sm-3 text-muted">Payor Telephone (Internal)</dt>
+                <dd class="col-sm-9"><code>@(string.IsNullOrWhiteSpace(Model.PayorTelephone) ? "—" : Model.PayorTelephone)</code></dd>
+
+                <dt class="col-sm-3 text-muted">Payment Date (UTC)</dt>
+                <dd class="col-sm-9">@Model.PaymentDateUtc.ToString("yyyy-MM-dd HH:mm")</dd>
+
+                <dt class="col-sm-3 text-muted">Reference / Check No.</dt>
+                <dd class="col-sm-9"><code>@(string.IsNullOrWhiteSpace(Model.ReferenceNumber) ? "—" : Model.ReferenceNumber)</code></dd>
+            </dl>
+
+            <div class="mt-4 pt-3 border-top d-flex gap-2">
+                <form method="post" asp-action="Reissue" asp-route-id="@Model.Id" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn-outline-primary">Reissue Receipt Email</button>
+                </form>
+                <a class="btn btn-outline-secondary" asp-action="Print" asp-route-id="@Model.Id" target="_blank">Print Customer Receipt</a>
+                <a class="btn btn-link text-decoration-none" asp-action="Index">Back to Collections</a>
+            </div>
+        </div>
+    </div>
+</div>

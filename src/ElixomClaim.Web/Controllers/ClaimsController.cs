@@ -33,7 +33,18 @@ public class ClaimsController : Controller
     {
         var userId = GetCurrentUserId();
         var claims = await _claimService.GetUserClaimsAsync(userId);
-        return View(claims);
+        var paymentHistory = await _dbContext.JobPayments
+            .Where(j => j.PayeeUserId == userId)
+            .OrderByDescending(j => j.PaymentDateUtc ?? j.CreatedAtUtc)
+            .ToListAsync();
+
+        var viewModel = new Models.UserDashboardViewModel
+        {
+            Claims = claims,
+            PaymentHistory = paymentHistory
+        };
+
+        return View(viewModel);
     }
 
     [HttpGet("create")]
@@ -42,7 +53,7 @@ public class ClaimsController : Controller
         return View();
     }
 
-    public record CreateClaimInput(string Title, string Description, decimal Amount);
+    public record CreateClaimInput(string Title, string Description, decimal Amount, DateTime? DateOfJob = null);
 
     [HttpPost("create")]
     [ValidateAntiForgeryToken]
@@ -55,7 +66,7 @@ public class ClaimsController : Controller
         }
 
         var userId = GetCurrentUserId();
-        var claim = await _claimService.CreateDraftAsync(new CreateClaimCommand(userId, input.Title, input.Description, input.Amount));
+        var claim = await _claimService.CreateDraftAsync(new CreateClaimCommand(userId, input.Title, input.Description, input.Amount, input.DateOfJob));
 
         return RedirectToAction(nameof(Details), new { id = claim.Id });
     }
@@ -109,7 +120,7 @@ public class ClaimsController : Controller
             return View();
         }
 
-        var claim = await _claimService.EditDraftAsync(new EditClaimCommand(id, userId, input.Title, input.Description, input.Amount));
+        var claim = await _claimService.EditDraftAsync(new EditClaimCommand(id, userId, input.Title, input.Description, input.Amount, input.DateOfJob));
         if (claim == null)
         {
             return NotFound();

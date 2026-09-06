@@ -19,4 +19,5 @@ public record RecordCollectionCommand(
     CollectionMethod Method,
     decimal ProcessingFee,
     DateTime PaymentDateUtc,
-    string? ReferenceNumber = null);
+    string? ReferenceNumber = null,
+    string? PayorTelephone = null);

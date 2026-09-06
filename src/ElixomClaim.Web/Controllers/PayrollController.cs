@@ -24,6 +24,15 @@ public sealed class PayrollController : Controller
     }
     [HttpGet("salary-definitions/create")] public async Task<IActionResult> Create() { ViewBag.Users = await _db.Users.AsNoTracking().Where(user => user.IsActive).OrderBy(user => user.FullName).ToListAsync(); return View(); }
     [HttpPost("salary-definitions/create")][ValidateAntiForgeryToken] public async Task<IActionResult> Create(CreateSalaryDefinitionInput input) { var result = await _service.CreateDefinitionAsync(new(ActorId(), input.UserId, input.Description, input.BaseAmount, input.FirstSalaryDate, input.StartDate, input.EndDate, input.RecurrenceDays, input.RecurrenceMonths, input.NearestWeekday)); if (result.IsSuccess) return RedirectToAction(nameof(Index)); ModelState.AddModelError(string.Empty, result.Error); ViewBag.Users = await _db.Users.AsNoTracking().Where(user => user.IsActive).OrderBy(user => user.FullName).ToListAsync(); return View(input); }
+    [HttpPost("salary-definitions/{id:guid}/adjustments")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddAdjustment(Guid id, [FromForm] string title, [FromForm] decimal percentageRate, [FromForm] decimal fixedValue, [FromForm] SalaryAdjustmentType type)
+    {
+        var result = await _service.AddAdjustmentAsync(new AddSalaryAdjustmentCommand(ActorId(), id, title, percentageRate, fixedValue, type));
+        TempData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.IsSuccess ? "Salary adjustment added." : result.Error;
+        return RedirectToAction(nameof(Index));
+    }
+
     [HttpPost("salary-definitions/{id:guid}/generate")][ValidateAntiForgeryToken]
     public async Task<IActionResult> GenerateNow(Guid id)
     {
@@ -32,6 +41,15 @@ public sealed class PayrollController : Controller
         TempData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.IsSuccess ? "Payroll generated." : result.Error;
         return RedirectToAction(nameof(Index));
     }
+    [HttpPost("{id:guid}/custom-entries")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddCustomEntry(Guid id, [FromForm] string description, [FromForm] decimal amount)
+    {
+        var result = await _service.AddCustomEntryAsync(id, ActorId(), description, amount);
+        TempData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.IsSuccess ? "Custom payroll entry added." : result.Error;
+        return RedirectToAction(nameof(Index));
+    }
+
     [HttpPost("{id:guid}/submit")][ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(Guid id)
     {

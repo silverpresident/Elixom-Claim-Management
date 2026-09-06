@@ -1,0 +1,45 @@
+@{
+    var original = (ElixomClaim.Lib.Entities.JobPayment)ViewBag.Original;
+    ViewData["Title"] = "Create Payment Adjustment";
+}
+
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning text-dark p-3">
+                    <h4 class="mb-0">Create Linked Payment Adjustment</h4>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted">Adjustments link to original paid job payment #@original.Id ($@original.TotalPaid.ToString("N2") JMD) without altering original immutable records.</p>
+
+                    <form asp-action="CreateAdjustment" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="originalJobPaymentId" value="@original.Id" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="mb-3">
+                            <label for="amount" class="form-label fw-bold">Adjustment Amount (JMD)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" id="amount" name="amount" step="0.01" class="form-control" placeholder="Positive for supplement, negative for recovery receivable" required />
+                                <span class="input-group-text">JMD</span>
+                            </div>
+                            <div class="form-text">Negative amounts create recovery receivables.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="reason" class="form-label fw-bold">Adjustment Reason</label>
+                            <textarea id="reason" name="reason" class="form-control" rows="3" placeholder="Provide reason for audit..." required></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Details" asp-route-id="@original.Id" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-warning fw-bold">Create Adjustment</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -32,11 +32,19 @@ public class CollectionClientsAdminController : Controller
 
     [HttpPost("create")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([FromForm] string name)
+    public async Task<IActionResult> Create([FromForm] string name, [FromForm] string? description, [FromForm] string? notes, [FromForm] decimal perJobProcessingFee, [FromForm] decimal perTransactionFee)
     {
-        var result = await _service.CreateClientAsync(new(GetCurrentUserId(), name));
+        var result = await _service.CreateClientAsync(new(GetCurrentUserId(), name, description, notes, perJobProcessingFee, perTransactionFee));
         if (result.IsFailure) { ModelState.AddModelError(string.Empty, result.Error); return View(); }
         return RedirectToAction(nameof(Details), new { id = result.Value!.Id });
+    }
+
+    [HttpPost("{id:guid}/edit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(Guid id, [FromForm] string name, [FromForm] string? description, [FromForm] string? notes, [FromForm] decimal perJobProcessingFee, [FromForm] decimal perTransactionFee)
+    {
+        var result = await _service.UpdateClientAsync(new(GetCurrentUserId(), id, name, description, notes, perJobProcessingFee, perTransactionFee));
+        return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
     }
 
     [HttpGet("{id:guid}")]
@@ -77,9 +85,9 @@ public class CollectionClientsAdminController : Controller
 
     [HttpPost("{id:guid}/bank-details")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddBankDetail(Guid id, [FromForm] string accountName, [FromForm] string bankName, [FromForm] string branchCode, [FromForm] string accountNumber)
+    public async Task<IActionResult> AddBankDetail(Guid id, [FromForm] string accountName, [FromForm] string bankName, [FromForm] string branchCode, [FromForm] string accountNumber, [FromForm] string? notes)
     {
-        var result = await _service.AddBankDetailAsync(new(GetCurrentUserId(), id, accountName, bankName, branchCode, accountNumber));
+        var result = await _service.AddBankDetailAsync(new(GetCurrentUserId(), id, accountName, bankName, branchCode, accountNumber, notes));
         return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
     }
 
