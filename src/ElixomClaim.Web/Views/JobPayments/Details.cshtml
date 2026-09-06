@@ -1,3 +1,192 @@
 @model ElixomClaim.Lib.Entities.JobPayment
-@{ ViewData["Title"] = $"Job payment #{Model.Id}"; }
-<h1>Job payment #@Model.Id</h1><p><strong>Payee:</strong> @(Model.PayeeUser?.FullName ?? Model.CollectionClient?.Name)</p><p><strong>Status:</strong> @Model.Status</p><p><strong>Total paid:</strong> @Model.TotalPaid.ToString("N2") JMD</p><h2 class="h4">Claims</h2><ul>@foreach(var item in Model.Claims){<li>@item.Claim.Title — @item.Claim.Amount.ToString("N2") JMD</li>}</ul><h2 class="h4">Collections</h2><ul>@foreach(var item in Model.Collections){<li>#@item.CollectionTransactionId — @item.CollectionTransaction.Amount.ToString("N2") JMD</li>}</ul>@if(Model.CollectionClientId.HasValue){<a asp-action="Collections" asp-route-id="@Model.Id" class="btn btn-outline-primary">Review collected transactions</a>} <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-outline-secondary">Print</a>@if(Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Paid){<form method="post" asp-action="Resend" asp-route-id="@Model.Id" class="d-inline">@Html.AntiForgeryToken()<button class="btn btn-outline-primary">Resend payout notification</button></form>}
+@{
+    ViewData["Title"] = $"Job Payment #{Model.Id}";
+    var isManagerOrAbove = User.IsInRole("Manager") || User.IsInRole("Accountant") || User.IsInRole("Administrator");
+}
+
+<div class="container my-4">
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h2 class="fw-bold mb-1">@(Model.Title ?? "Job Payment") <small class="text-muted">#@Model.Id</small></h2>
+                    <p class="text-muted mb-0">Created @Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-primary fs-6 mb-2">@Model.Status</span>
+                    <h3 class="text-success fw-bold mb-0">$@Model.TotalPaid.ToString("N2") JMD</h3>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="row g-3 mb-4 fs-6">
+                <div class="col-md-6">
+                    <strong>Payee Target:</strong>
+                    @if (Model.PayeeUser != null)
+                    {
+                        <span>User: <strong>@Model.PayeeUser.FullName</strong> (<code>@Model.PayeeUser.Email</code>)</span>
+                    }
+                    else if (Model.CollectionClient != null)
+                    {
+                        <span>Collection Client: <strong>@Model.CollectionClient.Name</strong></span>
+                    }
+                </div>
+                <div class="col-md-6">
+                    <strong>Public Description:</strong> @(Model.PublicNote ?? "—")
+                </div>
+                @if (isManagerOrAbove && !string.IsNullOrWhiteSpace(Model.InternalNote))
+                {
+                    <div class="col-12 bg-light p-3 rounded border">
+                        <strong class="text-muted">Internal Manager Note:</strong> @Model.InternalNote
+                    </div>
+                }
+            </div>
+
+            @if (Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Processing)
+            {
+                <div class="d-flex gap-2 mb-4">
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">Edit Details</a>
+
+                    @if (Model.PayeeUserId.HasValue)
+                    {
+                        <a asp-action="Claims" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm">+ Attach Claim</a>
+                    }
+                    @if (Model.CollectionClientId.HasValue)
+                    {
+                        <a asp-action="Collections" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm">+ Attach Collection</a>
+                    }
+
+                    <form method="post" asp-action="Submit" asp-route-id="@Model.Id" class="ms-auto" onsubmit="return confirm('Submit this job payment for Accountant scheduling?');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-success btn-sm">Submit Job Payment</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Line Items Section -->
+    <div class="row g-4">
+        @if (Model.PayeeUserId.HasValue)
+        {
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Attached Claims</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+                            @if (!Model.Claims.Any())
+                            {
+                                <li class="list-group-item text-muted">No claims attached.</li>
+                            }
+                            @foreach (var item in Model.Claims)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>@item.Claim.Title</strong>
+                                        <div><small class="text-muted">$@item.Claim.Amount.ToString("N2") JMD</small></div>
+                                    </div>
+                                    @if (Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Processing)
+                                    {
+                                        <form method="post" asp-action="RemoveClaim" asp-route-id="@Model.Id" asp-route-claimId="@item.ClaimId">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                        </form>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (Model.CollectionClientId.HasValue)
+        {
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Attached Collections</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+                            @if (!Model.Collections.Any())
+                            {
+                                <li class="list-group-item text-muted">No collection transactions attached.</li>
+                            }
+                            @foreach (var item in Model.Collections)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>Collection #@item.CollectionTransactionId</strong>
+                                        <div><small class="text-muted">$@item.CollectionTransaction.Amount.ToString("N2") JMD (Fee: $@item.CollectionTransaction.ProcessingFee.ToString("N2"))</small></div>
+                                    </div>
+                                    @if (Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Processing)
+                                    {
+                                        <form method="post" asp-action="RemoveCollection" asp-route-id="@Model.Id" asp-route-collectionId="@item.CollectionTransactionId">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                        </form>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Deductions</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush mb-3">
+                        @if (!Model.Deductions.Any())
+                        {
+                            <li class="list-group-item text-muted">No deductions added.</li>
+                        }
+                        @foreach (var d in Model.Deductions)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>@d.Description</span>
+                                <strong>-$@d.Amount.ToString("N2") JMD</strong>
+                            </li>
+                        }
+                    </ul>
+
+                    @if (Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Processing)
+                    {
+                        <form method="post" asp-action="AddDeduction" asp-route-id="@Model.Id" class="row g-2">
+                            @Html.AntiForgeryToken()
+                            <div class="col-7">
+                                <input type="text" name="description" class="form-control form-control-sm" placeholder="Deduction description" required />
+                            </div>
+                            <div class="col-3">
+                                <input type="number" name="amount" step="0.01" min="0.01" class="form-control form-control-sm" placeholder="Amount" required />
+                            </div>
+                            <div class="col-2">
+                                <button type="submit" class="btn btn-sm btn-outline-primary w-100">Add</button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 pt-3 border-top d-flex gap-2">
+        <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-outline-secondary">Print Job Summary</a>
+        @if (Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Paid)
+        {
+            <form method="post" asp-action="Resend" asp-route-id="@Model.Id" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-outline-primary">Resend Payout Notification</button>
+            </form>
+        }
+        <a asp-action="Index" class="btn btn-link text-decoration-none">Back to Job Payments</a>
+    </div>
+</div>

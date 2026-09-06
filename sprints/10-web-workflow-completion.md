@@ -26,7 +26,7 @@
 | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-03 | Ordinary-user profile & bank details route/UI (`ProfileController`, `Views/Profile/Index.cshtml`) and claims dashboard payment history (`ClaimsController`, `Views/Claims/Index.cshtml`, `UserDashboardViewModel`). Verified with Playwright screenshot and 162 unit/integration tests passing (`ProfileControllerTests`, `ClaimsControllerTests`). |
 | 2 | Complete | 2026-09-03 | Exposing claim DateOfJob, collection client description/notes/fees, bank detail notes, and payor telephone across MVC workflows and domain services. Verified with 165 solution unit and integration tests passing (`WorkflowFieldsCompletionTests`). |
-| 3 | Not started | — | — |
+| 3 | Complete | 2026-09-03 | Manager job-payment workflows for creation, payee selection (User vs Collection Client), claim/collection attachment & removal, deduction additions, metadata editing, and submission. Verified with 166 solution unit and integration tests passing (`ManagerJobPaymentsWorkflowTests`). |
 | 4 | Not started | — | — |
 | 5 | Not started | — | — |
 | 6 | Not started | — | — |

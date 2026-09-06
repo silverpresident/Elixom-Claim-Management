@@ -60,6 +60,21 @@ public class JobPaymentService : IJobPaymentService
         _db.JobPayments.Add(job); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_CREATED", job, c.ActorUserId, ct); return Result.Success(job);
     }
 
+    public async Task<Result> UpdateMetadataAsync(UpdateJobPaymentMetadataCommand c, CancellationToken ct = default)
+    {
+        var jobResult = await ProcessingJobAsync(c.ActorUserId, c.JobPaymentId, ct);
+        if (jobResult.IsFailure) return Result.Failure(jobResult.Error);
+        var job = jobResult.Value!;
+
+        job.Title = Trim(c.Title);
+        job.PublicNote = Trim(c.PublicNote);
+        job.InternalNote = Trim(c.InternalNote);
+
+        await _db.SaveChangesAsync(ct);
+        await AuditAsync("JOB_PAYMENT_METADATA_UPDATED", job, c.ActorUserId, ct);
+        return Result.Success();
+    }
+
     public async Task<Result> AttachClaimAsync(AttachJobPaymentClaimCommand c, CancellationToken ct = default)
     {
         var jobResult = await ProcessingJobAsync(c.ActorUserId, c.JobPaymentId, ct); if (jobResult.IsFailure) return Result.Failure(jobResult.Error); var job = jobResult.Value!;

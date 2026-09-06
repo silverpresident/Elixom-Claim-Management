@@ -1,0 +1,42 @@
+@model ElixomClaim.Lib.Entities.JobPayment
+@{
+    ViewData["Title"] = $"Edit Job Payment #{Model.Id}";
+}
+
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-secondary text-white p-3">
+                    <h4 class="mb-0">Edit Job Payment</h4>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="mb-3">
+                            <label for="title" class="form-label fw-bold">Title</label>
+                            <input type="text" id="title" name="title" class="form-control" value="@Model.Title" placeholder="e.g. Expense Reimbursement Job" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="publicNote" class="form-label fw-bold">Public Description / Note</label>
+                            <textarea id="publicNote" name="publicNote" class="form-control" rows="2">@Model.PublicNote</textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="internalNote" class="form-label fw-bold">Internal Note (Manager & Accountant only)</label>
+                            <textarea id="internalNote" name="internalNote" class="form-control" rows="2">@Model.InternalNote</textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
