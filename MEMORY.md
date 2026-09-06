@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 09 Domain Data Completion In Progress (Item 2 Complete). Next item: Sprint 09 Item 3.
+- **Stage:** Sprint 09 Domain Data Completion Complete. Next item: Sprint 10 Item 1.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
@@ -65,8 +65,8 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 06 MCP & readiness | Complete | All 9 items complete; build and 127 tests passed on 2026-09-03. See `sprints/06-mcp-release.md`. |
 | 07 Development testing | Complete | Development-only in-memory sample data and role-selectable test login completed; full suite passed (130 tests) on 2026-09-03. See `sprints/07-development-testing.md`. |
 | 08 MCP transport & OAuth hardening | Complete | All 5 items complete; standard MCP transport, durable operations, OAuth hardening, rate limiting, and updated threat model/security test suite (145 tests passed) on 2026-09-03. See `sprints/08-mcp-oauth-hardening.md`. |
-| 09 Domain data completion | In progress | Item 1 complete (all-Guid identifiers & ADR 0004); build & 145 tests passed on 2026-09-03. See `sprints/09-domain-data-completion.md`. |
-| 10 Web workflow completion | Planned | Profile/dashboard, collection fields, job lifecycle/deductions, payroll adjustment/custom-entry workflows, and navigation. See `sprints/10-web-workflow-completion.md`. |
+| 09 Domain data completion | Complete | All 6 items complete; EF migration 20260903120000_DomainDataCompletion applied; build & 159 tests passed on 2026-09-03. See `sprints/09-domain-data-completion.md`. |
+| 10 Web workflow completion | In progress | Profile/dashboard, collection fields, job lifecycle/deductions, payroll adjustment/custom-entry workflows, and navigation. See `sprints/10-web-workflow-completion.md`. |
 | 11 Deployment & release verification | Planned | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification. See `sprints/11-deployment-and-release-verification.md`. |
 
 ## Open decisions / risks
@@ -98,3 +98,4 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 2026-09-03 | Persist OAuth consents in dbclaim.OAuthConsents, enforce strict redirect URI shape/scheme rules during dynamic client registration and authorization, stop retaining raw authorization codes in database, and revalidate client and redirect URI on consent POST. | OAuth 2.0 hardening requirements under Sprint 09 Item 3. |
 | 2026-09-03 | Standardize all entity primary keys and foreign keys to Guid across `dbclaim` schema. See [ADR 0004](adr/0004-all-guid-identifier-convention.md). | Global uniqueness, uniform Web/MCP routes, and lock-free identifier generation. |
 | 2026-09-03 | Complete common auditability fields: CreatedAtUtc on options/adjustments, SentAtUtc on EmailLog, and DateOfJob & DeletedAtUtc on Claim. | Sprint 09 Item 2 domain auditability requirement. |
+| 2026-09-03 | Complete Sprint 09 Domain Data Completion (Items 1-6): all-Guid identifiers, auditability fields, User bank fields/masking, clearing-house fees/notes/payor telephone, job-payment title/description/payout bank snapshots, DataAnnotations, and migration 20260903120000_DomainDataCompletion. | Sprint 09 complete. |

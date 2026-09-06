@@ -89,8 +89,14 @@ public class ApplicationDbContext : DbContext
                 .IsRequired()
                 .HasDefaultValue(true);
 
+            entity.Property(u => u.BankAccountName)
+                .HasMaxLength(200);
+
             entity.Property(u => u.BankAccountNumber)
                 .HasMaxLength(100);
+
+            entity.Property(u => u.BankName)
+                .HasMaxLength(200);
 
             entity.Property(u => u.BankBranchCode)
                 .HasMaxLength(50);
@@ -248,6 +254,10 @@ public class ApplicationDbContext : DbContext
             entity.ToTable("CollectionClients");
             entity.HasKey(c => c.Id);
             entity.Property(c => c.Name).IsRequired().HasMaxLength(200);
+            entity.Property(c => c.Description).HasMaxLength(1000);
+            entity.Property(c => c.Notes).HasMaxLength(4000);
+            entity.Property(c => c.PerJobProcessingFee).IsRequired().HasPrecision(18, 2);
+            entity.Property(c => c.PerTransactionFee).IsRequired().HasPrecision(18, 2);
             entity.Property(c => c.IsActive).IsRequired().HasDefaultValue(true);
             entity.HasIndex(c => c.Name).IsUnique();
         });
@@ -271,6 +281,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(b => b.BankName).IsRequired().HasMaxLength(200);
             entity.Property(b => b.BranchCode).IsRequired().HasMaxLength(50);
             entity.Property(b => b.AccountNumber).IsRequired().HasMaxLength(100);
+            entity.Property(b => b.Notes).HasMaxLength(4000);
             entity.Property(b => b.IsActive).IsRequired().HasDefaultValue(true);
             entity.HasOne(b => b.CollectionClient).WithMany(c => c.BankDetails)
                 .HasForeignKey(b => b.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
@@ -310,6 +321,7 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(c => c.Id);
             entity.Property(c => c.PayorName).IsRequired().HasMaxLength(200);
             entity.Property(c => c.PayorEmail).HasMaxLength(256);
+            entity.Property(c => c.PayorTelephone).HasMaxLength(50);
             entity.Property(c => c.ReferenceNumber).HasMaxLength(100);
             entity.Property(c => c.Method).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
@@ -425,9 +437,15 @@ public class ApplicationDbContext : DbContext
         {
             entity.ToTable("JobPayments", table => table.HasCheckConstraint("CK_JobPayments_ExactlyOnePayee", "([PayeeUserId] IS NOT NULL AND [CollectionClientId] IS NULL) OR ([PayeeUserId] IS NULL AND [CollectionClientId] IS NOT NULL)"));
             entity.HasKey(j => j.Id);
+            entity.Property(j => j.Title).HasMaxLength(200);
             entity.Property(j => j.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(j => j.PublicNote).HasMaxLength(4000);
+            entity.Ignore(j => j.PublicDescription);
             entity.Property(j => j.InternalNote).HasMaxLength(4000);
+            entity.Property(j => j.PayoutBankName).HasMaxLength(200);
+            entity.Property(j => j.PayoutBankAccountName).HasMaxLength(200);
+            entity.Property(j => j.PayoutBankAccountNumber).HasMaxLength(100);
+            entity.Property(j => j.PayoutBankBranchCode).HasMaxLength(50);
             entity.Property(j => j.JobTotal).IsRequired().HasPrecision(18, 2);
             entity.Property(j => j.ClientProcessingFee).IsRequired().HasPrecision(18, 2);
             entity.Property(j => j.TotalTxnProcessingFee).IsRequired().HasPrecision(18, 2);

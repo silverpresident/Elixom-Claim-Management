@@ -102,8 +102,16 @@ public class JobPayment
     public Guid? CollectionClientId { get; set; }
     public CollectionClient? CollectionClient { get; set; }
     public JobPaymentStatus Status { get; set; } = JobPaymentStatus.Processing;
+    public string? Title { get; set; }
     public string? PublicNote { get; set; }
+    public string? PublicDescription { get => PublicNote; set => PublicNote = value; }
     public string? InternalNote { get; set; }
+
+    // Payout bank details snapshot (captured at creation/settlement)
+    public string? PayoutBankName { get; set; }
+    public string? PayoutBankAccountName { get; set; }
+    public string? PayoutBankAccountNumber { get; set; }
+    public string? PayoutBankBranchCode { get; set; }
     public decimal JobTotal { get; set; }
     public decimal ClientProcessingFee { get; set; }
     public decimal TotalTxnProcessingFee { get; set; }

@@ -20,7 +20,43 @@ public class JobPaymentService : IJobPaymentService
         if ((c.PayeeUserId.HasValue) == (c.CollectionClientId.HasValue)) return Result.Failure<JobPayment>("Choose exactly one payee: a user or a collection client.");
         if (c.PayeeUserId.HasValue && !await _db.Users.AnyAsync(u => u.Id == c.PayeeUserId && u.IsActive, ct)) return Result.Failure<JobPayment>("Payee user was not found.");
         if (c.CollectionClientId.HasValue && !await _db.CollectionClients.AnyAsync(x => x.Id == c.CollectionClientId && x.IsActive, ct)) return Result.Failure<JobPayment>("Collection client was not found.");
-        var job = new JobPayment { PayeeUserId = c.PayeeUserId, CollectionClientId = c.CollectionClientId, PublicNote = Trim(c.PublicNote), InternalNote = Trim(c.InternalNote), CreatedAtUtc = _clock.UtcNow };
+        string? payoutBankName = null, payoutAccountName = null, payoutAccountNum = null, payoutBranch = null;
+        if (c.PayeeUserId.HasValue)
+        {
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == c.PayeeUserId.Value, ct);
+            if (user != null)
+            {
+                payoutBankName = user.BankName;
+                payoutAccountName = user.BankAccountName ?? user.FullName;
+                payoutAccountNum = user.BankAccountNumber;
+                payoutBranch = user.BankBranchCode;
+            }
+        }
+        else if (c.CollectionClientId.HasValue)
+        {
+            var bankDetail = await _db.CollectionClientBankDetails.FirstOrDefaultAsync(b => b.CollectionClientId == c.CollectionClientId.Value && b.IsActive, ct);
+            if (bankDetail != null)
+            {
+                payoutBankName = bankDetail.BankName;
+                payoutAccountName = bankDetail.AccountName;
+                payoutAccountNum = bankDetail.AccountNumber;
+                payoutBranch = bankDetail.BranchCode;
+            }
+        }
+
+        var job = new JobPayment
+        {
+            PayeeUserId = c.PayeeUserId,
+            CollectionClientId = c.CollectionClientId,
+            Title = Trim(c.Title),
+            PublicNote = Trim(c.PublicNote),
+            InternalNote = Trim(c.InternalNote),
+            PayoutBankName = payoutBankName,
+            PayoutBankAccountName = payoutAccountName,
+            PayoutBankAccountNumber = payoutAccountNum,
+            PayoutBankBranchCode = payoutBranch,
+            CreatedAtUtc = _clock.UtcNow
+        };
         _db.JobPayments.Add(job); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_CREATED", job, c.ActorUserId, ct); return Result.Success(job);
     }
 
@@ -149,7 +185,10 @@ public class JobPaymentService : IJobPaymentService
         var claims = string.Join("", job.Claims.Select(x => $"<li>{encode(x.Claim.Title)} — {x.Claim.Amount:N2} JMD</li>"));
         var collections = string.Join("", job.Collections.Select(x => $"<li>Collection #{x.CollectionTransactionId} — {x.CollectionTransaction.Amount:N2} JMD</li>"));
         var deductions = string.Join("", job.Deductions.Select(x => $"<li>{encode(x.Description)} — {x.Amount:N2} JMD</li>"));
-        var bank = job.PayeeUser is null ? "Collection client payout" : $"Bank account ending {encode(job.PayeeUser.BankAccountNumber?[^Math.Min(4, job.PayeeUser.BankAccountNumber.Length)..] ?? "unavailable")}";
+        var acctNumber = job.PayoutBankAccountNumber ?? job.PayeeUser?.BankAccountNumber;
+        var bank = string.IsNullOrWhiteSpace(acctNumber)
+            ? "Collection client payout"
+            : $"Bank account ending {encode(acctNumber[^Math.Min(4, acctNumber.Length)..])}";
         return $"<article style=\"font-family:Arial,sans-serif;max-width:720px;margin:auto\"><h1>Payout summary</h1><p>Payment #{job.Id}</p><p>{bank}</p><p>Payment date: {job.PaymentDateUtc:yyyy-MM-dd} UTC<br/>Transaction: {encode(job.PaymentTransactionNumber ?? string.Empty)}</p><h2>Claims</h2><ul>{claims}</ul><h2>Collections</h2><ul>{collections}</ul><h2>Deductions</h2><ul>{deductions}</ul><table><tr><th>Job total</th><td>{job.JobTotal:N2} JMD</td></tr><tr><th>Client fee</th><td>{job.ClientProcessingFee:N2} JMD</td></tr><tr><th>Deductions</th><td>{job.TotalDeductions:N2} JMD</td></tr><tr><th>Total paid</th><td><strong>{job.TotalPaid:N2} JMD</strong></td></tr></table></article>";
     }
 }
