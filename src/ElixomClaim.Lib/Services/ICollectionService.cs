@@ -6,14 +6,14 @@ namespace ElixomClaim.Lib.Services;
 public interface ICollectionService
 {
     Task<Result<CollectionTransaction>> RecordAsync(RecordCollectionCommand command, CancellationToken cancellationToken = default);
-    Task<Result> ReissueReceiptAsync(long collectionId, Guid actorUserId, CancellationToken cancellationToken = default);
+    Task<Result> ReissueReceiptAsync(Guid collectionId, Guid actorUserId, CancellationToken cancellationToken = default);
 }
 
 public record RecordCollectionCommand(
     Guid TellerUserId,
     Guid CollectionClientId,
-    long PurposeOptionId,
-    long AmountOptionId,
+    Guid PurposeOptionId,
+    Guid AmountOptionId,
     string PayorName,
     string? PayorEmail,
     CollectionMethod Method,

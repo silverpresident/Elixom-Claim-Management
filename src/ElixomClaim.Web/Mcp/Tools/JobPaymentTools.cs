@@ -6,10 +6,10 @@ using Microsoft.EntityFrameworkCore;
 namespace ElixomClaim.Web.Mcp.Tools;
 
 public sealed record ListJobPaymentsRequest(JobPaymentStatus? StatusFilter = null);
-public sealed record GetJobPaymentRequest(long JobPaymentId);
+public sealed record GetJobPaymentRequest(Guid JobPaymentId);
 
 public sealed record JobPaymentDto(
-    long Id,
+    Guid Id,
     Guid? PayeeUserId,
     Guid? CollectionClientId,
     JobPaymentStatus Status,

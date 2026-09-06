@@ -2,7 +2,7 @@ namespace ElixomClaim.Lib.Entities;
 
 public class AuditRecord
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; }
     public string? ActorUserId { get; set; }
     public string? ActorEmail { get; set; }
     public string? CorrelationId { get; set; }

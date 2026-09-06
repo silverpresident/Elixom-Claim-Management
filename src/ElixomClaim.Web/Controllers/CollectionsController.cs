@@ -44,30 +44,30 @@ public class CollectionsController : Controller
         return RedirectToAction(nameof(Details), new { id = result.Value!.Id });
     }
 
-    [HttpGet("{id:long}")]
-    public async Task<IActionResult> Details(long id)
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> Details(Guid id)
     {
         var collection = await FindVisibleCollectionAsync(id);
         return collection is null ? NotFound() : View(collection);
     }
 
-    [HttpPost("{id:long}/reissue")]
+    [HttpPost("{id:guid}/reissue")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Reissue(long id)
+    public async Task<IActionResult> Reissue(Guid id)
     {
         var result = await _collectionService.ReissueReceiptAsync(id, CurrentUserId());
         TempData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.IsSuccess ? "Receipt reissue queued." : result.Error;
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    [HttpGet("{id:long}/print")]
-    public async Task<IActionResult> Print(long id)
+    [HttpGet("{id:guid}/print")]
+    public async Task<IActionResult> Print(Guid id)
     {
         var collection = await FindVisibleCollectionAsync(id);
         return collection is null ? NotFound() : View(collection);
     }
 
-    private async Task<CollectionTransaction?> FindVisibleCollectionAsync(long id)
+    private async Task<CollectionTransaction?> FindVisibleCollectionAsync(Guid id)
     {
         var collection = await _dbContext.CollectionTransactions.AsNoTracking().Include(c => c.CollectionClient).Include(c => c.PurposeOption).Include(c => c.AmountOption).SingleOrDefaultAsync(c => c.Id == id);
         if (collection is null) return null;
@@ -93,8 +93,8 @@ public class CollectionsController : Controller
 public class RecordCollectionInput
 {
     public Guid CollectionClientId { get; set; }
-    public long PurposeOptionId { get; set; }
-    public long AmountOptionId { get; set; }
+    public Guid PurposeOptionId { get; set; }
+    public Guid AmountOptionId { get; set; }
     public string PayorName { get; set; } = string.Empty;
     public string? PayorEmail { get; set; }
     public CollectionMethod Method { get; set; }

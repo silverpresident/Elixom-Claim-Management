@@ -17,7 +17,7 @@ public enum CollectionStatus
 
 public class CollectionClient
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
@@ -40,7 +40,7 @@ public class CollectionClientUser
 
 public class CollectionClientBankDetail
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; }
     public Guid CollectionClientId { get; set; }
     public CollectionClient CollectionClient { get; set; } = null!;
     public string AccountName { get; set; } = string.Empty;
@@ -53,7 +53,7 @@ public class CollectionClientBankDetail
 
 public class CollectionPurposeOption
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; }
     public Guid CollectionClientId { get; set; }
     public CollectionClient CollectionClient { get; set; } = null!;
     public string Name { get; set; } = string.Empty;
@@ -63,7 +63,7 @@ public class CollectionPurposeOption
 
 public class CollectionAmountOption
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; }
     public Guid CollectionClientId { get; set; }
     public CollectionClient CollectionClient { get; set; } = null!;
     public string Name { get; set; } = string.Empty;
@@ -74,12 +74,12 @@ public class CollectionAmountOption
 
 public class CollectionTransaction
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; }
     public Guid CollectionClientId { get; set; }
     public CollectionClient CollectionClient { get; set; } = null!;
-    public long PurposeOptionId { get; set; }
+    public Guid PurposeOptionId { get; set; }
     public CollectionPurposeOption PurposeOption { get; set; } = null!;
-    public long AmountOptionId { get; set; }
+    public Guid AmountOptionId { get; set; }
     public CollectionAmountOption AmountOption { get; set; } = null!;
     public Guid TellerUserId { get; set; }
     public User TellerUser { get; set; } = null!;

@@ -6,10 +6,10 @@ using Microsoft.EntityFrameworkCore;
 namespace ElixomClaim.Web.Mcp.Tools;
 
 public sealed record ListCollectionsRequest(Guid? CollectionClientId = null);
-public sealed record GetCollectionRequest(long CollectionId);
+public sealed record GetCollectionRequest(Guid CollectionId);
 
 public sealed record CollectionDto(
-    long Id,
+    Guid Id,
     Guid CollectionClientId,
     string PayorName,
     string? PayorEmail,

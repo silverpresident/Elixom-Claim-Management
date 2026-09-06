@@ -127,7 +127,7 @@ public class CollectionService : ICollectionService
         }
     }
 
-    public async Task<Result> ReissueReceiptAsync(long collectionId, Guid actorUserId, CancellationToken cancellationToken = default)
+    public async Task<Result> ReissueReceiptAsync(Guid collectionId, Guid actorUserId, CancellationToken cancellationToken = default)
     {
         var actor = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == actorUserId && u.IsActive, cancellationToken);
         var collection = await _dbContext.CollectionTransactions.Include(c => c.CollectionClient).Include(c => c.PurposeOption).Include(c => c.AmountOption).SingleOrDefaultAsync(c => c.Id == collectionId, cancellationToken);

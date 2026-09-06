@@ -18,22 +18,22 @@ public sealed class PayrollController : Controller
     public async Task<IActionResult> Index()
     {
         var definitions = await _db.SalaryDefinitions.AsNoTracking().Include(definition => definition.User).Include(definition => definition.Adjustments).OrderBy(definition => definition.User.FullName).ToListAsync();
-        var previews = new Dictionary<long, SalaryPayrollPreview>();
+        var previews = new Dictionary<Guid, SalaryPayrollPreview>();
         foreach (var definition in definitions) { var preview = await _service.PreviewAsync(definition.Id, ActorId(), DateOnly.FromDateTime(DateTime.UtcNow)); if (preview.IsSuccess) previews[definition.Id] = preview.Value!; }
         return View(new PayrollWorkspaceViewModel { SalaryDefinitions = definitions, Previews = previews, Payrolls = await _db.Payrolls.AsNoTracking().Include(payroll => payroll.User).Include(payroll => payroll.Entries).OrderByDescending(payroll => payroll.GeneratedAtUtc).Take(50).ToListAsync(), AuditRecords = await _db.AuditRecords.AsNoTracking().Where(record => record.Target.StartsWith("Payroll:") || record.Target.StartsWith("SalaryDefinition:")).OrderByDescending(record => record.TimestampUtc).Take(20).ToListAsync() });
     }
     [HttpGet("salary-definitions/create")] public async Task<IActionResult> Create() { ViewBag.Users = await _db.Users.AsNoTracking().Where(user => user.IsActive).OrderBy(user => user.FullName).ToListAsync(); return View(); }
     [HttpPost("salary-definitions/create")][ValidateAntiForgeryToken] public async Task<IActionResult> Create(CreateSalaryDefinitionInput input) { var result = await _service.CreateDefinitionAsync(new(ActorId(), input.UserId, input.Description, input.BaseAmount, input.FirstSalaryDate, input.StartDate, input.EndDate, input.RecurrenceDays, input.RecurrenceMonths, input.NearestWeekday)); if (result.IsSuccess) return RedirectToAction(nameof(Index)); ModelState.AddModelError(string.Empty, result.Error); ViewBag.Users = await _db.Users.AsNoTracking().Where(user => user.IsActive).OrderBy(user => user.FullName).ToListAsync(); return View(input); }
-    [HttpPost("salary-definitions/{id:long}/generate")][ValidateAntiForgeryToken]
-    public async Task<IActionResult> GenerateNow(long id)
+    [HttpPost("salary-definitions/{id:guid}/generate")][ValidateAntiForgeryToken]
+    public async Task<IActionResult> GenerateNow(Guid id)
     {
         var actor = ActorId();
         var result = await _service.GenerateForDefinitionAsync(id, actor, DateOnly.FromDateTime(DateTime.UtcNow));
         TempData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.IsSuccess ? "Payroll generated." : result.Error;
         return RedirectToAction(nameof(Index));
     }
-    [HttpPost("{id:long}/submit")][ValidateAntiForgeryToken]
-    public async Task<IActionResult> Submit(long id)
+    [HttpPost("{id:guid}/submit")][ValidateAntiForgeryToken]
+    public async Task<IActionResult> Submit(Guid id)
     {
         var actor = ActorId();
         var result = await _service.SubmitAsync(id, actor);

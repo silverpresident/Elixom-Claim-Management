@@ -13,4 +13,7 @@ This directory contains Architectural Decision Records (ADRs) for the Elixom Cla
 | Number | Title | Status | Date |
 | --- | --- | --- | --- |
 | Template | [ADR Template](template.md) | Standard | 2026-09-02 |
+| 0001 | [In-House OAuth 2.0 Server with PKCE and Dynamic Client Registration](0001-in-house-oauth-server.md) | Accepted | 2026-09-02 |
 | 0002 | [Reversal and Adjustment Accounting](0002-reversal-adjustment-accounting.md) | Accepted | 2026-09-02 |
+| 0003 | [Audit Record Database Immutability](0003-audit-record-database-immutability.md) | Accepted | 2026-09-03 |
+| 0004 | [All-Guid Identifier Convention Across Domain Entities](0004-all-guid-identifier-convention.md) | Accepted | 2026-09-03 |

@@ -11,7 +11,7 @@ public enum EmailOutboxStatus
 
 public class EmailOutboxItem
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
     public string Recipient { get; set; } = string.Empty;
     public string Subject { get; set; } = string.Empty;
     public string HtmlBody { get; set; } = string.Empty;
@@ -28,7 +28,7 @@ public class EmailOutboxItem
 
 public class EmailLog
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; }
     public Guid OutboxItemId { get; set; }
     public string Recipient { get; set; } = string.Empty;
     public string Subject { get; set; } = string.Empty;

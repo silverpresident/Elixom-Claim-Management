@@ -2,7 +2,7 @@ namespace ElixomClaim.Web.Models;
 
 public class AuditRecordViewModel
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; }
     public string? ActorEmail { get; set; }
     public string Action { get; set; } = string.Empty;
     public string Target { get; set; } = string.Empty;

@@ -1,5 +1,7 @@
+using System.Collections;
 using ElixomClaim.Lib.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace ElixomClaim.Lib.Data;
@@ -50,6 +52,11 @@ public class ApplicationDbContext : DbContext
         // Global soft-delete query filters
         modelBuilder.Entity<Claim>().HasQueryFilter(c => !c.IsDeleted);
         modelBuilder.Entity<ClaimComment>().HasQueryFilter(cc => !cc.IsDeleted);
+
+        var rowVersionComparer = new ValueComparer<byte[]>(
+            (c1, c2) => StructuralComparisons.StructuralEqualityComparer.Equals(c1, c2),
+            c => StructuralComparisons.StructuralEqualityComparer.GetHashCode(c),
+            c => c);
 
         modelBuilder.Entity<User>(entity =>
         {
@@ -199,7 +206,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(c => c.PaymentStatus).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(c => c.RejectionReason).HasMaxLength(1000);
             entity.Property(c => c.IsDeleted).IsRequired().HasDefaultValue(false);
-            entity.Property(c => c.RowVersion).IsRowVersion();
+            entity.Property(c => c.RowVersion).IsRowVersion().Metadata.SetValueComparer(rowVersionComparer);
 
             entity.HasOne(c => c.ClaimantUser)
                 .WithMany()
@@ -303,7 +310,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(c => c.Amount).IsRequired().HasPrecision(18, 2);
             entity.Property(c => c.ProcessingFee).IsRequired().HasPrecision(18, 2);
             entity.Property(c => c.Currency).IsRequired().HasMaxLength(10).HasDefaultValue("JMD");
-            entity.Property(c => c.RowVersion).IsRowVersion();
+            entity.Property(c => c.RowVersion).IsRowVersion().Metadata.SetValueComparer(rowVersionComparer);
             entity.HasOne(c => c.CollectionClient).WithMany().HasForeignKey(c => c.CollectionClientId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(c => c.PurposeOption).WithMany().HasForeignKey(c => new { c.PurposeOptionId, c.CollectionClientId })
@@ -361,7 +368,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(s => s.Description).IsRequired().HasMaxLength(500);
             entity.Property(s => s.BaseAmount).IsRequired().HasPrecision(18, 2);
             entity.Property(s => s.IsActive).IsRequired().HasDefaultValue(true);
-            entity.Property(s => s.RowVersion).IsRowVersion();
+            entity.Property(s => s.RowVersion).IsRowVersion().Metadata.SetValueComparer(rowVersionComparer);
             entity.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(s => new { s.UserId, s.IsActive });
         });
@@ -386,7 +393,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(p => p.PayrollTotal).IsRequired().HasPrecision(18, 2);
             entity.Property(p => p.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(p => p.IsLocked).IsRequired().HasDefaultValue(false);
-            entity.Property(p => p.RowVersion).IsRowVersion();
+            entity.Property(p => p.RowVersion).IsRowVersion().Metadata.SetValueComparer(rowVersionComparer);
             entity.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(p => p.SalaryDefinition).WithMany(s => s.Payrolls).HasForeignKey(p => p.SalaryDefinitionId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(p => new { p.UserId, p.Status });
@@ -420,7 +427,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(j => j.Currency).IsRequired().HasMaxLength(10).HasDefaultValue("JMD");
             entity.Property(j => j.PaymentTransactionNumber).HasMaxLength(100);
             entity.Property(j => j.AdjustmentReason).HasMaxLength(1000);
-            entity.Property(j => j.RowVersion).IsRowVersion();
+            entity.Property(j => j.RowVersion).IsRowVersion().Metadata.SetValueComparer(rowVersionComparer);
             entity.HasOne(j => j.PayeeUser).WithMany().HasForeignKey(j => j.PayeeUserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(j => j.CollectionClient).WithMany().HasForeignKey(j => j.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(j => j.OriginalJobPayment).WithMany().HasForeignKey(j => j.OriginalJobPaymentId).OnDelete(DeleteBehavior.Restrict);

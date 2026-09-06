@@ -60,8 +60,8 @@ public class ClaimsController : Controller
         return RedirectToAction(nameof(Details), new { id = claim.Id });
     }
 
-    [HttpGet("{id:long}")]
-    public async Task<IActionResult> Details(long id)
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> Details(Guid id)
     {
         var userId = GetCurrentUserId();
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
@@ -79,8 +79,8 @@ public class ClaimsController : Controller
         return View(claim);
     }
 
-    [HttpGet("{id:long}/edit")]
-    public async Task<IActionResult> Edit(long id)
+    [HttpGet("{id:guid}/edit")]
+    public async Task<IActionResult> Edit(Guid id)
     {
         var userId = GetCurrentUserId();
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
@@ -98,9 +98,9 @@ public class ClaimsController : Controller
         return View(claim);
     }
 
-    [HttpPost("{id:long}/edit")]
+    [HttpPost("{id:guid}/edit")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(long id, [FromForm] CreateClaimInput input)
+    public async Task<IActionResult> Edit(Guid id, [FromForm] CreateClaimInput input)
     {
         var userId = GetCurrentUserId();
         if (string.IsNullOrWhiteSpace(input.Title) || string.IsNullOrWhiteSpace(input.Description) || input.Amount <= 0)
@@ -118,9 +118,9 @@ public class ClaimsController : Controller
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    [HttpPost("{id:long}/submit")]
+    [HttpPost("{id:guid}/submit")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Submit(long id)
+    public async Task<IActionResult> Submit(Guid id)
     {
         var userId = GetCurrentUserId();
         var success = await _claimService.SubmitAsync(new SubmitClaimCommand(id, userId));
@@ -132,9 +132,9 @@ public class ClaimsController : Controller
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    [HttpPost("{id:long}/delete")]
+    [HttpPost("{id:guid}/delete")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(long id)
+    public async Task<IActionResult> Delete(Guid id)
     {
         var userId = GetCurrentUserId();
         var success = await _claimService.SoftDeleteAsync(new SoftDeleteClaimCommand(id, userId));
@@ -146,9 +146,9 @@ public class ClaimsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("{id:long}/comment")]
+    [HttpPost("{id:guid}/comment")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddComment(long id, [FromForm] string content)
+    public async Task<IActionResult> AddComment(Guid id, [FromForm] string content)
     {
         if (string.IsNullOrWhiteSpace(content))
         {

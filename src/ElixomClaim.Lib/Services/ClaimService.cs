@@ -248,7 +248,7 @@ public class ClaimService : IClaimService
         return comment;
     }
 
-    public async Task<Claim?> GetByIdAsync(long claimId, User actor, CancellationToken cancellationToken = default)
+    public async Task<Claim?> GetByIdAsync(Guid claimId, User actor, CancellationToken cancellationToken = default)
     {
         var claim = await _dbContext.Claims
             .AsNoTracking()
