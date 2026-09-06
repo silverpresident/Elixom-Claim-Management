@@ -59,7 +59,7 @@ The detailed request/response schema is part of item 1. This outline fixes the i
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | — |
+| 1 | Complete | 2026-09-03 | Recorded transport and API contract in ADR 0005 (`adr/0005-standard-mcp-and-versioned-rest-api.md`) and contract spec (`docs/api-and-mcp-contract.md`). Added `api:access` scope to default OAuth allowed scopes in `OAuthEntities.cs`, `OAuthService.cs`, and `OAuthController.cs`. Full test suite passed (176 tests). |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |

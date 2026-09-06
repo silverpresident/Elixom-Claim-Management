@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 12 Standard MCP Server and Versioned Operations API planned.
+- **Stage:** Sprint 12 Standard MCP Server and Versioned Operations API in progress.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
@@ -68,7 +68,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 09 Domain data completion | Complete | All 6 items complete; EF migration 20260903120000_DomainDataCompletion applied; build & 159 tests passed on 2026-09-03. See `sprints/09-domain-data-completion.md`. |
 | 10 Web workflow completion | Complete | All 7 items complete; build & 170 tests passed on 2026-09-03. See `sprints/10-web-workflow-completion.md`. |
 | 11 Deployment & release verification | Complete | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification matrix (176 tests passing). See `sprints/11-deployment-and-release-verification.md`. |
-| 12 Standard MCP server & API | Planned | Resolve the post-release MCP transport gap: standard .NET MCP endpoint, shared actor boundary, durable operation semantics, a separately scoped `/api/v1` REST API, retirement of bespoke `/mcp/*` controllers, and transport/contract coverage. See `sprints/12-standard-mcp-and-api.md`. |
+| 12 Standard MCP server & API | In progress | Resolve post-release MCP transport gap: Item 1 complete (ADR 0005 and contract spec recorded, `api:access` OAuth scope added). See `sprints/12-standard-mcp-and-api.md`. |
 
 ## Open decisions / risks
 
@@ -106,3 +106,4 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 2026-09-03 | Complete Sprint 10 Item 4: Accountant job-payment workflows for scheduling, settlement (marking paid), bank snapshots, outbox notifications, and linked adjustment creation & administrator approval. | Sprint 10 Item 4 complete. |
 | 2026-09-03 | Complete Sprint 10 Item 5: Salary-definition adjustment management and Accountant custom payroll entry additions in ISalaryPayrollService, PayrollController, and views. | Sprint 10 Item 5 complete. |
 | 2026-09-03 | Complete Sprint 10 Item 6 & Item 7: Role-aware landing page work queues in HomeController & Index view, role-tailored navbar navigation in _Layout, and integration coverage across all Sprint 10 workflows (170 tests passing). Sprint 10 complete. | Sprint 10 complete. |
+| 2026-09-03 | Establish standard MCP server endpoint at /mcp (mcp:access scope) and versioned REST API at /api/v1 (api:access scope) per [ADR 0005](adr/0005-standard-mcp-and-versioned-rest-api.md). Retire legacy bespoke /mcp/* controllers. | Clean transport separation, compliance with official SDK, and scope isolation. |

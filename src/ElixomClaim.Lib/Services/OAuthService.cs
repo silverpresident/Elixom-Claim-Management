@@ -95,7 +95,7 @@ public class OAuthService : IOAuthService
             ClientSecretHash = clientSecretHash,
             RedirectUrisJson = JsonSerializer.Serialize(urisList),
             AllowedGrantTypes = "authorization_code,refresh_token",
-            AllowedScopes = "openid profile email mcp:access",
+            AllowedScopes = "openid profile email mcp:access api:access",
             IsActive = true,
             CreatedAtUtc = DateTime.UtcNow
         };

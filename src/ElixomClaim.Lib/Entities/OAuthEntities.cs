@@ -7,7 +7,7 @@ public class OAuthClient
     public string ClientSecretHash { get; set; } = string.Empty;
     public string RedirectUrisJson { get; set; } = "[]";
     public string AllowedGrantTypes { get; set; } = "authorization_code,refresh_token";
-    public string AllowedScopes { get; set; } = "openid,profile,email,mcp:access";
+    public string AllowedScopes { get; set; } = "openid profile email mcp:access api:access";
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
