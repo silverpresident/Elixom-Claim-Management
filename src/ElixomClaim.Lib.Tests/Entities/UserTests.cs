@@ -21,10 +21,48 @@ public class UserTests
         Assert.Equal("Jane Doe", user.FullName);
         Assert.Equal(UserRole.User, user.Role);
         Assert.True(user.IsActive);
+        Assert.Null(user.BankAccountName);
         Assert.Null(user.BankAccountNumber);
+        Assert.Null(user.BankName);
         Assert.Null(user.BankBranchCode);
         Assert.True(user.CreatedAtUtc <= DateTime.UtcNow);
         Assert.True(user.UpdatedAtUtc <= DateTime.UtcNow);
+    }
+
+    [Theory]
+    [InlineData("1234567890", "******7890")]
+    [InlineData("9876", "****")]
+    [InlineData("123", "****")]
+    [InlineData(null, null)]
+    [InlineData("   ", null)]
+    public void GetMaskedBankAccountNumber_MasksCorrectly(string? inputAccountNumber, string? expectedMasked)
+    {
+        var user = new User { BankAccountNumber = inputAccountNumber };
+        Assert.Equal(expectedMasked, user.GetMaskedBankAccountNumber());
+    }
+
+    [Fact]
+    public void UserProfileSummary_FromUser_RedactsAccountNumberWhenUnprivileged()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "john@example.com",
+            FullName = "John Swimmer",
+            Role = UserRole.User,
+            BankAccountName = "John Swimmer",
+            BankAccountNumber = "1234567890",
+            BankName = "National Commercial Bank",
+            BankBranchCode = "001"
+        };
+
+        var redactedSummary = UserProfileSummary.FromUser(user, includeFullBankDetails: false);
+        Assert.Equal("******7890", redactedSummary.BankAccountNumber);
+        Assert.Equal("National Commercial Bank", redactedSummary.BankName);
+        Assert.Equal("John Swimmer", redactedSummary.BankAccountName);
+
+        var fullSummary = UserProfileSummary.FromUser(user, includeFullBankDetails: true);
+        Assert.Equal("1234567890", fullSummary.BankAccountNumber);
     }
 
     [Theory]

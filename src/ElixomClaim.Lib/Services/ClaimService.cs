@@ -35,6 +35,7 @@ public class ClaimService : IClaimService
             Status = ClaimStatus.Draft,
             PaymentStatus = ClaimPaymentStatus.Unpaid,
             IsDeleted = false,
+            DateOfJob = command.DateOfJob ?? DateTime.UtcNow,
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = DateTime.UtcNow
         };
@@ -204,6 +205,7 @@ public class ClaimService : IClaimService
         }
 
         claim.IsDeleted = true;
+        claim.DeletedAtUtc = DateTime.UtcNow;
         claim.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);

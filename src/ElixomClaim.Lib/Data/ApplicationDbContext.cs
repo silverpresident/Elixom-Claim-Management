@@ -89,8 +89,14 @@ public class ApplicationDbContext : DbContext
                 .IsRequired()
                 .HasDefaultValue(true);
 
+            entity.Property(u => u.BankAccountName)
+                .HasMaxLength(200);
+
             entity.Property(u => u.BankAccountNumber)
                 .HasMaxLength(100);
+
+            entity.Property(u => u.BankName)
+                .HasMaxLength(200);
 
             entity.Property(u => u.BankBranchCode)
                 .HasMaxLength(50);
@@ -206,6 +212,10 @@ public class ApplicationDbContext : DbContext
             entity.Property(c => c.PaymentStatus).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(c => c.RejectionReason).HasMaxLength(1000);
             entity.Property(c => c.IsDeleted).IsRequired().HasDefaultValue(false);
+            entity.Property(c => c.DateOfJob).IsRequired();
+            entity.Property(c => c.CreatedAtUtc).IsRequired();
+            entity.Property(c => c.UpdatedAtUtc).IsRequired();
+            entity.Property(c => c.DeletedAtUtc);
             entity.Property(c => c.RowVersion).IsRowVersion().Metadata.SetValueComparer(rowVersionComparer);
 
             entity.HasOne(c => c.ClaimantUser)
@@ -244,6 +254,10 @@ public class ApplicationDbContext : DbContext
             entity.ToTable("CollectionClients");
             entity.HasKey(c => c.Id);
             entity.Property(c => c.Name).IsRequired().HasMaxLength(200);
+            entity.Property(c => c.Description).HasMaxLength(1000);
+            entity.Property(c => c.Notes).HasMaxLength(4000);
+            entity.Property(c => c.PerJobProcessingFee).IsRequired().HasPrecision(18, 2);
+            entity.Property(c => c.PerTransactionFee).IsRequired().HasPrecision(18, 2);
             entity.Property(c => c.IsActive).IsRequired().HasDefaultValue(true);
             entity.HasIndex(c => c.Name).IsUnique();
         });
@@ -267,6 +281,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(b => b.BankName).IsRequired().HasMaxLength(200);
             entity.Property(b => b.BranchCode).IsRequired().HasMaxLength(50);
             entity.Property(b => b.AccountNumber).IsRequired().HasMaxLength(100);
+            entity.Property(b => b.Notes).HasMaxLength(4000);
             entity.Property(b => b.IsActive).IsRequired().HasDefaultValue(true);
             entity.HasOne(b => b.CollectionClient).WithMany(c => c.BankDetails)
                 .HasForeignKey(b => b.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
@@ -280,6 +295,7 @@ public class ApplicationDbContext : DbContext
             entity.HasAlternateKey(o => new { o.Id, o.CollectionClientId });
             entity.Property(o => o.Name).IsRequired().HasMaxLength(200);
             entity.Property(o => o.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(o => o.CreatedAtUtc).IsRequired();
             entity.HasOne(o => o.CollectionClient).WithMany(c => c.PurposeOptions)
                 .HasForeignKey(o => o.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(o => new { o.CollectionClientId, o.Name }).IsUnique();
@@ -293,6 +309,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(o => o.Name).IsRequired().HasMaxLength(200);
             entity.Property(o => o.Amount).IsRequired().HasPrecision(18, 2);
             entity.Property(o => o.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(o => o.CreatedAtUtc).IsRequired();
             entity.HasOne(o => o.CollectionClient).WithMany(c => c.AmountOptions)
                 .HasForeignKey(o => o.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(o => new { o.CollectionClientId, o.Name }).IsUnique();
@@ -304,6 +321,7 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(c => c.Id);
             entity.Property(c => c.PayorName).IsRequired().HasMaxLength(200);
             entity.Property(c => c.PayorEmail).HasMaxLength(256);
+            entity.Property(c => c.PayorTelephone).HasMaxLength(50);
             entity.Property(c => c.ReferenceNumber).HasMaxLength(100);
             entity.Property(c => c.Method).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
@@ -351,6 +369,8 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.RelatedEntityId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(e => e.FailureReason).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAtUtc).IsRequired();
+            entity.Property(e => e.SentAtUtc);
             entity.HasIndex(e => e.OutboxItemId);
             entity.HasIndex(e => e.CreatedAtUtc);
         });
@@ -381,6 +401,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(a => a.PercentageRate).IsRequired().HasPrecision(18, 3);
             entity.Property(a => a.FixedValue).IsRequired().HasPrecision(18, 2);
             entity.Property(a => a.Type).IsRequired().HasConversion<string>().HasMaxLength(20);
+            entity.Property(a => a.CreatedAtUtc).IsRequired();
             entity.HasOne(a => a.SalaryDefinition).WithMany(s => s.Adjustments).HasForeignKey(a => a.SalaryDefinitionId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(a => new { a.SalaryDefinitionId, a.Type });
         });
@@ -416,9 +437,15 @@ public class ApplicationDbContext : DbContext
         {
             entity.ToTable("JobPayments", table => table.HasCheckConstraint("CK_JobPayments_ExactlyOnePayee", "([PayeeUserId] IS NOT NULL AND [CollectionClientId] IS NULL) OR ([PayeeUserId] IS NULL AND [CollectionClientId] IS NOT NULL)"));
             entity.HasKey(j => j.Id);
+            entity.Property(j => j.Title).HasMaxLength(200);
             entity.Property(j => j.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(j => j.PublicNote).HasMaxLength(4000);
+            entity.Ignore(j => j.PublicDescription);
             entity.Property(j => j.InternalNote).HasMaxLength(4000);
+            entity.Property(j => j.PayoutBankName).HasMaxLength(200);
+            entity.Property(j => j.PayoutBankAccountName).HasMaxLength(200);
+            entity.Property(j => j.PayoutBankAccountNumber).HasMaxLength(100);
+            entity.Property(j => j.PayoutBankBranchCode).HasMaxLength(50);
             entity.Property(j => j.JobTotal).IsRequired().HasPrecision(18, 2);
             entity.Property(j => j.ClientProcessingFee).IsRequired().HasPrecision(18, 2);
             entity.Property(j => j.TotalTxnProcessingFee).IsRequired().HasPrecision(18, 2);

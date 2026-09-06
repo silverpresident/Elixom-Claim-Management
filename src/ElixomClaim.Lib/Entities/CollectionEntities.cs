@@ -19,6 +19,10 @@ public class CollectionClient
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? Notes { get; set; } // Internal notes
+    public decimal PerJobProcessingFee { get; set; }
+    public decimal PerTransactionFee { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
@@ -47,6 +51,7 @@ public class CollectionClientBankDetail
     public string BankName { get; set; } = string.Empty;
     public string BranchCode { get; set; } = string.Empty;
     public string AccountNumber { get; set; } = string.Empty;
+    public string? Notes { get; set; } // Internal notes
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
@@ -59,6 +64,7 @@ public class CollectionPurposeOption
     public string Name { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
     public int DisplayOrder { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class CollectionAmountOption
@@ -70,6 +76,7 @@ public class CollectionAmountOption
     public decimal Amount { get; set; }
     public bool IsActive { get; set; } = true;
     public int DisplayOrder { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class CollectionTransaction
@@ -85,6 +92,7 @@ public class CollectionTransaction
     public User TellerUser { get; set; } = null!;
     public string PayorName { get; set; } = string.Empty;
     public string? PayorEmail { get; set; }
+    public string? PayorTelephone { get; set; } // Internal-only
     public string? ReferenceNumber { get; set; }
     public CollectionMethod Method { get; set; }
     public CollectionStatus Status { get; set; } = CollectionStatus.Collected;

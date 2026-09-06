@@ -2,7 +2,7 @@ using ElixomClaim.Lib.Entities;
 
 namespace ElixomClaim.Lib.Services;
 
-public record CreateClaimCommand(Guid ClaimantUserId, string Title, string Description, decimal Amount);
+public record CreateClaimCommand(Guid ClaimantUserId, string Title, string Description, decimal Amount, DateTime? DateOfJob = null);
 public record EditClaimCommand(Guid ClaimId, Guid ActorUserId, string Title, string Description, decimal Amount);
 public record SubmitClaimCommand(Guid ClaimId, Guid ActorUserId);
 public record AcceptClaimCommand(Guid ClaimId, Guid ActorUserId);

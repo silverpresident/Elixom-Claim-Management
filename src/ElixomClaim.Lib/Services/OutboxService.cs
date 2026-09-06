@@ -48,7 +48,7 @@ public class OutboxService : IOutboxService
 
     private Task AddLogAsync(EmailOutboxItem item, EmailOutboxStatus status, string? reason, CancellationToken cancellationToken)
     {
-        _dbContext.EmailLogs.Add(new EmailLog { OutboxItemId = item.Id, Recipient = item.Recipient, Subject = item.Subject, HtmlBody = item.HtmlBody, Provider = _sender.ProviderName, RelatedEntityType = item.RelatedEntityType, RelatedEntityId = item.RelatedEntityId, AttemptNumber = item.AttemptCount + 1, Status = status, FailureReason = reason, CreatedAtUtc = _clock.UtcNow });
+        _dbContext.EmailLogs.Add(new EmailLog { OutboxItemId = item.Id, Recipient = item.Recipient, Subject = item.Subject, HtmlBody = item.HtmlBody, Provider = _sender.ProviderName, RelatedEntityType = item.RelatedEntityType, RelatedEntityId = item.RelatedEntityId, AttemptNumber = item.AttemptCount + 1, Status = status, FailureReason = reason, CreatedAtUtc = _clock.UtcNow, SentAtUtc = status == EmailOutboxStatus.Sent ? _clock.UtcNow : null });
         _logger.LogInformation("Outbox email {OutboxId} finished with {Status}", item.Id, status);
         return Task.CompletedTask;
     }
