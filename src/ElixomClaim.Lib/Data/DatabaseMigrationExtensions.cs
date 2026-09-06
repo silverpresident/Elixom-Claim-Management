@@ -22,8 +22,24 @@ public static class DatabaseMigrationExtensions
             using var scope = serviceProvider.CreateScope();
             var logger = scope.ServiceProvider.GetService<ILogger<ApplicationDbContext>>();
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var dbOptions = scope.ServiceProvider.GetService<IOptions<DatabaseOptions>>()?.Value;
 
-            logger?.LogInformation("Checking database state and applying EF Core migrations for schema '{Schema}'...", ApplicationDbContext.DefaultSchema);
+            if (dbOptions != null && !dbOptions.AutoApplyMigrations)
+            {
+                logger?.LogInformation("AutoApplyMigrations is disabled in configuration. Skipping database migration execution.");
+                await SeedBootstrapAdminAsync(scope.ServiceProvider, logger, cancellationToken);
+                return;
+            }
+
+            if (!dbContext.Database.IsRelational())
+            {
+                logger?.LogInformation("Database provider is non-relational. Skipping database migration execution.");
+                await SeedBootstrapAdminAsync(scope.ServiceProvider, logger, cancellationToken);
+                return;
+            }
+
+            logger?.LogInformation("Checking database state and applying EF Core migrations for schema '{Schema}'... ({Config})",
+                ApplicationDbContext.DefaultSchema, dbOptions?.ToRedactedString());
 
             var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync(cancellationToken);
             var pendingList = pendingMigrations.ToList();

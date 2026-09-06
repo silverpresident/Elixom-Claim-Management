@@ -1,5 +1,6 @@
 using ElixomClaim.Lib;
 using ElixomClaim.Lib.Configuration;
+using ElixomClaim.Lib.Data;
 using ElixomClaim.Web.Authentication;
 using ElixomClaim.Web.Configuration;
 using ElixomClaim.Web.Development;
@@ -63,6 +64,10 @@ var app = builder.Build();
 if (developmentTesting)
 {
     await DevelopmentDataSeeder.InitializeAsync(app.Services);
+}
+else
+{
+    await app.Services.ApplyDatabaseMigrationsAsync(app.Environment.IsProduction());
 }
 
 // Correlation ID Middleware first to scope all request logging

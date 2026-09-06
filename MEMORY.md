@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 10 Web Workflow Completion Complete. Next item: Sprint 11 Item 1.
+- **Stage:** Sprint 11 Deployment and Release Verification Complete. Roadmap complete.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
@@ -67,7 +67,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 08 MCP transport & OAuth hardening | Complete | All 5 items complete; standard MCP transport, durable operations, OAuth hardening, rate limiting, and updated threat model/security test suite (145 tests passed) on 2026-09-03. See `sprints/08-mcp-oauth-hardening.md`. |
 | 09 Domain data completion | Complete | All 6 items complete; EF migration 20260903120000_DomainDataCompletion applied; build & 159 tests passed on 2026-09-03. See `sprints/09-domain-data-completion.md`. |
 | 10 Web workflow completion | Complete | All 7 items complete; build & 170 tests passed on 2026-09-03. See `sprints/10-web-workflow-completion.md`. |
-| 11 Deployment & release verification | Planned | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification. See `sprints/11-deployment-and-release-verification.md`. |
+| 11 Deployment & release verification | Complete | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification matrix (176 tests passing). See `sprints/11-deployment-and-release-verification.md`. |
 
 ## Open decisions / risks
 

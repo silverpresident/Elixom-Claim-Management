@@ -9,6 +9,12 @@ public class DatabaseOptions
     [Required(ErrorMessage = "ClaimDatabase connection string is required.")]
     public string ClaimDatabase { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether database migrations are automatically applied on startup.
+    /// Defaults to true.
+    /// </summary>
+    public bool AutoApplyMigrations { get; set; } = true;
+
     public string ToRedactedString()
     {
         if (string.IsNullOrWhiteSpace(ClaimDatabase))
