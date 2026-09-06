@@ -206,6 +206,10 @@ public class ApplicationDbContext : DbContext
             entity.Property(c => c.PaymentStatus).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(c => c.RejectionReason).HasMaxLength(1000);
             entity.Property(c => c.IsDeleted).IsRequired().HasDefaultValue(false);
+            entity.Property(c => c.DateOfJob).IsRequired();
+            entity.Property(c => c.CreatedAtUtc).IsRequired();
+            entity.Property(c => c.UpdatedAtUtc).IsRequired();
+            entity.Property(c => c.DeletedAtUtc);
             entity.Property(c => c.RowVersion).IsRowVersion().Metadata.SetValueComparer(rowVersionComparer);
 
             entity.HasOne(c => c.ClaimantUser)
@@ -280,6 +284,7 @@ public class ApplicationDbContext : DbContext
             entity.HasAlternateKey(o => new { o.Id, o.CollectionClientId });
             entity.Property(o => o.Name).IsRequired().HasMaxLength(200);
             entity.Property(o => o.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(o => o.CreatedAtUtc).IsRequired();
             entity.HasOne(o => o.CollectionClient).WithMany(c => c.PurposeOptions)
                 .HasForeignKey(o => o.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(o => new { o.CollectionClientId, o.Name }).IsUnique();
@@ -293,6 +298,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(o => o.Name).IsRequired().HasMaxLength(200);
             entity.Property(o => o.Amount).IsRequired().HasPrecision(18, 2);
             entity.Property(o => o.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(o => o.CreatedAtUtc).IsRequired();
             entity.HasOne(o => o.CollectionClient).WithMany(c => c.AmountOptions)
                 .HasForeignKey(o => o.CollectionClientId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(o => new { o.CollectionClientId, o.Name }).IsUnique();
@@ -351,6 +357,8 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.RelatedEntityId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(e => e.FailureReason).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAtUtc).IsRequired();
+            entity.Property(e => e.SentAtUtc);
             entity.HasIndex(e => e.OutboxItemId);
             entity.HasIndex(e => e.CreatedAtUtc);
         });
@@ -381,6 +389,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(a => a.PercentageRate).IsRequired().HasPrecision(18, 3);
             entity.Property(a => a.FixedValue).IsRequired().HasPrecision(18, 2);
             entity.Property(a => a.Type).IsRequired().HasConversion<string>().HasMaxLength(20);
+            entity.Property(a => a.CreatedAtUtc).IsRequired();
             entity.HasOne(a => a.SalaryDefinition).WithMany(s => s.Adjustments).HasForeignKey(a => a.SalaryDefinitionId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(a => new { a.SalaryDefinitionId, a.Type });
         });

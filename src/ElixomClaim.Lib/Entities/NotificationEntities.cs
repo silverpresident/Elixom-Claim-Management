@@ -40,4 +40,5 @@ public class EmailLog
     public EmailOutboxStatus Status { get; set; }
     public string? FailureReason { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? SentAtUtc { get; set; }
 }

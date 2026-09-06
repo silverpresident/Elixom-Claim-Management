@@ -59,6 +59,7 @@ public class CollectionPurposeOption
     public string Name { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
     public int DisplayOrder { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class CollectionAmountOption
@@ -70,6 +71,7 @@ public class CollectionAmountOption
     public decimal Amount { get; set; }
     public bool IsActive { get; set; } = true;
     public int DisplayOrder { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class CollectionTransaction

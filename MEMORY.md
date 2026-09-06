@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 09 Domain Data Completion In Progress (Item 1 Complete). Next item: Sprint 09 Item 2.
+- **Stage:** Sprint 09 Domain Data Completion In Progress (Item 2 Complete). Next item: Sprint 09 Item 3.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
@@ -97,3 +97,4 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 2026-09-03 | Standardize MCP transport using `ModelContextProtocol.AspNetCore` mapped at `/mcp` with Bearer auth and `mcp:access` scope validation. Retire bespoke `/mcp/*` REST controllers per ADR 0004. | Compliance with standard MCP server specification and interoperability with conforming MCP client agents. |
 | 2026-09-03 | Persist OAuth consents in dbclaim.OAuthConsents, enforce strict redirect URI shape/scheme rules during dynamic client registration and authorization, stop retaining raw authorization codes in database, and revalidate client and redirect URI on consent POST. | OAuth 2.0 hardening requirements under Sprint 09 Item 3. |
 | 2026-09-03 | Standardize all entity primary keys and foreign keys to Guid across `dbclaim` schema. See [ADR 0004](adr/0004-all-guid-identifier-convention.md). | Global uniqueness, uniform Web/MCP routes, and lock-free identifier generation. |
+| 2026-09-03 | Complete common auditability fields: CreatedAtUtc on options/adjustments, SentAtUtc on EmailLog, and DateOfJob & DeletedAtUtc on Claim. | Sprint 09 Item 2 domain auditability requirement. |

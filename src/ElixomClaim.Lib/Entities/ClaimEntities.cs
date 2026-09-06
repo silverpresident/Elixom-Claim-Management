@@ -13,8 +13,10 @@ public class Claim
     public ClaimPaymentStatus PaymentStatus { get; set; } = ClaimPaymentStatus.Unpaid;
     public string? RejectionReason { get; set; }
     public bool IsDeleted { get; set; }
+    public DateTime DateOfJob { get; set; } = DateTime.UtcNow;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? DeletedAtUtc { get; set; }
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     public ICollection<ClaimComment> Comments { get; set; } = new List<ClaimComment>();

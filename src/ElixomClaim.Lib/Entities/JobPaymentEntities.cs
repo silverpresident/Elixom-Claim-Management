@@ -60,6 +60,7 @@ public class SalaryAdjustment
     public decimal PercentageRate { get; set; }
     public decimal FixedValue { get; set; }
     public SalaryAdjustmentType Type { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class Payroll

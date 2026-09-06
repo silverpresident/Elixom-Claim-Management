@@ -24,7 +24,7 @@
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-03 | Implemented ADR 0004 all-Guid primary/foreign keys across entities, services, controllers, routes ({id:guid}), MCP tools, seeder, and tests; build & 145 tests passed. |
-| 2 | Not started | — | — |
+| 2 | Complete | 2026-09-03 | Added CreatedAtUtc to CollectionPurposeOption, CollectionAmountOption, SalaryAdjustment; SentAtUtc to EmailLog; DateOfJob & DeletedAtUtc to Claim with ApplicationDbContext EF mappings and ClaimService/OutboxService logic; build & 150 tests passed. |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
 | 5 | Not started | — | — |
