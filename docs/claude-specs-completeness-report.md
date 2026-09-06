@@ -2,9 +2,7 @@
 
 **Re-evaluated:** 2026-09-06
 
-**Requested source:** `claude-specs.md`
-
-**Specification reviewed:** [`context/claude-specs.md`](../context/claude-specs.md)
+**Source specification:** [`context/claude-specs.md`](../context/claude-specs.md)
 **Method:** Source, migrations, routes, Razor views, tests, configuration, sprint ledger, and runtime wiring were reviewed. Findings are based on executable source rather than sprint-status assertions.
 
 ## Overall conclusion
