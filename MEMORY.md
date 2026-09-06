@@ -72,7 +72,6 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
-2. **2026-09-03 — Remediation delivery plan:** The attached task-list gaps are scheduled after the existing Sprint 01 audit prerequisite in Sprints 08–11. No task-list entry has been removed because no remediation was implemented in this planning change. Affected area: [sprints/08-mcp-oauth-hardening.md](sprints/08-mcp-oauth-hardening.md), [sprints/09-domain-data-completion.md](sprints/09-domain-data-completion.md), [sprints/10-web-workflow-completion.md](sprints/10-web-workflow-completion.md), [sprints/11-deployment-and-release-verification.md](sprints/11-deployment-and-release-verification.md).
 
 ## Decision log
 
