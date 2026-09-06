@@ -1,0 +1,92 @@
+@model ElixomClaim.Lib.Entities.User
+@{
+    ViewData["Title"] = "My Profile";
+    var summary = (ElixomClaim.Lib.Entities.UserProfileSummary)ViewBag.Summary;
+    var isAccountantOrAdmin = (bool)(ViewBag.IsAccountantOrAdmin ?? false);
+}
+
+<div class="container my-4">
+    <h2 class="mb-4">My Profile</h2>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">User Account Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-semibold">Full Name</label>
+                        <p class="fs-5 fw-bold mb-0">@Model.FullName</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-semibold">Email Address</label>
+                        <p class="fs-6 mb-0">@Model.Email</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-semibold">Assigned Role</label>
+                        <div>
+                            <span class="badge bg-secondary fs-6">@Model.Role</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-semibold">Account Status</label>
+                        <div>
+                            @if (Model.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Inactive</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Payout Bank Details</h5>
+                    <span class="badge bg-light text-dark">Direct Deposit</span>
+                </div>
+                <div class="card-body">
+                    <form asp-action="UpdateBankDetails" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+                            <label for="bankNameInput" class="form-label fw-semibold">Bank Name</label>
+                            <input type="text" class="form-control" id="bankNameInput" name="bankName" value="@Model.BankName" placeholder="e.g., National Commercial Bank" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="accountNameInput" class="form-label fw-semibold">Account Holder Name</label>
+                            <input type="text" class="form-control" id="accountNameInput" name="bankAccountName" value="@Model.BankAccountName" placeholder="e.g., Jane Doe" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="branchCodeInput" class="form-label fw-semibold">Branch Code / Routing Number</label>
+                            <input type="text" class="form-control" id="branchCodeInput" name="bankBranchCode" value="@Model.BankBranchCode" placeholder="e.g., 00123" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="accountNumberInput" class="form-label fw-semibold">Bank Account Number</label>
+                            @if (!string.IsNullOrWhiteSpace(summary?.BankAccountNumber))
+                            {
+                                <div class="form-text text-muted mb-1">Current account on file: <code>@summary.BankAccountNumber</code></div>
+                            }
+                            <input type="text" class="form-control" id="accountNumberInput" name="bankAccountNumber" value="@(isAccountantOrAdmin ? Model.BankAccountNumber : "")" placeholder="Enter new account number" required />
+                            <div class="form-text">Account numbers are securely stored and masked on display for your protection.</div>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary">Save Bank Details</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

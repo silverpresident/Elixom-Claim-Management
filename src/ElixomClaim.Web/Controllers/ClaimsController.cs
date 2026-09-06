@@ -33,7 +33,18 @@ public class ClaimsController : Controller
     {
         var userId = GetCurrentUserId();
         var claims = await _claimService.GetUserClaimsAsync(userId);
-        return View(claims);
+        var paymentHistory = await _dbContext.JobPayments
+            .Where(j => j.PayeeUserId == userId)
+            .OrderByDescending(j => j.PaymentDateUtc ?? j.CreatedAtUtc)
+            .ToListAsync();
+
+        var viewModel = new Models.UserDashboardViewModel
+        {
+            Claims = claims,
+            PaymentHistory = paymentHistory
+        };
+
+        return View(viewModel);
     }
 
     [HttpGet("create")]

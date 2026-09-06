@@ -24,7 +24,7 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | — |
+| 1 | Complete | 2026-09-03 | Ordinary-user profile & bank details route/UI (`ProfileController`, `Views/Profile/Index.cshtml`) and claims dashboard payment history (`ClaimsController`, `Views/Claims/Index.cshtml`, `UserDashboardViewModel`). Verified with Playwright screenshot and 162 unit/integration tests passing (`ProfileControllerTests`, `ClaimsControllerTests`). |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
