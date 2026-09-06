@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = $"Job Payment #{Model.Id}";
     var isManagerOrAbove = User.IsInRole("Manager") || User.IsInRole("Accountant") || User.IsInRole("Administrator");
+    var isAccountantOrAdmin = User.IsInRole("Accountant") || User.IsInRole("Administrator");
+    var isAdmin = User.IsInRole("Administrator");
 }
 
 <div class="container my-4">
@@ -9,7 +11,13 @@
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                    <h2 class="fw-bold mb-1">@(Model.Title ?? "Job Payment") <small class="text-muted">#@Model.Id</small></h2>
+                    <h2 class="fw-bold mb-1">
+                        @(Model.Title ?? "Job Payment") <small class="text-muted">#@Model.Id</small>
+                        @if (Model.IsAdjustment)
+                        {
+                            <span class="badge bg-warning text-dark ms-2">Adjustment Record</span>
+                        }
+                    </h2>
                     <p class="text-muted mb-0">Created @Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
                 </div>
                 <div class="text-end">
@@ -35,13 +43,91 @@
                 <div class="col-md-6">
                     <strong>Public Description:</strong> @(Model.PublicNote ?? "—")
                 </div>
-                @if (isManagerOrAbove && !string.IsNullOrWhiteSpace(Model.InternalNote))
+
+                @if (isAccountantOrAdmin)
                 {
                     <div class="col-12 bg-light p-3 rounded border">
+                        <h6 class="fw-bold text-uppercase text-muted small mb-2">Payout Bank Details Snapshot (Accountant View)</h6>
+                        <div class="row g-2">
+                            <div class="col-md-3"><strong>Bank:</strong> @(Model.PayoutBankName ?? "N/A")</div>
+                            <div class="col-md-3"><strong>Holder:</strong> @(Model.PayoutBankAccountName ?? "N/A")</div>
+                            <div class="col-md-3"><strong>Account:</strong> <code>@(Model.PayoutBankAccountNumber ?? "N/A")</code></div>
+                            <div class="col-md-3"><strong>Branch:</strong> @(Model.PayoutBankBranchCode ?? "N/A")</div>
+                        </div>
+                    </div>
+                }
+
+                @if (isManagerOrAbove && !string.IsNullOrWhiteSpace(Model.InternalNote))
+                {
+                    <div class="col-12">
                         <strong class="text-muted">Internal Manager Note:</strong> @Model.InternalNote
                     </div>
                 }
             </div>
+
+            <!-- Accountant & Administrator Actions -->
+            @if (isAccountantOrAdmin)
+            {
+                <div class="card bg-light border-0 mb-4 p-3">
+                    <h5 class="fw-bold mb-3">Accountant Settlement & Approval Controls</h5>
+                    <div class="row g-3">
+                        @if (Model.IsAdjustment && Model.ApprovedAtUtc == null)
+                        {
+                            <div class="col-12 alert alert-warning mb-0">
+                                <strong>Adjustment Pending Approval:</strong> This adjustment must be approved by an Administrator before scheduling.
+                                @if (isAdmin)
+                                {
+                                    <form method="post" asp-action="ApproveAdjustment" asp-route-id="@Model.Id" class="mt-2">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-warning btn-sm fw-bold">Approve Adjustment</button>
+                                    </form>
+                                }
+                            </div>
+                        }
+
+                        @if (Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Submitted && (!Model.IsAdjustment || Model.ApprovedAtUtc != null))
+                        {
+                            <div class="col-md-6">
+                                <form method="post" asp-action="Schedule" asp-route-id="@Model.Id">
+                                    @Html.AntiForgeryToken()
+                                    <label for="scheduledAtUtc" class="form-label fw-bold">Schedule Payment (UTC)</label>
+                                    <div class="input-group">
+                                        <input type="datetime-local" id="scheduledAtUtc" name="scheduledAtUtc" class="form-control form-control-sm" value="@DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-ddTHH:mm")" required />
+                                        <button type="submit" class="btn btn-primary btn-sm">Schedule Payment</button>
+                                    </div>
+                                </form>
+                            </div>
+                        }
+
+                        @if (Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Scheduled)
+                        {
+                            <div class="col-md-8">
+                                <form method="post" asp-action="MarkPaid" asp-route-id="@Model.Id" class="row g-2">
+                                    @Html.AntiForgeryToken()
+                                    <div class="col-md-5">
+                                        <label for="paymentDateUtc" class="form-label fw-bold">Payment Date (UTC)</label>
+                                        <input type="datetime-local" id="paymentDateUtc" name="paymentDateUtc" class="form-control form-control-sm" value="@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm")" required />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="transactionNumber" class="form-label fw-bold">Transaction Ref / No.</label>
+                                        <input type="text" id="transactionNumber" name="transactionNumber" class="form-control form-control-sm" placeholder="TXN-998811" required />
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-success btn-sm w-100 fw-bold">Settle & Mark Paid</button>
+                                    </div>
+                                </form>
+                            </div>
+                        }
+
+                        @if (Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Paid && !Model.IsAdjustment)
+                        {
+                            <div class="col-12">
+                                <a asp-action="CreateAdjustment" asp-route-originalId="@Model.Id" class="btn btn-outline-warning btn-sm">Create Linked Reversal / Adjustment</a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
 
             @if (Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Processing)
             {

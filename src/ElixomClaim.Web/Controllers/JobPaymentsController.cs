@@ -59,6 +59,60 @@ public class JobPaymentsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(Guid id) => RedirectResult(await _service.SubmitAsync(id, CurrentUserId()), id);
 
+    [HttpPost("{id:guid}/schedule")]
+    [Authorize(Policy = PolicyNames.RequireAccountant)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Schedule(Guid id, [FromForm] DateTime scheduledAtUtc)
+    {
+        var result = await _service.ScheduleAsync(id, CurrentUserId(), DateTime.SpecifyKind(scheduledAtUtc, DateTimeKind.Utc));
+        return RedirectResult(result, id);
+    }
+
+    [HttpPost("{id:guid}/mark-paid")]
+    [Authorize(Policy = PolicyNames.RequireAccountant)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarkPaid(Guid id, [FromForm] DateTime paymentDateUtc, [FromForm] string transactionNumber)
+    {
+        var result = await _service.MarkPaidAsync(id, CurrentUserId(), DateTime.SpecifyKind(paymentDateUtc, DateTimeKind.Utc), transactionNumber);
+        return RedirectResult(result, id);
+    }
+
+    [HttpGet("adjustments/create")]
+    [Authorize(Policy = PolicyNames.RequireAccountant)]
+    public async Task<IActionResult> CreateAdjustment(Guid originalId)
+    {
+        var original = await _db.JobPayments.AsNoTracking().SingleOrDefaultAsync(j => j.Id == originalId);
+        if (original == null || original.Status != JobPaymentStatus.Paid || original.IsAdjustment)
+            return BadRequest("Adjustments must link to an original paid job payment.");
+        ViewBag.Original = original;
+        return View();
+    }
+
+    [HttpPost("adjustments/create")]
+    [Authorize(Policy = PolicyNames.RequireAccountant)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateAdjustment([FromForm] Guid originalJobPaymentId, [FromForm] decimal amount, [FromForm] string reason)
+    {
+        var result = await _service.CreateAdjustmentAsync(new CreateJobPaymentAdjustmentCommand(CurrentUserId(), originalJobPaymentId, amount, reason));
+        if (result.IsFailure)
+        {
+            ModelState.AddModelError(string.Empty, result.Error);
+            ViewBag.Original = await _db.JobPayments.AsNoTracking().SingleOrDefaultAsync(j => j.Id == originalJobPaymentId);
+            return View();
+        }
+        TempData["SuccessMessage"] = "Adjustment created and submitted.";
+        return RedirectToAction(nameof(Details), new { id = result.Value!.Id });
+    }
+
+    [HttpPost("{id:guid}/approve-adjustment")]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApproveAdjustment(Guid id)
+    {
+        var result = await _service.ApproveAdjustmentAsync(id, CurrentUserId());
+        return RedirectResult(result, id);
+    }
+
     [HttpGet("{id:guid}")] public async Task<IActionResult> Details(Guid id) { var job = await QueryJob().SingleOrDefaultAsync(j => j.Id == id); return job is null ? NotFound() : View(job); }
 
     private async Task PopulatePayeesAsync()
