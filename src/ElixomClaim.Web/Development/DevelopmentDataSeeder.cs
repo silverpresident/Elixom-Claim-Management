@@ -49,6 +49,10 @@ public static class DevelopmentDataSeeder
         {
             Id = Guid.Parse("20000000-0000-0000-0000-000000000001"),
             Name = "Development Collection Client",
+            Description = "Development collection client for local testing",
+            Notes = "Internal management notes for development client",
+            PerJobProcessingFee = 25.00m,
+            PerTransactionFee = 5.00m,
             CreatedAtUtc = now,
             UpdatedAtUtc = now
         };
@@ -58,8 +62,8 @@ public static class DevelopmentDataSeeder
             new CollectionClientUser { CollectionClientId = client.Id, UserId = UserIds[UserRole.User], AssignedAtUtc = now },
             new CollectionClientBankDetail { Id = Guid.Parse("21000000-0000-0000-0000-000000000001"), CollectionClientId = client.Id, AccountName = "Development Client", BankName = "Example Bank", BranchCode = "DEV-001", AccountNumber = "DEV-CLIENT-001", CreatedAtUtc = now });
 
-        var draftClaim = new Claim { Id = Guid.Parse("50000000-0000-0000-0000-000000000101"), ClaimantUserId = UserIds[UserRole.User], Title = "Development mileage", Description = "Sample draft claim", Amount = 1200.00m, Status = ClaimStatus.Draft, CreatedAtUtc = now, UpdatedAtUtc = now };
-        var acceptedClaim = new Claim { Id = Guid.Parse("50000000-0000-0000-0000-000000000102"), ClaimantUserId = UserIds[UserRole.User], Title = "Development supplies", Description = "Sample accepted claim", Amount = 3400.00m, Status = ClaimStatus.Accepted, PaymentStatus = ClaimPaymentStatus.Processing, CreatedAtUtc = now, UpdatedAtUtc = now };
+        var draftClaim = new Claim { Id = Guid.Parse("50000000-0000-0000-0000-000000000101"), ClaimantUserId = UserIds[UserRole.User], Title = "Development mileage", Description = "Sample draft claim", DateOfJob = now, Amount = 1200.00m, Status = ClaimStatus.Draft, CreatedAtUtc = now, UpdatedAtUtc = now };
+        var acceptedClaim = new Claim { Id = Guid.Parse("50000000-0000-0000-0000-000000000102"), ClaimantUserId = UserIds[UserRole.User], Title = "Development supplies", Description = "Sample accepted claim", DateOfJob = now, Amount = 3400.00m, Status = ClaimStatus.Accepted, PaymentStatus = ClaimPaymentStatus.Processing, CreatedAtUtc = now, UpdatedAtUtc = now };
         db.AddRange(draftClaim, acceptedClaim,
             new ClaimComment { Id = Guid.Parse("51000000-0000-0000-0000-000000000101"), ClaimId = draftClaim.Id, AuthorUserId = UserIds[UserRole.User], Content = "Sample claimant comment", CreatedAtUtc = now },
             new ClaimComment { Id = Guid.Parse("51000000-0000-0000-0000-000000000102"), ClaimId = acceptedClaim.Id, AuthorUserId = UserIds[UserRole.Manager], Content = "Sample management comment", IsPrivate = true, CreatedAtUtc = now });
@@ -67,7 +71,7 @@ public static class DevelopmentDataSeeder
         var collection = new CollectionTransaction
         {
             Id = Guid.Parse("60000000-0000-0000-0000-000000000101"), CollectionClientId = client.Id, PurposeOptionId = purpose.Id, AmountOptionId = amount.Id,
-            TellerUserId = UserIds[UserRole.Teller], PayorName = "Development Payor", PayorEmail = "payor@example.test",
+            TellerUserId = UserIds[UserRole.Teller], PayorName = "Development Payor", PayorEmail = "payor@example.test", PayorTelephone = "8765550100",
             ReferenceNumber = "DEV-COL-001", Method = CollectionMethod.Pos, Amount = amount.Amount, ProcessingFee = 25.00m,
             PaymentDateUtc = now, CreatedAtUtc = now
         };
@@ -95,8 +99,16 @@ public static class DevelopmentDataSeeder
             new PayrollEntry { Id = Guid.Parse("81000000-0000-0000-0000-000000000101"), PayrollId = payroll.Id, Description = "Base salary", Amount = 85000.00m, Type = PayrollEntryType.Base, IsLocked = true, SortOrder = 0, CreatedAtUtc = now },
             new PayrollEntry { Id = Guid.Parse("81000000-0000-0000-0000-000000000102"), PayrollId = payroll.Id, Description = "Travel benefit", Amount = 2000.00m, Type = PayrollEntryType.Benefit, IsLocked = true, SortOrder = 1, CreatedAtUtc = now });
 
-        var claimJob = new JobPayment { Id = Guid.Parse("90000000-0000-0000-0000-000000000101"), PayeeUserId = UserIds[UserRole.User], Status = JobPaymentStatus.Processing, JobTotal = acceptedClaim.Amount, TotalPaid = acceptedClaim.Amount, PublicNote = "Development claim payment", CreatedAtUtc = now };
-        var collectionJob = new JobPayment { Id = Guid.Parse("90000000-0000-0000-0000-000000000102"), CollectionClientId = client.Id, Status = JobPaymentStatus.Processing, JobTotal = collection.Amount, ClientProcessingFee = collection.ProcessingFee, TotalPaid = collection.Amount - collection.ProcessingFee, PublicNote = "Development collection payment", CreatedAtUtc = now };
+        var claimJob = new JobPayment
+        {
+            Id = Guid.Parse("90000000-0000-0000-0000-000000000101"), PayeeUserId = UserIds[UserRole.User], Status = JobPaymentStatus.Processing, JobTotal = acceptedClaim.Amount, TotalPaid = acceptedClaim.Amount, PublicNote = "Development claim payment", CreatedAtUtc = now,
+            PayoutBankName = "Development Bank", PayoutBankBranchCode = "DEV-001", PayoutBankAccountNumber = "DEV-ACCOUNT-001", PayoutBankAccountName = "Development User"
+        };
+        var collectionJob = new JobPayment
+        {
+            Id = Guid.Parse("90000000-0000-0000-0000-000000000102"), CollectionClientId = client.Id, Status = JobPaymentStatus.Processing, JobTotal = collection.Amount, ClientProcessingFee = collection.ProcessingFee, TotalPaid = collection.Amount - collection.ProcessingFee, PublicNote = "Development collection payment", CreatedAtUtc = now,
+            PayoutBankName = "Example Bank", PayoutBankBranchCode = "DEV-001", PayoutBankAccountNumber = "DEV-CLIENT-001", PayoutBankAccountName = "Development Client"
+        };
         db.AddRange(claimJob, collectionJob,
             new JobPaymentClaim { JobPaymentId = claimJob.Id, ClaimId = acceptedClaim.Id },
             new JobPaymentCollection { JobPaymentId = collectionJob.Id, CollectionTransactionId = collection.Id });

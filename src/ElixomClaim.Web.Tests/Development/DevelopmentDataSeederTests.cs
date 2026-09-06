@@ -26,6 +26,19 @@ public class DevelopmentDataSeederTests
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         Assert.Equal(6, await db.Users.CountAsync());
         Assert.False((await db.Users.SingleAsync(user => user.Role == UserRole.Blocked)).IsActive);
+        var claim = await db.Claims.FirstAsync();
+        Assert.NotEqual(default, claim.DateOfJob);
+
+        var client = await db.CollectionClients.FirstAsync();
+        Assert.False(string.IsNullOrWhiteSpace(client.Description));
+        Assert.True(client.PerJobProcessingFee > 0);
+
+        var transaction = await db.CollectionTransactions.FirstAsync();
+        Assert.Equal("8765550100", transaction.PayorTelephone);
+
+        var jobPayment = await db.JobPayments.FirstAsync();
+        Assert.False(string.IsNullOrWhiteSpace(jobPayment.PayoutBankName));
+
         Assert.NotEmpty(await db.Claims.ToListAsync());
         Assert.NotEmpty(await db.CollectionClients.ToListAsync());
         Assert.NotEmpty(await db.CollectionTransactions.ToListAsync());
