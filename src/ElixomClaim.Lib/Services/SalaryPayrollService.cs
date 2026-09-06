@@ -9,6 +9,7 @@ namespace ElixomClaim.Lib.Services;
 public interface ISalaryPayrollService
 {
     Task<Result<SalaryDefinition>> CreateDefinitionAsync(CreateSalaryDefinitionCommand command, CancellationToken cancellationToken = default);
+    Task<Result<SalaryAdjustment>> AddAdjustmentAsync(AddSalaryAdjustmentCommand command, CancellationToken cancellationToken = default);
     Task<Result<SalaryPayrollPreview>> PreviewAsync(Guid salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
     Task<Result<Payroll>> GenerateForDefinitionAsync(Guid salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
     Task<Result> AddCustomEntryAsync(Guid payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default);
@@ -17,6 +18,7 @@ public interface ISalaryPayrollService
 }
 
 public sealed record CreateSalaryDefinitionCommand(Guid ActorUserId, Guid UserId, string Description, decimal BaseAmount, DateOnly FirstSalaryDate, DateOnly StartDate, DateOnly? EndDate, int RecurrenceDays, int RecurrenceMonths, DayOfWeek NearestWeekday);
+public sealed record AddSalaryAdjustmentCommand(Guid ActorUserId, Guid SalaryDefinitionId, string Title, decimal PercentageRate, decimal FixedValue, SalaryAdjustmentType Type);
 
 public sealed record SalaryPayrollPreview(DateOnly DueDate, SalaryGenerationEligibility Eligibility, decimal ProjectedTotal);
 
@@ -46,6 +48,33 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
         _db.SalaryDefinitions.Add(definition); await _db.SaveChangesAsync(cancellationToken);
         await _audit.LogAsync("SALARY_DEFINITION_CREATED", $"SalaryDefinition:{definition.Id}", afterState: new { definition.Id, definition.UserId, definition.BaseAmount }, actorUserId: command.ActorUserId.ToString(), cancellationToken: cancellationToken);
         return Result.Success(definition);
+    }
+
+    public async Task<Result<SalaryAdjustment>> AddAdjustmentAsync(AddSalaryAdjustmentCommand command, CancellationToken cancellationToken = default)
+    {
+        if (!await IsAccountantAsync(command.ActorUserId, cancellationToken)) return Result.Failure<SalaryAdjustment>("Accountant access is required.");
+        if (string.IsNullOrWhiteSpace(command.Title) || (command.PercentageRate == 0 && command.FixedValue == 0))
+            return Result.Failure<SalaryAdjustment>("An adjustment title and non-zero rate or fixed value are required.");
+
+        var definition = await _db.SalaryDefinitions.FirstOrDefaultAsync(s => s.Id == command.SalaryDefinitionId, cancellationToken);
+        if (definition == null) return Result.Failure<SalaryAdjustment>("Salary definition was not found.");
+
+        var adjustment = new SalaryAdjustment
+        {
+            SalaryDefinitionId = command.SalaryDefinitionId,
+            Title = command.Title.Trim(),
+            PercentageRate = command.PercentageRate,
+            FixedValue = command.FixedValue,
+            Type = command.Type,
+            CreatedAtUtc = _clock.UtcNow
+        };
+
+        _db.SalaryAdjustments.Add(adjustment);
+        definition.UpdatedAtUtc = _clock.UtcNow;
+
+        await _db.SaveChangesAsync(cancellationToken);
+        await _audit.LogAsync("SALARY_ADJUSTMENT_ADDED", $"SalaryDefinition:{definition.Id}", afterState: new { adjustment.Id, adjustment.Title, adjustment.Type, adjustment.PercentageRate, adjustment.FixedValue }, actorUserId: command.ActorUserId.ToString(), cancellationToken: cancellationToken);
+        return Result.Success(adjustment);
     }
 
     public async Task<Result<SalaryPayrollPreview>> PreviewAsync(Guid salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default)

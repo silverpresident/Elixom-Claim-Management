@@ -1,15 +1,26 @@
 using Microsoft.AspNetCore.Mvc;
+using ElixomClaim.Lib.Data;
 using ElixomClaim.Web.Controllers;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace ElixomClaim.Web.Tests.Controllers;
 
 public class HomeControllerTests
 {
+    private static ApplicationDbContext CreateInMemoryDbContext()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        return new ApplicationDbContext(options);
+    }
+
     [Fact]
     public void Privacy_ReturnsViewResult()
     {
-        var controller = new HomeController();
+        var db = CreateInMemoryDbContext();
+        var controller = new HomeController(db);
 
         var result = controller.Privacy();
 

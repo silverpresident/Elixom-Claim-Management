@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 10 Item 4 Complete. Next item: Sprint 10 Item 5.
+- **Stage:** Sprint 10 Web Workflow Completion Complete. Next item: Sprint 11 Item 1.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
@@ -66,7 +66,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 07 Development testing | Complete | Development-only in-memory sample data and role-selectable test login completed; full suite passed (130 tests) on 2026-09-03. See `sprints/07-development-testing.md`. |
 | 08 MCP transport & OAuth hardening | Complete | All 5 items complete; standard MCP transport, durable operations, OAuth hardening, rate limiting, and updated threat model/security test suite (145 tests passed) on 2026-09-03. See `sprints/08-mcp-oauth-hardening.md`. |
 | 09 Domain data completion | Complete | All 6 items complete; EF migration 20260903120000_DomainDataCompletion applied; build & 159 tests passed on 2026-09-03. See `sprints/09-domain-data-completion.md`. |
-| 10 Web workflow completion | In progress | Items 1, 2, 3, and 4 complete (Profile route/UI, user payment history, claim DateOfJob, client fees/notes, payor telephone, Manager job payments, Accountant scheduling/settlement/adjustments); remaining items pending. See `sprints/10-web-workflow-completion.md`. |
+| 10 Web workflow completion | Complete | All 7 items complete; build & 170 tests passed on 2026-09-03. See `sprints/10-web-workflow-completion.md`. |
 | 11 Deployment & release verification | Planned | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification. See `sprints/11-deployment-and-release-verification.md`. |
 
 ## Open decisions / risks
@@ -103,3 +103,5 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 2026-09-03 | Complete Sprint 10 Item 2: Expose DateOfJob on Claim workflows, Collection Client description/notes/fees and bank detail notes on Admin workflows, and Payor Telephone on Collection workflows. Internal fees/notes remain excluded from receipts. | Sprint 10 Item 2 complete. |
 | 2026-09-03 | Complete Sprint 10 Item 3: Manager job-payment workflows for creation, payee selection (User vs Collection Client), claim/collection discovery & removal, deductions, metadata editing, and submission. | Sprint 10 Item 3 complete. |
 | 2026-09-03 | Complete Sprint 10 Item 4: Accountant job-payment workflows for scheduling, settlement (marking paid), bank snapshots, outbox notifications, and linked adjustment creation & administrator approval. | Sprint 10 Item 4 complete. |
+| 2026-09-03 | Complete Sprint 10 Item 5: Salary-definition adjustment management and Accountant custom payroll entry additions in ISalaryPayrollService, PayrollController, and views. | Sprint 10 Item 5 complete. |
+| 2026-09-03 | Complete Sprint 10 Item 6 & Item 7: Role-aware landing page work queues in HomeController & Index view, role-tailored navbar navigation in _Layout, and integration coverage across all Sprint 10 workflows (170 tests passing). Sprint 10 complete. | Sprint 10 complete. |
