@@ -3,7 +3,7 @@ using ElixomClaim.Lib.Services;
 
 namespace ElixomClaim.Web.Mcp.Tools;
 
-public sealed record SalaryGenCommandRequest(long SalaryDefinitionId, DateOnly AsOfDate, string IdempotencyKey);
+public sealed record SalaryGenCommandRequest(Guid SalaryDefinitionId, DateOnly AsOfDate, string IdempotencyKey);
 public sealed record OutboxWakeUpRequest(int? BatchSize, string IdempotencyKey);
 public sealed record OperationStatusRequest(string IdempotencyKey);
 

@@ -4,11 +4,11 @@ using ElixomClaim.Lib.Services;
 namespace ElixomClaim.Web.Mcp.Tools;
 
 public sealed record ListClaimsRequest(ClaimStatus? StatusFilter = null);
-public sealed record GetClaimRequest(long ClaimId);
-public sealed record SubmitClaimRequest(long ClaimId);
+public sealed record GetClaimRequest(Guid ClaimId);
+public sealed record SubmitClaimRequest(Guid ClaimId);
 
 public sealed record ClaimDto(
-    long Id,
+    Guid Id,
     string Title,
     string Description,
     decimal Amount,

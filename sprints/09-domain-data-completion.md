@@ -23,7 +23,7 @@
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | Requires ADR before implementation. |
+| 1 | Complete | 2026-09-03 | Implemented ADR 0004 all-Guid primary/foreign keys across entities, services, controllers, routes ({id:guid}), MCP tools, seeder, and tests; build & 145 tests passed. |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |

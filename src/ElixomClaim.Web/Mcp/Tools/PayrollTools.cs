@@ -1,8 +1,9 @@
+using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 namespace ElixomClaim.Web.Mcp.Tools;
-public sealed record PayrollPreviewRequest(long SalaryDefinitionId, DateOnly AsOfDate);
-public sealed record PayrollRunRequest(long SalaryDefinitionId, DateOnly AsOfDate);
-public sealed record PayrollToolResponse(bool Success, string? Error, DateOnly? DueDate, string? Eligibility, decimal? Total, long? PayrollId);
+public sealed record PayrollPreviewRequest(Guid SalaryDefinitionId, DateOnly AsOfDate);
+public sealed record PayrollRunRequest(Guid SalaryDefinitionId, DateOnly AsOfDate);
+public sealed record PayrollToolResponse(bool Success, string? Error, DateOnly? DueDate, string? Eligibility, decimal? Total, Guid? PayrollId);
 public sealed class PayrollTools
 {
     private readonly ISalaryPayrollService _service;

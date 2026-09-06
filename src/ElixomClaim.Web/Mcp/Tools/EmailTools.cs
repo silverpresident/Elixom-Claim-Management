@@ -9,8 +9,8 @@ using Microsoft.Extensions.Options;
 
 namespace ElixomClaim.Web.Mcp.Tools;
 
-public sealed record EmailPreviewRequest(string TemplateType, long EntityId);
-public sealed record EmailQueueSendRequest(string TemplateType, long EntityId, string IdempotencyKey);
+public sealed record EmailPreviewRequest(string TemplateType, Guid EntityId);
+public sealed record EmailQueueSendRequest(string TemplateType, Guid EntityId, string IdempotencyKey);
 
 public sealed record EmailPreviewResponse(
     bool Success,
@@ -89,7 +89,7 @@ public sealed class EmailTools
         }
     }
 
-    private async Task<EmailPreviewResponse> PreviewCollectionReceiptAsync(User actor, long collectionId, CancellationToken ct)
+    private async Task<EmailPreviewResponse> PreviewCollectionReceiptAsync(User actor, Guid collectionId, CancellationToken ct)
     {
         if (!actor.Role.HasMinimumRole(UserRole.Teller))
         {
@@ -128,7 +128,7 @@ public sealed class EmailTools
         return new EmailPreviewResponse(true, null, subject, html, recipients.Distinct().ToList());
     }
 
-    private async Task<EmailPreviewResponse> PreviewPaymentSummaryAsync(User actor, long jobPaymentId, CancellationToken ct)
+    private async Task<EmailPreviewResponse> PreviewPaymentSummaryAsync(User actor, Guid jobPaymentId, CancellationToken ct)
     {
         if (!actor.Role.HasMinimumRole(UserRole.Manager))
         {
@@ -171,7 +171,7 @@ public sealed class EmailTools
         return new EmailPreviewResponse(true, null, subject, html, recipients.Distinct().ToList());
     }
 
-    private async Task<EmailQueueSendResponse> QueueCollectionReceiptSendAsync(User actor, long collectionId, string idempotencyKey, CancellationToken ct)
+    private async Task<EmailQueueSendResponse> QueueCollectionReceiptSendAsync(User actor, Guid collectionId, string idempotencyKey, CancellationToken ct)
     {
         if (!actor.Role.HasMinimumRole(UserRole.Teller))
         {
@@ -239,7 +239,7 @@ public sealed class EmailTools
         return new EmailQueueSendResponse(true, null, queuedCount);
     }
 
-    private async Task<EmailQueueSendResponse> QueuePaymentSummarySendAsync(User actor, long jobPaymentId, string idempotencyKey, CancellationToken ct)
+    private async Task<EmailQueueSendResponse> QueuePaymentSummarySendAsync(User actor, Guid jobPaymentId, string idempotencyKey, CancellationToken ct)
     {
         if (!actor.Role.HasMinimumRole(UserRole.Accountant))
         {

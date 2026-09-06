@@ -28,11 +28,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.AuditRecord", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -81,11 +79,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.Claim", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
@@ -155,17 +151,15 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.ClaimComment", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("AuthorUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<long>("ClaimId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("ClaimId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Content")
                         .IsRequired()
@@ -196,11 +190,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.CollectionAmountOption", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
@@ -262,11 +254,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.CollectionClientBankDetail", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AccountName")
                         .IsRequired()
@@ -326,11 +316,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.CollectionPurposeOption", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("CollectionClientId")
                         .HasColumnType("uniqueidentifier");
@@ -358,18 +346,16 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.CollectionTransaction", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<long>("AmountOptionId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("AmountOptionId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("CollectionClientId")
                         .HasColumnType("uniqueidentifier");
@@ -405,8 +391,8 @@ namespace ElixomClaim.Lib.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<long>("PurposeOptionId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("PurposeOptionId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ReferenceNumber")
                         .HasMaxLength(100)
@@ -441,11 +427,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.EmailLog", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("AttemptNumber")
                         .HasColumnType("int");
@@ -571,11 +555,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPayment", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AdjustmentReason")
                         .HasMaxLength(1000)
@@ -618,8 +600,8 @@ namespace ElixomClaim.Lib.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<long?>("OriginalJobPaymentId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid?>("OriginalJobPaymentId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("PayeeUserId")
                         .HasColumnType("uniqueidentifier");
@@ -682,11 +664,11 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentClaim", b =>
                 {
-                    b.Property<long>("JobPaymentId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("JobPaymentId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<long>("ClaimId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("ClaimId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("JobPaymentId", "ClaimId");
 
@@ -698,11 +680,11 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentCollection", b =>
                 {
-                    b.Property<long>("JobPaymentId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("JobPaymentId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<long>("CollectionTransactionId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("CollectionTransactionId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("JobPaymentId", "CollectionTransactionId");
 
@@ -714,11 +696,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentDeduction", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
@@ -732,8 +712,8 @@ namespace ElixomClaim.Lib.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<long>("JobPaymentId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("JobPaymentId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -744,11 +724,11 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.JobPaymentPayroll", b =>
                 {
-                    b.Property<long>("JobPaymentId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("JobPaymentId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<long>("PayrollId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("PayrollId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("JobPaymentId", "PayrollId");
 
@@ -912,11 +892,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.Payroll", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -944,8 +922,8 @@ namespace ElixomClaim.Lib.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<long>("SalaryDefinitionId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("SalaryDefinitionId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -970,11 +948,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.PayrollEntry", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
@@ -993,8 +969,8 @@ namespace ElixomClaim.Lib.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<long>("PayrollId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("PayrollId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
@@ -1014,11 +990,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.SalaryAdjustment", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("FixedValue")
                         .HasPrecision(18, 2)
@@ -1028,8 +1002,8 @@ namespace ElixomClaim.Lib.Migrations
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
 
-                    b.Property<long>("SalaryDefinitionId")
-                        .HasColumnType("bigint");
+                    b.Property<Guid>("SalaryDefinitionId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -1053,11 +1027,9 @@ namespace ElixomClaim.Lib.Migrations
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.SalaryDefinition", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("BaseAmount")
                         .HasPrecision(18, 2)

@@ -33,7 +33,7 @@ public class McpToolBoundaryTests
         db.Users.Add(teller);
 
         // Prohibited arbitrary template request
-        var freeFormReq = new EmailPreviewRequest("FreeFormCustomTemplate", 1);
+        var freeFormReq = new EmailPreviewRequest("FreeFormCustomTemplate", Guid.NewGuid());
         var freeFormRes = await emailTools.PreviewAsync(teller, freeFormReq, CancellationToken.None);
         Assert.False(freeFormRes.Success);
         Assert.Contains("Prohibited", freeFormRes.Error, StringComparison.OrdinalIgnoreCase);

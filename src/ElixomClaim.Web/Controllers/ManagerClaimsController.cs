@@ -36,8 +36,8 @@ public class ManagerClaimsController : Controller
         return View(claims);
     }
 
-    [HttpGet("{id:long}")]
-    public async Task<IActionResult> Details(long id)
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> Details(Guid id)
     {
         var userId = GetCurrentUserId();
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
@@ -55,9 +55,9 @@ public class ManagerClaimsController : Controller
         return View(claim);
     }
 
-    [HttpPost("{id:long}/accept")]
+    [HttpPost("{id:guid}/accept")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Accept(long id)
+    public async Task<IActionResult> Accept(Guid id)
     {
         var userId = GetCurrentUserId();
         var success = await _claimService.AcceptAsync(new AcceptClaimCommand(id, userId));
@@ -69,9 +69,9 @@ public class ManagerClaimsController : Controller
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    [HttpPost("{id:long}/reject")]
+    [HttpPost("{id:guid}/reject")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Reject(long id, [FromForm] string rejectionReason)
+    public async Task<IActionResult> Reject(Guid id, [FromForm] string rejectionReason)
     {
         if (string.IsNullOrWhiteSpace(rejectionReason))
         {
@@ -89,9 +89,9 @@ public class ManagerClaimsController : Controller
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    [HttpPost("{id:long}/comment")]
+    [HttpPost("{id:guid}/comment")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddComment(long id, [FromForm] string content, [FromForm] bool isPrivate)
+    public async Task<IActionResult> AddComment(Guid id, [FromForm] string content, [FromForm] bool isPrivate)
     {
         if (string.IsNullOrWhiteSpace(content))
         {

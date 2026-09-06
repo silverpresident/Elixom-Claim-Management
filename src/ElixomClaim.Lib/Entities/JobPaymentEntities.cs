@@ -31,7 +31,7 @@ public enum PayrollEntryType
 
 public class SalaryDefinition
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; }
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
     public string Description { get; set; } = string.Empty;
@@ -53,8 +53,8 @@ public class SalaryDefinition
 
 public class SalaryAdjustment
 {
-    public long Id { get; set; }
-    public long SalaryDefinitionId { get; set; }
+    public Guid Id { get; set; }
+    public Guid SalaryDefinitionId { get; set; }
     public SalaryDefinition SalaryDefinition { get; set; } = null!;
     public string Title { get; set; } = string.Empty;
     public decimal PercentageRate { get; set; }
@@ -64,8 +64,8 @@ public class SalaryAdjustment
 
 public class Payroll
 {
-    public long Id { get; set; }
-    public long SalaryDefinitionId { get; set; }
+    public Guid Id { get; set; }
+    public Guid SalaryDefinitionId { get; set; }
     public SalaryDefinition SalaryDefinition { get; set; } = null!;
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
@@ -82,8 +82,8 @@ public class Payroll
 
 public class PayrollEntry
 {
-    public long Id { get; set; }
-    public long PayrollId { get; set; }
+    public Guid Id { get; set; }
+    public Guid PayrollId { get; set; }
     public Payroll Payroll { get; set; } = null!;
     public string Description { get; set; } = string.Empty;
     public decimal Amount { get; set; }
@@ -95,7 +95,7 @@ public class PayrollEntry
 
 public class JobPayment
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; }
     public Guid? PayeeUserId { get; set; }
     public User? PayeeUser { get; set; }
     public Guid? CollectionClientId { get; set; }
@@ -114,7 +114,7 @@ public class JobPayment
     public DateTime? ScheduledAtUtc { get; set; }
     public DateTime? PaymentDateUtc { get; set; }
     public string? PaymentTransactionNumber { get; set; }
-    public long? OriginalJobPaymentId { get; set; }
+    public Guid? OriginalJobPaymentId { get; set; }
     public JobPayment? OriginalJobPayment { get; set; }
     public bool IsAdjustment { get; set; }
     public bool IsRecoveryReceivable { get; set; }
@@ -129,7 +129,7 @@ public class JobPayment
     public ICollection<JobPaymentDeduction> Deductions { get; set; } = new List<JobPaymentDeduction>();
 }
 
-public class JobPaymentClaim { public long JobPaymentId { get; set; } public JobPayment JobPayment { get; set; } = null!; public long ClaimId { get; set; } public Claim Claim { get; set; } = null!; }
-public class JobPaymentCollection { public long JobPaymentId { get; set; } public JobPayment JobPayment { get; set; } = null!; public long CollectionTransactionId { get; set; } public CollectionTransaction CollectionTransaction { get; set; } = null!; }
-public class JobPaymentPayroll { public long JobPaymentId { get; set; } public JobPayment JobPayment { get; set; } = null!; public long PayrollId { get; set; } public Payroll Payroll { get; set; } = null!; }
-public class JobPaymentDeduction { public long Id { get; set; } public long JobPaymentId { get; set; } public JobPayment JobPayment { get; set; } = null!; public string Description { get; set; } = string.Empty; public decimal Amount { get; set; } public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow; }
+public class JobPaymentClaim { public Guid JobPaymentId { get; set; } public JobPayment JobPayment { get; set; } = null!; public Guid ClaimId { get; set; } public Claim Claim { get; set; } = null!; }
+public class JobPaymentCollection { public Guid JobPaymentId { get; set; } public JobPayment JobPayment { get; set; } = null!; public Guid CollectionTransactionId { get; set; } public CollectionTransaction CollectionTransaction { get; set; } = null!; }
+public class JobPaymentPayroll { public Guid JobPaymentId { get; set; } public JobPayment JobPayment { get; set; } = null!; public Guid PayrollId { get; set; } public Payroll Payroll { get; set; } = null!; }
+public class JobPaymentDeduction { public Guid Id { get; set; } public Guid JobPaymentId { get; set; } public JobPayment JobPayment { get; set; } = null!; public string Description { get; set; } = string.Empty; public decimal Amount { get; set; } public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow; }

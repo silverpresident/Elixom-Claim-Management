@@ -58,7 +58,7 @@ public class JobPaymentService : IJobPaymentService
         _db.JobPaymentDeductions.Add(new() { JobPaymentId = c.JobPaymentId, Description = c.Description.Trim(), Amount = c.Amount, CreatedAtUtc = _clock.UtcNow }); await _db.SaveChangesAsync(ct); await RecalculateAsync(jobResult.Value!, ct); await _db.SaveChangesAsync(ct); return Result.Success();
     }
 
-    public async Task<Result> ResendNotificationAsync(long jobPaymentId, Guid actorUserId, CancellationToken ct = default)
+    public async Task<Result> ResendNotificationAsync(Guid jobPaymentId, Guid actorUserId, CancellationToken ct = default)
     {
         var auth = await AuthorizeAsync(actorUserId, ct); if (auth.IsFailure) return auth;
         var job = await _db.JobPayments.SingleOrDefaultAsync(j => j.Id == jobPaymentId, ct);
@@ -70,7 +70,7 @@ public class JobPaymentService : IJobPaymentService
         await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_NOTIFICATION_RESEND_QUEUED", job, actorUserId, ct); return Result.Success();
     }
 
-    public async Task<Result> SubmitAsync(long jobPaymentId, Guid actorUserId, CancellationToken ct = default)
+    public async Task<Result> SubmitAsync(Guid jobPaymentId, Guid actorUserId, CancellationToken ct = default)
     {
         var jobResult = await ProcessingJobAsync(actorUserId, jobPaymentId, ct); if (jobResult.IsFailure) return Result.Failure(jobResult.Error);
         var job = jobResult.Value!;
@@ -78,7 +78,7 @@ public class JobPaymentService : IJobPaymentService
         job.Status = JobPaymentStatus.Submitted; job.SubmittedAtUtc = _clock.UtcNow; await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_SUBMITTED", job, actorUserId, ct); return Result.Success();
     }
 
-    public async Task<Result> ScheduleAsync(long jobPaymentId, Guid actorUserId, DateTime scheduledAtUtc, CancellationToken ct = default)
+    public async Task<Result> ScheduleAsync(Guid jobPaymentId, Guid actorUserId, DateTime scheduledAtUtc, CancellationToken ct = default)
     {
         var role = await _db.Users.Where(u => u.Id == actorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct);
         if (role is not { } value || !value.HasMinimumRole(UserRole.Accountant)) return Result.Failure("Accountant access is required.");
@@ -89,7 +89,7 @@ public class JobPaymentService : IJobPaymentService
         job.Status = JobPaymentStatus.Scheduled; job.ScheduledAtUtc = scheduledAtUtc; await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_SCHEDULED", job, actorUserId, ct); return Result.Success();
     }
 
-    public async Task<Result> MarkPaidAsync(long jobPaymentId, Guid actorUserId, DateTime paymentDateUtc, string transactionNumber, CancellationToken ct = default)
+    public async Task<Result> MarkPaidAsync(Guid jobPaymentId, Guid actorUserId, DateTime paymentDateUtc, string transactionNumber, CancellationToken ct = default)
     {
         var role = await _db.Users.Where(u => u.Id == actorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct);
         if (role is not { } userRole || !userRole.HasMinimumRole(UserRole.Accountant)) return Result.Failure("Accountant access is required.");
@@ -125,7 +125,7 @@ public class JobPaymentService : IJobPaymentService
         _db.JobPayments.Add(adjustment); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_ADJUSTMENT_CREATED", adjustment, command.ActorUserId, ct); return Result.Success(adjustment);
     }
 
-    public async Task<Result> ApproveAdjustmentAsync(long jobPaymentId, Guid actorUserId, CancellationToken ct = default)
+    public async Task<Result> ApproveAdjustmentAsync(Guid jobPaymentId, Guid actorUserId, CancellationToken ct = default)
     {
         var role = await _db.Users.Where(u => u.Id == actorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct);
         if (role is not UserRole.Administrator) return Result.Failure("Administrator approval is required.");
@@ -139,7 +139,7 @@ public class JobPaymentService : IJobPaymentService
         var claims = await _db.JobPaymentClaims.Where(x => x.JobPaymentId == job.Id).Select(x => x.Claim.Amount).ToListAsync(ct); var collections = await _db.JobPaymentCollections.Where(x => x.JobPaymentId == job.Id).Select(x => new { x.CollectionTransaction.Amount, x.CollectionTransaction.ProcessingFee }).ToListAsync(ct); var payrolls = await _db.JobPaymentPayrolls.Where(x => x.JobPaymentId == job.Id).Select(x => x.Payroll.PayrollTotal).ToListAsync(ct); var deductions = await _db.JobPaymentDeductions.Where(x => x.JobPaymentId == job.Id).Select(x => x.Amount).ToListAsync(ct);
         job.JobTotal = claims.Sum() + collections.Sum(x => x.Amount) + payrolls.Sum(); job.ClientProcessingFee = collections.Sum(x => x.ProcessingFee); job.TotalTxnProcessingFee = 0m; job.TotalDeductions = deductions.Sum(); job.TotalPaid = job.JobTotal - job.ClientProcessingFee - job.TotalTxnProcessingFee - job.TotalDeductions;
     }
-    private async Task<Result<JobPayment>> ProcessingJobAsync(Guid actor, long id, CancellationToken ct) { var auth = await AuthorizeAsync(actor, ct); if (auth.IsFailure) return Result.Failure<JobPayment>(auth.Error); var job = await _db.JobPayments.SingleOrDefaultAsync(j => j.Id == id, ct); return job is null ? Result.Failure<JobPayment>("Job payment was not found.") : job.Status != JobPaymentStatus.Processing ? Result.Failure<JobPayment>("Only Processing job payments can be changed.") : Result.Success(job); }
+    private async Task<Result<JobPayment>> ProcessingJobAsync(Guid actor, Guid id, CancellationToken ct) { var auth = await AuthorizeAsync(actor, ct); if (auth.IsFailure) return Result.Failure<JobPayment>(auth.Error); var job = await _db.JobPayments.SingleOrDefaultAsync(j => j.Id == id, ct); return job is null ? Result.Failure<JobPayment>("Job payment was not found.") : job.Status != JobPaymentStatus.Processing ? Result.Failure<JobPayment>("Only Processing job payments can be changed.") : Result.Success(job); }
     private async Task<Result> AuthorizeAsync(Guid actor, CancellationToken ct) { var role = await _db.Users.Where(u => u.Id == actor && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct); return role is { } r && r.HasMinimumRole(UserRole.Manager) ? Result.Success() : Result.Failure("Manager access is required."); }
     private Task AuditAsync(string action, JobPayment job, Guid actor, CancellationToken ct) => _audit.LogAsync(action, $"JobPayment:{job.Id}", afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid }, actorUserId: actor.ToString(), cancellationToken: ct);
     private static string? Trim(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

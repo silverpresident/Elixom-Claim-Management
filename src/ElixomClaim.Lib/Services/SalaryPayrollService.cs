@@ -9,10 +9,10 @@ namespace ElixomClaim.Lib.Services;
 public interface ISalaryPayrollService
 {
     Task<Result<SalaryDefinition>> CreateDefinitionAsync(CreateSalaryDefinitionCommand command, CancellationToken cancellationToken = default);
-    Task<Result<SalaryPayrollPreview>> PreviewAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
-    Task<Result<Payroll>> GenerateForDefinitionAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
-    Task<Result> AddCustomEntryAsync(long payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default);
-    Task<Result<JobPayment>> SubmitAsync(long payrollId, Guid actorUserId, CancellationToken cancellationToken = default);
+    Task<Result<SalaryPayrollPreview>> PreviewAsync(Guid salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
+    Task<Result<Payroll>> GenerateForDefinitionAsync(Guid salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default);
+    Task<Result> AddCustomEntryAsync(Guid payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default);
+    Task<Result<JobPayment>> SubmitAsync(Guid payrollId, Guid actorUserId, CancellationToken cancellationToken = default);
     Task<int> GenerateDueAsync(DateOnly asOfDate, CancellationToken cancellationToken = default);
 }
 
@@ -48,7 +48,7 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
         return Result.Success(definition);
     }
 
-    public async Task<Result<SalaryPayrollPreview>> PreviewAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default)
+    public async Task<Result<SalaryPayrollPreview>> PreviewAsync(Guid salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default)
     {
         if (!await IsAccountantAsync(actorUserId, cancellationToken)) return Result.Failure<SalaryPayrollPreview>("Accountant access is required.");
         var definition = await _db.SalaryDefinitions.Include(s => s.Adjustments).SingleOrDefaultAsync(s => s.Id == salaryDefinitionId, cancellationToken);
@@ -59,7 +59,7 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
         return Result.Success(new SalaryPayrollPreview(plan.DueDate, plan.Eligibility, total));
     }
 
-    public async Task<Result<Payroll>> GenerateForDefinitionAsync(long salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default)
+    public async Task<Result<Payroll>> GenerateForDefinitionAsync(Guid salaryDefinitionId, Guid actorUserId, DateOnly asOfDate, CancellationToken cancellationToken = default)
     {
         var authorized = await IsAccountantAsync(actorUserId, cancellationToken);
         if (!authorized)
@@ -125,13 +125,14 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
         return generated;
     }
 
-    public async Task<Result> AddCustomEntryAsync(long payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default)
+    public async Task<Result> AddCustomEntryAsync(Guid payrollId, Guid actorUserId, string description, decimal amount, CancellationToken cancellationToken = default)
     {
         if (!await IsAccountantAsync(actorUserId, cancellationToken)) return Result.Failure("Accountant access is required.");
         if (string.IsNullOrWhiteSpace(description) || amount == 0) return Result.Failure("A custom entry description and non-zero amount are required.");
         var payroll = await _db.Payrolls.Include(p => p.Entries).SingleOrDefaultAsync(p => p.Id == payrollId, cancellationToken);
         if (payroll is null || payroll.Status != PayrollStatus.Generated || payroll.IsLocked) return Result.Failure("Custom entries can only be added to an unlocked generated payroll.");
         if (amount < 0 && payroll.PayrollTotal + amount < 0) return Result.Failure("A negative custom entry cannot make payroll net pay negative.");
+        if (payroll.SalaryDefinition is not null) _db.Entry(payroll.SalaryDefinition).State = EntityState.Detached;
         payroll.Entries.Add(new PayrollEntry { Description = description.Trim(), Amount = amount, Type = PayrollEntryType.Custom, IsLocked = false, SortOrder = payroll.Entries.Count, CreatedAtUtc = _clock.UtcNow });
         payroll.PayrollTotal += amount;
         await _db.SaveChangesAsync(cancellationToken);
@@ -139,13 +140,14 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
         return Result.Success();
     }
 
-    public async Task<Result<JobPayment>> SubmitAsync(long payrollId, Guid actorUserId, CancellationToken cancellationToken = default)
+    public async Task<Result<JobPayment>> SubmitAsync(Guid payrollId, Guid actorUserId, CancellationToken cancellationToken = default)
     {
         if (!await IsAccountantAsync(actorUserId, cancellationToken)) return Result.Failure<JobPayment>("Accountant access is required.");
         var payroll = await _db.Payrolls.Include(p => p.Entries).SingleOrDefaultAsync(p => p.Id == payrollId, cancellationToken);
         if (payroll is null || payroll.Status != PayrollStatus.Generated || payroll.IsLocked) return Result.Failure<JobPayment>("Only an unlocked generated payroll can be submitted.");
         if (payroll.PayrollTotal < 0) return Result.Failure<JobPayment>("Payroll net pay cannot be negative.");
         if (await _db.JobPaymentPayrolls.AnyAsync(link => link.PayrollId == payrollId, cancellationToken)) return Result.Failure<JobPayment>("Payroll is already bound to a job payment.");
+        if (payroll.SalaryDefinition is not null) _db.Entry(payroll.SalaryDefinition).State = EntityState.Detached;
         await using var transaction = _db.Database.IsRelational() ? await _db.Database.BeginTransactionAsync(cancellationToken) : null;
         try
         {

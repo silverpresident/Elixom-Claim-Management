@@ -17,8 +17,8 @@ public class JobPaymentServiceTests
         var client = new CollectionClient { Name = "Acme" }; var otherClient = new CollectionClient { Name = "Other" };
         db.AddRange(manager, client, otherClient); await db.SaveChangesAsync();
         var job = new JobPayment { CollectionClientId = client.Id };
-        var valid = new CollectionTransaction { CollectionClientId = client.Id, TellerUserId = manager.Id, PurposeOptionId = 1, AmountOptionId = 1, PayorName = "Payor", Amount = 1000m, ProcessingFee = 25m, PaymentDateUtc = DateTime.UtcNow };
-        var invalid = new CollectionTransaction { CollectionClientId = otherClient.Id, TellerUserId = manager.Id, PurposeOptionId = 1, AmountOptionId = 1, PayorName = "Payor", Amount = 100m, PaymentDateUtc = DateTime.UtcNow };
+        var valid = new CollectionTransaction { CollectionClientId = client.Id, TellerUserId = manager.Id, PurposeOptionId = Guid.NewGuid(), AmountOptionId = Guid.NewGuid(), PayorName = "Payor", Amount = 1000m, ProcessingFee = 25m, PaymentDateUtc = DateTime.UtcNow };
+        var invalid = new CollectionTransaction { CollectionClientId = otherClient.Id, TellerUserId = manager.Id, PurposeOptionId = Guid.NewGuid(), AmountOptionId = Guid.NewGuid(), PayorName = "Payor", Amount = 100m, PaymentDateUtc = DateTime.UtcNow };
         db.AddRange(job, valid, invalid); await db.SaveChangesAsync();
         var service = Service(db);
 
@@ -73,7 +73,7 @@ public class JobPaymentServiceTests
         var claim = new Claim { ClaimantUserId = payee.Id, Title = "Claim", Description = "Description", Amount = 100m, Status = ClaimStatus.Accepted, PaymentStatus = ClaimPaymentStatus.Processing };
         var client = new CollectionClient { Name = "Client" };
         db.AddRange(accountant, payee, claim, client); await db.SaveChangesAsync();
-        var collection = new CollectionTransaction { CollectionClientId = client.Id, TellerUserId = accountant.Id, PurposeOptionId = 1, AmountOptionId = 1, PayorName = "Payor", Amount = 200m, Status = CollectionStatus.Processing, PaymentDateUtc = DateTime.UtcNow };
+        var collection = new CollectionTransaction { CollectionClientId = client.Id, TellerUserId = accountant.Id, PurposeOptionId = Guid.NewGuid(), AmountOptionId = Guid.NewGuid(), PayorName = "Payor", Amount = 200m, Status = CollectionStatus.Processing, PaymentDateUtc = DateTime.UtcNow };
         var payroll = new Payroll { UserId = payee.Id, PayrollTotal = 300m, Status = PayrollStatus.Submitted };
         var job = new JobPayment { PayeeUserId = payee.Id, Status = JobPaymentStatus.Scheduled, JobTotal = 600m, TotalPaid = 600m };
         db.AddRange(collection, payroll, job); await db.SaveChangesAsync();
