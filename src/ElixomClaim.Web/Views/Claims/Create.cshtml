@@ -20,6 +20,11 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label fw-bold">Date of Job / Service Date</label>
+                            <input type="date" name="dateOfJob" class="form-control" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label fw-bold">Amount (JMD)</label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>

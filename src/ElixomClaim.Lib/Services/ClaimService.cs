@@ -71,11 +71,15 @@ public class ClaimService : IClaimService
             throw new InvalidOperationException($"Only Draft claims can be edited. Current status: {claim.Status}");
         }
 
-        var beforeState = new { claim.Title, claim.Description, claim.Amount };
+        var beforeState = new { claim.Title, claim.Description, claim.Amount, claim.DateOfJob };
 
         claim.Title = command.Title.Trim();
         claim.Description = command.Description.Trim();
         claim.Amount = command.Amount;
+        if (command.DateOfJob.HasValue)
+        {
+            claim.DateOfJob = command.DateOfJob.Value;
+        }
         claim.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -84,7 +88,7 @@ public class ClaimService : IClaimService
             action: "CLAIM_DRAFT_EDITED",
             target: $"Claim:{claim.Id}",
             beforeState: beforeState,
-            afterState: new { claim.Title, claim.Description, claim.Amount },
+            afterState: new { claim.Title, claim.Description, claim.Amount, claim.DateOfJob },
             actorUserId: command.ActorUserId.ToString(),
             cancellationToken: cancellationToken);
 

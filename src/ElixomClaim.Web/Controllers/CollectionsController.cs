@@ -38,7 +38,7 @@ public class CollectionsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(RecordCollectionInput input)
     {
-        var result = await _collectionService.RecordAsync(new(CurrentUserId(), input.CollectionClientId, input.PurposeOptionId, input.AmountOptionId, input.PayorName, input.PayorEmail, input.Method, input.ProcessingFee, DateTime.SpecifyKind(input.PaymentDateUtc, DateTimeKind.Utc), input.ReferenceNumber));
+        var result = await _collectionService.RecordAsync(new(CurrentUserId(), input.CollectionClientId, input.PurposeOptionId, input.AmountOptionId, input.PayorName, input.PayorEmail, input.Method, input.ProcessingFee, DateTime.SpecifyKind(input.PaymentDateUtc, DateTimeKind.Utc), input.ReferenceNumber, input.PayorTelephone));
         if (result.IsFailure) { ModelState.AddModelError(string.Empty, result.Error); await PopulateOptionsAsync(); return View(input); }
         TempData["SuccessMessage"] = "Collection recorded and receipt queued.";
         return RedirectToAction(nameof(Details), new { id = result.Value!.Id });
@@ -97,6 +97,7 @@ public class RecordCollectionInput
     public Guid AmountOptionId { get; set; }
     public string PayorName { get; set; } = string.Empty;
     public string? PayorEmail { get; set; }
+    public string? PayorTelephone { get; set; }
     public CollectionMethod Method { get; set; }
     public decimal ProcessingFee { get; set; }
     public DateTime PaymentDateUtc { get; set; }

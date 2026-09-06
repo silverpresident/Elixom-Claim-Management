@@ -31,10 +31,46 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         if (await _dbContext.CollectionClients.AnyAsync(c => c.Name == name, cancellationToken))
             return Result.Failure<CollectionClient>("A collection client with that name already exists.");
 
-        var client = new CollectionClient { Name = name, CreatedAtUtc = _clock.UtcNow, UpdatedAtUtc = _clock.UtcNow };
+        var client = new CollectionClient
+        {
+            Name = name,
+            Description = command.Description?.Trim(),
+            Notes = command.Notes?.Trim(),
+            PerJobProcessingFee = command.PerJobProcessingFee >= 0 ? command.PerJobProcessingFee : 0,
+            PerTransactionFee = command.PerTransactionFee >= 0 ? command.PerTransactionFee : 0,
+            CreatedAtUtc = _clock.UtcNow,
+            UpdatedAtUtc = _clock.UtcNow
+        };
         _dbContext.CollectionClients.Add(client);
         await _dbContext.SaveChangesAsync(cancellationToken);
         await AuditAsync("COLLECTION_CLIENT_CREATED", $"CollectionClient:{client.Id}", command.ActorUserId, new { client.Id, client.Name }, cancellationToken);
+        return Result.Success(client);
+    }
+
+    public async Task<Result<CollectionClient>> UpdateClientAsync(UpdateCollectionClientCommand command, CancellationToken cancellationToken = default)
+    {
+        var authorization = await EnsureAdministratorAsync(command.ActorUserId, cancellationToken);
+        if (authorization.IsFailure || string.IsNullOrWhiteSpace(command.Name))
+            return Result.Failure<CollectionClient>(authorization.IsFailure ? authorization.Error : "Client name is required.");
+
+        var client = await _dbContext.CollectionClients.FirstOrDefaultAsync(c => c.Id == command.CollectionClientId, cancellationToken);
+        if (client == null) return Result.Failure<CollectionClient>("Collection client not found.");
+
+        var name = command.Name.Trim();
+        if (await _dbContext.CollectionClients.AnyAsync(c => c.Name == name && c.Id != command.CollectionClientId, cancellationToken))
+            return Result.Failure<CollectionClient>("Another collection client with that name already exists.");
+
+        var beforeState = new { client.Name, client.Description, client.Notes, client.PerJobProcessingFee, client.PerTransactionFee };
+
+        client.Name = name;
+        client.Description = command.Description?.Trim();
+        client.Notes = command.Notes?.Trim();
+        client.PerJobProcessingFee = command.PerJobProcessingFee >= 0 ? command.PerJobProcessingFee : 0;
+        client.PerTransactionFee = command.PerTransactionFee >= 0 ? command.PerTransactionFee : 0;
+        client.UpdatedAtUtc = _clock.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await AuditAsync("COLLECTION_CLIENT_UPDATED", $"CollectionClient:{client.Id}", command.ActorUserId, new { client.Id, client.Name, client.PerJobProcessingFee, client.PerTransactionFee }, cancellationToken);
         return Result.Success(client);
     }
 
@@ -102,7 +138,16 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         if (new[] { command.AccountName, command.BankName, command.BranchCode, command.AccountNumber }.Any(string.IsNullOrWhiteSpace))
             return Result.Failure<CollectionClientBankDetail>("All bank detail fields are required.");
 
-        var detail = new CollectionClientBankDetail { CollectionClientId = command.CollectionClientId, AccountName = command.AccountName.Trim(), BankName = command.BankName.Trim(), BranchCode = command.BranchCode.Trim(), AccountNumber = command.AccountNumber.Trim(), CreatedAtUtc = _clock.UtcNow };
+        var detail = new CollectionClientBankDetail
+        {
+            CollectionClientId = command.CollectionClientId,
+            AccountName = command.AccountName.Trim(),
+            BankName = command.BankName.Trim(),
+            BranchCode = command.BranchCode.Trim(),
+            AccountNumber = command.AccountNumber.Trim(),
+            Notes = command.Notes?.Trim(),
+            CreatedAtUtc = _clock.UtcNow
+        };
         _dbContext.CollectionClientBankDetails.Add(detail);
         await _dbContext.SaveChangesAsync(cancellationToken);
         await AuditAsync("COLLECTION_CLIENT_BANK_DETAIL_ADDED", $"CollectionClient:{command.CollectionClientId}", command.ActorUserId, new { detail.Id }, cancellationToken);

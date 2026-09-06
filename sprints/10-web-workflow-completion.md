@@ -25,7 +25,7 @@
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
 | 1 | Complete | 2026-09-03 | Ordinary-user profile & bank details route/UI (`ProfileController`, `Views/Profile/Index.cshtml`) and claims dashboard payment history (`ClaimsController`, `Views/Claims/Index.cshtml`, `UserDashboardViewModel`). Verified with Playwright screenshot and 162 unit/integration tests passing (`ProfileControllerTests`, `ClaimsControllerTests`). |
-| 2 | Not started | — | — |
+| 2 | Complete | 2026-09-03 | Exposing claim DateOfJob, collection client description/notes/fees, bank detail notes, and payor telephone across MVC workflows and domain services. Verified with 165 solution unit and integration tests passing (`WorkflowFieldsCompletionTests`). |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
 | 5 | Not started | — | — |
