@@ -47,27 +47,30 @@ public sealed class ClaimTools
     public async Task<ClaimListResponse> ListClaims(ListClaimsRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess
-            ? new ClaimListResponse(false, "MCP authorization failed.", null)
-            : await ListClaimsAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new ClaimListResponse(false, "MCP authorization failed.", null);
+        var response = await ListClaimsAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_LIST", "Claims", cancellationToken);
+        return response;
     }
 
     [McpServerTool(Name = "claims_get"), Description("Get a claim when the authenticated user is permitted to view it.")]
     public async Task<ClaimDetailResponse> GetClaim(GetClaimRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess
-            ? new ClaimDetailResponse(false, "MCP authorization failed.", null)
-            : await GetClaimAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new ClaimDetailResponse(false, "MCP authorization failed.", null);
+        var response = await GetClaimAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_GET", $"Claim:{request.ClaimId}", cancellationToken);
+        return response;
     }
 
     [McpServerTool(Name = "claims_submit"), Description("Submit an authenticated user's draft claim.")]
     public async Task<ClaimOperationResponse> SubmitClaim(SubmitClaimRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess
-            ? new ClaimOperationResponse(false, "MCP authorization failed.")
-            : await SubmitClaimAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new ClaimOperationResponse(false, "MCP authorization failed.");
+        var response = await SubmitClaimAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_SUBMIT", $"Claim:{request.ClaimId}", cancellationToken);
+        return response;
     }
 
     public async Task<ClaimListResponse> ListClaimsAsync(User actor, ListClaimsRequest request, CancellationToken ct)
@@ -102,9 +105,13 @@ public sealed class ClaimTools
             await _audit.LogAsync("MCP_CLAIMS_LIST", $"Actor:{actor.Id}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new ClaimListResponse(true, null, dtos);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            return new ClaimListResponse(false, ex.Message, null);
+            throw;
+        }
+        catch (Exception)
+        {
+            return new ClaimListResponse(false, "Claims could not be retrieved.", null);
         }
     }
 
@@ -132,9 +139,13 @@ public sealed class ClaimTools
             await _audit.LogAsync("MCP_CLAIM_GET", $"Claim:{request.ClaimId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new ClaimDetailResponse(true, null, dto);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            return new ClaimDetailResponse(false, ex.Message, null);
+            throw;
+        }
+        catch (Exception)
+        {
+            return new ClaimDetailResponse(false, "The claim could not be retrieved.", null);
         }
     }
 
@@ -151,9 +162,13 @@ public sealed class ClaimTools
             await _audit.LogAsync("MCP_CLAIM_SUBMIT", $"Claim:{request.ClaimId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new ClaimOperationResponse(true, null);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            return new ClaimOperationResponse(false, ex.Message);
+            throw;
+        }
+        catch (Exception)
+        {
+            return new ClaimOperationResponse(false, "The claim could not be submitted.");
         }
     }
 }

@@ -63,14 +63,20 @@ public sealed class EmailTools
     public async Task<EmailPreviewResponse> Preview(EmailPreviewRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null, null, null) : await PreviewAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null, null, null);
+        var response = await PreviewAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_EMAIL_PREVIEW", $"Template:{request.TemplateType}", cancellationToken);
+        return response;
     }
 
     [McpServerTool(Name = "email_queue"), Description("Queue an approved template email only to its authorized recipients.")]
     public async Task<EmailQueueSendResponse> QueueSend(EmailQueueSendRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", 0) : await QueueSendAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", 0);
+        var response = await QueueSendAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_EMAIL_QUEUE", $"Template:{request.TemplateType}", cancellationToken);
+        return response;
     }
 
     public async Task<EmailPreviewResponse> PreviewAsync(User actor, EmailPreviewRequest request, CancellationToken ct)

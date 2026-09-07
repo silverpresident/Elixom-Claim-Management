@@ -14,11 +14,9 @@ public sealed record CollectionDto(
     Guid Id,
     Guid CollectionClientId,
     string PayorName,
-    string? PayorEmail,
     CollectionMethod Method,
     CollectionStatus Status,
     decimal Amount,
-    decimal ProcessingFee,
     string Currency,
     DateTime PaymentDateUtc,
     DateTime CreatedAtUtc);
@@ -44,14 +42,20 @@ public sealed class CollectionTools
     public async Task<CollectionListResponse> ListCollections(ListCollectionsRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await ListCollectionsAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
+        var response = await ListCollectionsAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_COLLECTIONS_LIST", "Collections", cancellationToken);
+        return response;
     }
 
     [McpServerTool(Name = "collections_get"), Description("Get a collection available to the authenticated teller or manager.")]
     public async Task<CollectionDetailResponse> GetCollection(GetCollectionRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await GetCollectionAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
+        var response = await GetCollectionAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_COLLECTIONS_GET", $"Collection:{request.CollectionId}", cancellationToken);
+        return response;
     }
 
     public async Task<CollectionListResponse> ListCollectionsAsync(User actor, ListCollectionsRequest request, CancellationToken ct)
@@ -76,11 +80,9 @@ public sealed class CollectionTools
                     c.Id,
                     c.CollectionClientId,
                     c.PayorName,
-                    c.PayorEmail,
                     c.Method,
                     c.Status,
                     c.Amount,
-                    c.ProcessingFee,
                     c.Currency,
                     c.PaymentDateUtc,
                     c.CreatedAtUtc))
@@ -89,9 +91,13 @@ public sealed class CollectionTools
             await _audit.LogAsync("MCP_COLLECTIONS_LIST", $"Actor:{actor.Id}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new CollectionListResponse(true, null, collections);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            return new CollectionListResponse(false, ex.Message, null);
+            throw;
+        }
+        catch (Exception)
+        {
+            return new CollectionListResponse(false, "Collection records could not be retrieved.", null);
         }
     }
 
@@ -117,11 +123,9 @@ public sealed class CollectionTools
                 collection.Id,
                 collection.CollectionClientId,
                 collection.PayorName,
-                collection.PayorEmail,
                 collection.Method,
                 collection.Status,
                 collection.Amount,
-                collection.ProcessingFee,
                 collection.Currency,
                 collection.PaymentDateUtc,
                 collection.CreatedAtUtc);
@@ -129,9 +133,13 @@ public sealed class CollectionTools
             await _audit.LogAsync("MCP_COLLECTION_GET", $"Collection:{request.CollectionId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new CollectionDetailResponse(true, null, dto);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            return new CollectionDetailResponse(false, ex.Message, null);
+            throw;
+        }
+        catch (Exception)
+        {
+            return new CollectionDetailResponse(false, "The collection record could not be retrieved.", null);
         }
     }
 }

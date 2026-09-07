@@ -58,21 +58,30 @@ public sealed class OperationsTools
     public async Task<OperationResponse> RequestSalaryGeneration(SalaryGenCommandRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await RequestSalaryGenerationAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
+        var response = await RequestSalaryGenerationAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_SALARY_GENERATION", $"SalaryDefinition:{request.SalaryDefinitionId}", cancellationToken);
+        return response;
     }
 
     [McpServerTool(Name = "operations_outbox_wakeup"), Description("Request an authorized, idempotent outbox dispatch wake-up.")]
     public async Task<OperationResponse> RequestOutboxWakeUp(OutboxWakeUpRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await RequestOutboxWakeUpAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
+        var response = await RequestOutboxWakeUpAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_OUTBOX_WAKEUP", "Outbox", cancellationToken);
+        return response;
     }
 
     [McpServerTool(Name = "operations_status"), Description("Get the authenticated user's operation status.")]
     public async Task<OperationResponse> GetOperationStatus(OperationStatusRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await GetOperationStatusAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
+        var response = await GetOperationStatusAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_STATUS", "Operation", cancellationToken);
+        return response;
     }
 
     private static OperationRecordDto MapToDto(OperationRecord record)
@@ -122,17 +131,21 @@ public sealed class OperationsTools
             await _audit.LogAsync("MCP_OPERATIONS_SALARY_GEN", $"SalaryDefinition:{request.SalaryDefinitionId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new OperationResponse(result.IsSuccess, result.Error, MapToDto(record));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
         {
             var record = await _operationRecordService.RecordOperationAsync(
                 key,
                 "SalaryGeneration",
                 "Failed",
-                ex.Message,
+                "Operation could not be completed.",
                 actor.Id.ToString(),
                 ct);
 
-            return new OperationResponse(false, ex.Message, MapToDto(record));
+            return new OperationResponse(false, "Operation could not be completed.", MapToDto(record));
         }
     }
 
@@ -172,17 +185,21 @@ public sealed class OperationsTools
             await _audit.LogAsync("MCP_OPERATIONS_OUTBOX_WAKEUP", $"BatchSize:{batchSize}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new OperationResponse(true, null, MapToDto(record));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
         {
             var record = await _operationRecordService.RecordOperationAsync(
                 key,
                 "OutboxWakeUp",
                 "Failed",
-                ex.Message,
+                "Operation could not be completed.",
                 actor.Id.ToString(),
                 ct);
 
-            return new OperationResponse(false, ex.Message, MapToDto(record));
+            return new OperationResponse(false, "Operation could not be completed.", MapToDto(record));
         }
     }
 

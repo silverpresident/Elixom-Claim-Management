@@ -18,14 +18,20 @@ public sealed class PayrollTools
     public async Task<PayrollToolResponse> Preview(PayrollPreviewRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null, null, null, null) : await PreviewAsync(request, actor.Value!.User.Id, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null, null, null, null);
+        var response = await PreviewAsync(request, actor.Value!.User.Id, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_PAYROLL_PREVIEW", $"SalaryDefinition:{request.SalaryDefinitionId}", cancellationToken);
+        return response;
     }
 
     [McpServerTool(Name = "payroll_run"), Description("Run authorized salary payroll generation.")]
     public async Task<PayrollToolResponse> Run(PayrollRunRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null, null, null, null) : await RunAsync(request, actor.Value!.User.Id, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null, null, null, null);
+        var response = await RunAsync(request, actor.Value!.User.Id, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_PAYROLL_RUN", $"SalaryDefinition:{request.SalaryDefinitionId}", cancellationToken);
+        return response;
     }
     public async Task<PayrollToolResponse> PreviewAsync(PayrollPreviewRequest request, Guid actor, CancellationToken ct) { var result = await _service.PreviewAsync(request.SalaryDefinitionId, actor, request.AsOfDate, ct); await _audit.LogAsync("MCP_PAYROLL_PREVIEW", $"SalaryDefinition:{request.SalaryDefinitionId}", actorUserId: actor.ToString(), isMcpOperation: true, cancellationToken: ct); return result.IsSuccess ? new(true, null, result.Value!.DueDate, result.Value.Eligibility.ToString(), result.Value.ProjectedTotal, null) : new(false, result.Error, null, null, null, null); }
     public async Task<PayrollToolResponse> RunAsync(PayrollRunRequest request, Guid actor, CancellationToken ct) { var result = await _service.GenerateForDefinitionAsync(request.SalaryDefinitionId, actor, request.AsOfDate, ct); await _audit.LogAsync("MCP_PAYROLL_RUN", $"SalaryDefinition:{request.SalaryDefinitionId}", actorUserId: actor.ToString(), isMcpOperation: true, cancellationToken: ct); return result.IsSuccess ? new(true, null, result.Value!.PeriodEndingDate, SalaryGenerationEligibility.Eligible.ToString(), result.Value.PayrollTotal, result.Value.Id) : new(false, result.Error, null, null, null, null); }

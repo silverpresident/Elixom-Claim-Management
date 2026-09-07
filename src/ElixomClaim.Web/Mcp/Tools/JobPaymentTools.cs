@@ -45,14 +45,20 @@ public sealed class JobPaymentTools
     public async Task<JobPaymentListResponse> ListJobPayments(ListJobPaymentsRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await ListJobPaymentsAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
+        var response = await ListJobPaymentsAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_JOB_PAYMENTS_LIST", "JobPayments", cancellationToken);
+        return response;
     }
 
     [McpServerTool(Name = "job_payments_get"), Description("Get a job payment visible to the authenticated user.")]
     public async Task<JobPaymentDetailResponse> GetJobPayment(GetJobPaymentRequest request, CancellationToken cancellationToken)
     {
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
-        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await GetJobPaymentAsync(actor.Value!.User, request, cancellationToken);
+        if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
+        var response = await GetJobPaymentAsync(actor.Value!.User, request, cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_JOB_PAYMENTS_GET", $"JobPayment:{request.JobPaymentId}", cancellationToken);
+        return response;
     }
 
     public async Task<JobPaymentListResponse> ListJobPaymentsAsync(User actor, ListJobPaymentsRequest request, CancellationToken ct)
@@ -94,9 +100,13 @@ public sealed class JobPaymentTools
             await _audit.LogAsync("MCP_JOB_PAYMENTS_LIST", $"Actor:{actor.Id}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new JobPaymentListResponse(true, null, dtos);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            return new JobPaymentListResponse(false, ex.Message, null);
+            throw;
+        }
+        catch (Exception)
+        {
+            return new JobPaymentListResponse(false, "Job payments could not be retrieved.", null);
         }
     }
 
@@ -136,9 +146,13 @@ public sealed class JobPaymentTools
             await _audit.LogAsync("MCP_JOB_PAYMENT_GET", $"JobPayment:{request.JobPaymentId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new JobPaymentDetailResponse(true, null, dto);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            return new JobPaymentDetailResponse(false, ex.Message, null);
+            throw;
+        }
+        catch (Exception)
+        {
+            return new JobPaymentDetailResponse(false, "The job payment could not be retrieved.", null);
         }
     }
 

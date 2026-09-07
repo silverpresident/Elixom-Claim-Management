@@ -83,29 +83,30 @@ All `/api/v1/*` error responses use RFC 7807 Problem Details (`application/probl
 The `/mcp` endpoint uses the official `ModelContextProtocol.AspNetCore` HTTP server SDK. Tools are grouped into six domain-scoped tool classes:
 
 ### 1. `ClaimTools`
-- `list_claims` — List claims accessible to the authenticated user.
-- `get_claim` — Retrieve detailed claim information by Guid. Guid identifiers remain transport keys; `SequenceNo` is the human-facing record number returned/displayed for supported domain records.
-- `submit_claim` — Submit a draft claim owned by the user.
+- `claims_list` — List claims accessible to the authenticated user.
+- `claims_get` — Retrieve detailed claim information by Guid. Guid identifiers remain transport keys; `SequenceNo` is the human-facing record number returned/displayed for supported domain records.
+- `claims_submit` — Submit a draft claim owned by the user.
 
 ### 2. `CollectionTools`
-- `list_collections` — List collections (Teller+ required).
-- `get_collection` — Retrieve detailed collection information by Guid.
+- `collections_list` — List collections (Teller+ required).
+- `collections_get` — Retrieve collection information by Guid; payor email and internal processing fees are never returned.
 
 ### 3. `JobPaymentTools`
-- `list_job_payments` — List job payment records (payee ownership or Manager+).
-- `get_job_payment` — Retrieve job payment details (sensitive details Accountant+ only).
+- `job_payments_list` — List job payment records (payee ownership or Manager+).
+- `job_payments_get` — Retrieve job payment details (sensitive details Accountant+ only).
 
 ### 4. `EmailTools`
-- `preview_email_template` — Redacted preview of an approved email template.
-- `queue_template_email` — Request outbox delivery of an approved template email to pre-authorized recipients.
+- `email_preview` — Redacted preview of an approved email template.
+- `email_queue` — Request outbox delivery of an approved template email to pre-authorized recipients.
 
 ### 5. `PayrollTools`
-- `preview_payroll` — Service-backed payroll preview for salary definitions (Accountant+).
-- `run_payroll` — Generate salary-sourced payroll entry (Accountant+).
+- `payroll_preview` — Service-backed payroll preview for salary definitions (Accountant+).
+- `payroll_run` — Generate salary-sourced payroll entry (Accountant+).
 
 ### 6. `OperationsTools`
-- `request_operation` — Request an approved durable background operation (Accountant/Admin).
-- `get_operation_status` — Query status and result of a durable operation by operation ID or idempotency key.
+- `operations_salary_generation` — Request authorized, idempotent salary generation (Accountant+).
+- `operations_outbox_wakeup` — Request an authorized, idempotent outbox dispatch wake-up (Administrator only).
+- `operations_status` — Query status of an approved operation.
 
 ---
 

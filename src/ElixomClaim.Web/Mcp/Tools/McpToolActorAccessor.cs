@@ -27,4 +27,11 @@ public sealed class McpToolActorAccessor
             ? Task.FromResult(Result<ActorContext>.Failure("MCP request context is unavailable."))
             : _actorResolver.ResolveActorAsync(httpContext, "mcp:access", isMcp: true, cancellationToken);
     }
+
+    public Task AuditAsync(
+        ActorContext actor,
+        string action,
+        string target,
+        CancellationToken cancellationToken) =>
+        _actorResolver.LogAuditAsync(actor, action, target, cancellationToken: cancellationToken);
 }
