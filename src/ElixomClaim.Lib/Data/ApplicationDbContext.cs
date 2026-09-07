@@ -329,6 +329,7 @@ public class ApplicationDbContext : DbContext
             entity.ToTable("CollectionTransactions");
             entity.HasKey(c => c.Id);
             entity.Property(c => c.PayorName).IsRequired().HasMaxLength(200);
+            entity.Property(c => c.Purpose).IsRequired().HasMaxLength(200);
             entity.Property(c => c.PayorEmail).HasMaxLength(256);
             entity.Property(c => c.PayorTelephone).HasMaxLength(50);
             entity.Property(c => c.ReferenceNumber).HasMaxLength(100);
@@ -341,9 +342,9 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(c => c.CollectionClient).WithMany().HasForeignKey(c => c.CollectionClientId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(c => c.PurposeOption).WithMany().HasForeignKey(c => new { c.PurposeOptionId, c.CollectionClientId })
-                .HasPrincipalKey(o => new { o.Id, o.CollectionClientId }).OnDelete(DeleteBehavior.Restrict);
+                .HasPrincipalKey(o => new { o.Id, o.CollectionClientId }).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
             entity.HasOne(c => c.AmountOption).WithMany().HasForeignKey(c => new { c.AmountOptionId, c.CollectionClientId })
-                .HasPrincipalKey(o => new { o.Id, o.CollectionClientId }).OnDelete(DeleteBehavior.Restrict);
+                .HasPrincipalKey(o => new { o.Id, o.CollectionClientId }).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
             entity.HasOne(c => c.TellerUser).WithMany().HasForeignKey(c => c.TellerUserId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(c => new { c.CollectionClientId, c.Status, c.PaymentDateUtc });

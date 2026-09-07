@@ -84,10 +84,12 @@ public class CollectionTransaction
     public Guid Id { get; set; }
     public Guid CollectionClientId { get; set; }
     public CollectionClient CollectionClient { get; set; } = null!;
-    public Guid PurposeOptionId { get; set; }
-    public CollectionPurposeOption PurposeOption { get; set; } = null!;
-    public Guid AmountOptionId { get; set; }
-    public CollectionAmountOption AmountOption { get; set; } = null!;
+    public Guid? PurposeOptionId { get; set; }
+    public CollectionPurposeOption? PurposeOption { get; set; }
+    /// <summary>Immutable purpose snapshot, including teller-entered values not in the configured suggestions.</summary>
+    public string Purpose { get; set; } = string.Empty;
+    public Guid? AmountOptionId { get; set; }
+    public CollectionAmountOption? AmountOption { get; set; }
     public Guid TellerUserId { get; set; }
     public User TellerUser { get; set; } = null!;
     public string PayorName { get; set; } = string.Empty;

@@ -20,4 +20,6 @@ public record RecordCollectionCommand(
     decimal ProcessingFee,
     DateTime PaymentDateUtc,
     string? ReferenceNumber = null,
-    string? PayorTelephone = null);
+    string? PayorTelephone = null,
+    string? Purpose = null,
+    decimal? Amount = null);
