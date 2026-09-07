@@ -8,7 +8,7 @@
 
 ## Executive conclusion
 
-The implementation is now **substantially complete for the core business application**. The earlier functional gaps in profile/bank management, claim job date, collection telephone, job-payment UI, salary adjustment UI, payroll custom-entry UI, audit immutability, rate limiting, OAuth consent persistence, and migration startup have been addressed.
+The implementation is now **substantially complete for the core business application**. The earlier functional gaps in profile/bank management, claim job date, collection telephone, job-payment UI, salary adjustment UI, payroll custom-entry UI, audit immutability, rate limiting, OAuth consent persistence, and migration startup have been addressed. The latest changes also add durable human-facing record numbers, stronger bank-detail fields, richer payout/receipt presentation, and transaction snapshots for teller-entered collection values.
 
 It is **not fully complete against `gemini-specs.md`**, chiefly because no actual MCP server transport is registered or mapped. Sprint 12 has added a documented `/mcp`/`/api/v1` contract, `api:access`, and a tested shared `IActorResolver`, but the host still has no `AddMcpServer`/`MapMcp` calls, MCP tool annotations, `/mcp` endpoint, or `/api/v1` endpoints. The legacy bearer-authenticated REST controllers under `/mcp/*` remain the live integration surface.
 
@@ -18,11 +18,11 @@ It is **not fully complete against `gemini-specs.md`**, chiefly because no actua
 | --- | --- | --- |
 | .NET 10 MVC, Lib/Web/test split, EF Core, Azure SQL `dbclaim`, JMD money precision | Implemented | [`ApplicationDbContext.cs`](../src/ElixomClaim.Lib/Data/ApplicationDbContext.cs), [`DependencyInjection.cs`](../src/ElixomClaim.Lib/DependencyInjection.cs) |
 | Google allow-list authentication, blocked-user denial, hierarchical application roles | Implemented | [`UserValidationEvents.cs`](../src/ElixomClaim.Web/Authentication/UserValidationEvents.cs), [`AuthorizationHandlers.cs`](../src/ElixomClaim.Lib/Authorization/AuthorizationHandlers.cs) |
-| Claims lifecycle, soft deletion, job date, comments, claimant dashboard/history | Mostly implemented | [`ClaimEntities.cs`](../src/ElixomClaim.Lib/Entities/ClaimEntities.cs), [`ClaimsController.cs`](../src/ElixomClaim.Web/Controllers/ClaimsController.cs) |
+| Claims lifecycle, soft deletion, job date, comments, claimant dashboard/history | Mostly implemented | [`ClaimEntities.cs`](../src/ElixomClaim.Lib/Entities/ClaimEntities.cs), [`ClaimsController.cs`](../src/ElixomClaim.Web/Controllers/ClaimsController.cs); durable `SequenceNo` values provide safe human-facing labels while Guids remain technical keys. |
 | Profile and bank-detail management with masked display, optional display name, branch name/account type, and audit logging | Implemented | [`ProfileController.cs`](../src/ElixomClaim.Web/Controllers/ProfileController.cs), [`Profile/Index.cshtml`](../src/ElixomClaim.Web/Views/Profile/Index.cshtml), migration `20260907090000_AddUserProfileDisplayAndBankFields` |
-| Collections, client options/fees, complete client bank details, payor email/telephone, receipts, HTML print/reissue | Implemented | [`CollectionEntities.cs`](../src/ElixomClaim.Lib/Entities/CollectionEntities.cs), [`CollectionClientAdministrationService.cs`](../src/ElixomClaim.Lib/Services/CollectionClientAdministrationService.cs), [`CollectionService.cs`](../src/ElixomClaim.Lib/Services/CollectionService.cs) |
+| Collections, client options/fees, complete client bank details, payor email/telephone, receipts, HTML print/reissue | Mostly implemented | [`CollectionEntities.cs`](../src/ElixomClaim.Lib/Entities/CollectionEntities.cs), [`CollectionClientAdministrationService.cs`](../src/ElixomClaim.Lib/Services/CollectionClientAdministrationService.cs), [`CollectionService.cs`](../src/ElixomClaim.Lib/Services/CollectionService.cs); the workflow intentionally now permits transaction-only custom purpose/amount values, which differs from Gemini's configured-choice-only workflow. |
 | Durable SMTP/ACS outbox, retries, idempotency, email logs, HTML-only notifications | Implemented | [`OutboxService.cs`](../src/ElixomClaim.Lib/Services/OutboxService.cs), [`EmailSenders.cs`](../src/ElixomClaim.Lib/Services/EmailSenders.cs) |
-| Job creation, attachment/removal, deductions, metadata, submit/schedule/settle, adjustment workflow | Implemented | [`JobPaymentService.cs`](../src/ElixomClaim.Lib/Services/JobPaymentService.cs), [`JobPaymentsController.cs`](../src/ElixomClaim.Web/Controllers/JobPaymentsController.cs) |
+| Job creation, attachment/removal, deductions, metadata, submit/schedule/settle, adjustment workflow | Implemented | [`JobPaymentService.cs`](../src/ElixomClaim.Lib/Services/JobPaymentService.cs), [`JobPaymentsController.cs`](../src/ElixomClaim.Web/Controllers/JobPaymentsController.cs); detail/print presentation now includes linked collection, payroll, entry, deduction, and adjustment context. |
 | Salary definitions, adjustments, recurrence engine, payroll custom entries and payroll-to-job flow | Implemented | [`SalaryPayrollService.cs`](../src/ElixomClaim.Lib/Services/SalaryPayrollService.cs), [`PayrollController.cs`](../src/ElixomClaim.Web/Controllers/PayrollController.cs) |
 | Audit redaction and database-level append-only protection | Implemented | [`AddAuditRecordAppendOnlyTrigger.cs`](../src/ElixomClaim.Lib/Migrations/20260903090000_AddAuditRecordAppendOnlyTrigger.cs) |
 | OAuth authorization code + PKCE, consent persistence, token rotation/revocation, configured lifetimes and rate limiting | Mostly implemented | [`OAuthService.cs`](../src/ElixomClaim.Lib/Services/OAuthService.cs), [`OAuthController.cs`](../src/ElixomClaim.Web/Controllers/OAuthController.cs), [`RateLimitingConfiguration.cs`](../src/ElixomClaim.Web/Configuration/RateLimitingConfiguration.cs); Sprint 12 adds an `api:access` contract but not live API enforcement. |
@@ -48,7 +48,13 @@ The REST adapters do enforce bearer authentication and mostly enforce the `mcp:a
 
 `ClaimComment` has claim and author references but no parent-comment/thread reference. The application supports chronological public and private comments, satisfying the newer README requirement, but not Gemini's explicit "threaded comments" requirement.
 
-### 3. OAuth policy enforcement remains incomplete
+### 3. Collection configuration is now suggestions rather than an exclusive catalog
+
+Gemini specifies that tellers choose configured purpose and amount values. The current collection UI presents client-scoped suggestions but also permits free-text purpose and custom amount input. The shared service preserves a custom entry as an immutable transaction snapshot and does not modify client configuration, which is a sound auditability choice, but it relaxes the specification's catalog-only validation rule.
+
+If client-configured values are intended to be mandatory financial controls, custom entries should be removed or separately authorized/audited as exceptions.
+
+### 4. OAuth policy enforcement remains incomplete
 
 The hardening improvements are real: redirect URI validation, persisted consent, PKCE S256, raw-code non-retention, configured lifetimes, replay revocation, and rate limiting are present.
 
@@ -60,15 +66,16 @@ Two policy boundaries remain unclear or absent in code:
 
 These are protocol-hardening issues rather than missing business workflows.
 
-### 4. Migration locking is process-local
+### 5. Migration locking is process-local
 
 `ApplyDatabaseMigrationsAsync()` is wired on non-Development startup and honours `AutoApplyMigrations`, but its `SemaphoreSlim` prevents concurrent migration attempts only within one process. It does not coordinate multiple deployed instances. Production safety therefore still depends on the documented external single-runner deployment topology.
 
-### 5. Release and documentation risks
+### 6. Release and documentation risks
 
 - `dotnet list ... package --vulnerable --include-transitive` reports a **high-severity** transitive `SSH.NET` vulnerability (`GHSA-q939-rpr3-3284`) in `ElixomClaim.Lib.Tests`.
 - The top-level README still says the implementation "has not yet been scaffolded," which is materially outdated.
 - Sprint 12 is now explicitly in progress to correct the unmapped MCP transport and replace the legacy `/mcp/*` controllers with a separately scoped `/api/v1` API. Items 1 and 2 are complete; the endpoint/tool/API items are not started.
+- The collection-client bank-detail migration preserves existing records with empty branch-name/account-type fields. An Administrator must correct those legacy rows before they are relied on for a payout.
 - The independent OAuth security review remains an open risk in `MEMORY.md`; no code-only review can close it.
 
 ## Intentional and acceptable variations
@@ -80,15 +87,16 @@ These are protocol-hardening issues rather than missing business workflows.
 | `/Teller/PrintReceipt/{id}` | `/collections/{id}/print` | Equivalent feature under a different route. |
 | No adjustment process specified for paid records | Linked, audited adjustment/reversal workflow | Additional financial safeguard. |
 | Older numeric-style identifiers implied by examples | Uniform Guid identifiers | Valid implementation choice with an ADR and migration strategy. |
+| Opaque Guid labels in the UI | Durable database-sequence-backed `SequenceNo` values, while Guids remain route/FK/audit keys | Usability improvement without changing technical identity. |
 
 ## Verification performed on 2026-09-07
 
 ```bash
-dotnet test ElixomClaim.slnx --no-restore
+dotnet test src/ElixomClaim.Web.Tests/ElixomClaim.Web.Tests.csproj --no-restore
 ```
 
-- This run could not start in the managed execution sandbox: MSBuild failed while binding its local named pipe with `SocketException (13): Permission denied`. This is an environment limitation, not a code-test result.
-- Sprint 12 records 181 passing tests for its first two items, but that historical evidence was not reproduced during this review.
+- The current Web test suite passed: **70 passed, 0 failed**.
+- Sprint 12 records focused passing evidence for the new profile, receipt, free-entry collection, bank-detail, sequence-number, and development-seed changes. A full solution run was not repeated for this report.
 - The last package scan recorded a vulnerable transitive `SSH.NET` test dependency and two unnecessary `Microsoft.Extensions.Options` package references; re-run the scan in a normal build environment before release.
 
 ## Overall assessment

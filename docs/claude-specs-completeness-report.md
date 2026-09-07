@@ -22,6 +22,7 @@ It is still **not complete or release-ready**. The standard MCP transport is not
 | OAuth consent/lifetime/redirect/rate-limit gaps | OAuth service, consent persistence, strict redirect validation, and rate-limit configuration exist. | Substantially resolved. |
 | Process-local MCP operation records | [`OperationRecordService.cs`](../src/ElixomClaim.Lib/Services/OperationRecordService.cs) persists idempotency records. | Resolved for durable records. |
 | No transport-neutral actor boundary or separate REST scope | [`ActorResolver.cs`](../src/ElixomClaim.Web/Services/ActorResolver.cs), ADR 0005, and `api:access` OAuth scope are now present. | Partial remediation: no current `/mcp` or `/api/v1` endpoint consumes the boundary. |
+| Profile/bank, collection capture/receipt, client-bank, and record-number usability gaps | Sprint 12 items 2a–2f add optional user display names; bank branch/account-type fields; traditional printable receipts; custom collection purpose/amount snapshots; client-bank metadata; durable user-facing sequence numbers; and per-run Development collection samples. | Mostly resolved; clean relational migration verification currently fails (finding 8). |
 
 ## Requirement assessment
 
@@ -31,7 +32,7 @@ It is still **not complete or release-ready**. The standard MCP transport is not
 | Google provisioned-user sign-in, bootstrap administrator, hierarchical roles | Implemented | Authentication configuration, validation, policies, and authorization tests support the intended model. |
 | Claims lifecycle, ownership, comments, soft deletion, dates | Mostly implemented | [`ClaimService.cs`](../src/ElixomClaim.Lib/Services/ClaimService.cs), entities, MVC pages, and tests cover the workflow. Comment append-only behavior is not a database invariant. |
 | Ordinary-user profile, bank details, payment history | Implemented | [`ProfileController.cs`](../src/ElixomClaim.Web/Controllers/ProfileController.cs), Razor view, masking helper, dashboard history, and migration `20260907090000_AddUserProfileDisplayAndBankFields` provide an optional display name plus bank branch-name/account-type fields. |
-| Collection clients, complete client bank details, options, capture, receipt/reissue/print | Mostly implemented | Administrator-managed client bank details require branch name and Savings/Current account type; admin/teller UI, client-scoped options, durable outbox, and HTML printing exist. Fee behavior is materially incorrect; see finding 2. |
+| Collection clients, complete client bank details, options, capture, receipt/reissue/print | Mostly implemented | Administrator-managed client bank details now require branch name and Savings/Current account type. Capture supports configured suggestions plus immutable custom purpose/amount snapshots; printable receipts show payer, teller display name, method, and browser-local date/time while excluding telephone/fees. Fee behavior is materially incorrect; see finding 2. |
 | Job payments, deductions, lifecycle, settlement cascade, adjustment flow | Mostly implemented | Database constraint, shared service, MVC workflows, and lifecycle tests cover the core. Payout presentation remains incomplete. |
 | Salary recurrence, generated payroll, adjustments/custom entries, submit-to-job | Implemented | Planner, service, hosted scheduler, MVC actions, and tests are present. |
 | Durable email outbox, SMTP/ACS, retry, receipt/payout notifications | Mostly implemented | Outbox/sender implementations work, but the literal email-log/header schema is incomplete. |
@@ -91,11 +92,20 @@ The payout service includes claims, collections, deductions, and headline totals
 
 Controllers without `ILogger<T>` include `AdminController`, `ClaimsController`, `HomeController`, `JobPaymentsController`, `ManagerClaimsController`, `ProfileController`, and all `Mcp*Controller` classes. The specification says every controller, service, and hosted service should inject structured logging.
 
-### 8. Documentation and delivery evidence need final reconciliation
+### 8. Clean relational migration baseline fails — high priority
+
+The current full test run cannot establish the required relational persistence baseline:
+
+- `AuditRecordRelationalPersistenceTests.AuditRecords_RejectUpdatesAndDeletesAtTheSqlServerBoundary` fails during `MigrateAsync` with SQL Server error: `The specified schema name "dbclaim" either does not exist or you do not have permission to use it.`
+- The result is **117 passed / 1 failed** in `ElixomClaim.Lib.Tests`; `ElixomClaim.Web.Tests` passes **70 / 70**.
+
+Sprint 12 item 2a records the same clean-SQL baseline migration defect as separately blocked. Until the initial migration/schema creation order is repaired and this relational test passes from an empty database, migration and append-only-audit evidence is incomplete.
+
+### 9. Documentation and delivery evidence need final reconciliation
 
 - README says the implementation “has not yet been scaffolded,” though the repository contains an extensive implementation.
 - Historical Sprint 08 completion language and an older `MEMORY.md` decision-log entry claim standard MCP transport registration and REST-controller retirement. The current `MEMORY.md` baseline correctly supersedes that statement: Sprint 12 is in progress because the runtime still has neither.
-- The current test command succeeded, but its visible output reported 65 passing Web tests and did not emit the ledger's claimed solution-wide 181-total summary. Do not present the historical total as fresh verification without preserving its original artifacts/log.
+- The current full test command fails as described above. Historical 181/182-test sprint totals are not current full-suite evidence.
 
 ## Intentional or acceptable variations
 
@@ -113,20 +123,22 @@ Controllers without `ILogger<T>` include `AdminController`, `ClaimsController`, 
 dotnet test ElixomClaim.slnx --no-restore
 ```
 
-The command completed successfully. It emitted:
+The command **failed** in one relational Lib test. It emitted:
 
 - a high-severity dependency vulnerability warning for `SSH.NET` `2025.1.0` (`GHSA-q939-rpr3-3284`) in the Lib test project;
 - two non-blocking `NU1510` warnings for likely unnecessary options packages in `ElixomClaim.Lib`;
 - an obsolete Testcontainers `MsSqlBuilder` constructor warning in `AuditRecordRelationalPersistenceTests`;
-- a passing Web test segment with 65 tests.
+- a passing Web test project: **70 passed**;
+- a Lib test project result of **117 passed, 1 failed**. The failure is `AuditRecords_RejectUpdatesAndDeletesAtTheSqlServerBoundary`, which cannot apply migrations to an empty SQL baseline because `dbclaim` is unavailable.
 
-The command's stdout did not provide a trustworthy solution-wide total for this run, so this report intentionally does not repeat the ledger's historical “181 tests” as current evidence.
+The current revision therefore does not have a passing full solution suite. The historical 181/182-test counts in sprint rows are not current full-suite evidence.
 
 ## Recommended completion order
 
-1. Complete Sprint 12: wire the standard MCP transport and domain tools at `/mcp`, add the scope-separated `/api/v1` adapters, and retire legacy `/mcp/*` controller routes.
-2. Correct collection-fee snapshotting/job calculation, then add regression tests for fee allocation and exact `TotalPaid` values.
-3. Make production migrations safe across instances through a single-runner topology or database/distributed lock, with explicit production opt-in.
-4. Resolve the SSH.NET advisory and unnecessary package references.
-5. Complete structured audit fields, email-header logging if required, detailed payout print layout/subtotals, and universal `ILogger<T>` coverage.
-6. Reconcile README, sprint records, and `MEMORY.md` with the actual MCP implementation and record reproducible fresh verification evidence.
+1. Repair the empty-database migration/schema creation order and restore the relational audit test before claiming release verification.
+2. Complete Sprint 12: wire the standard MCP transport and domain tools at `/mcp`, add the scope-separated `/api/v1` adapters, and retire legacy `/mcp/*` controller routes.
+3. Correct collection-fee snapshotting/job calculation, then add regression tests for fee allocation and exact `TotalPaid` values.
+4. Make production migrations safe across instances through a single-runner topology or database/distributed lock, with explicit production opt-in.
+5. Resolve the SSH.NET advisory and unnecessary package references.
+6. Complete structured audit fields, email-header logging if required, detailed payout print layout/subtotals, and universal `ILogger<T>` coverage.
+7. Reconcile README, sprint records, and `MEMORY.md` with the actual MCP implementation and record reproducible fresh verification evidence.
