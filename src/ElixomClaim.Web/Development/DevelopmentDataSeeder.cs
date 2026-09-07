@@ -70,7 +70,7 @@ public static class DevelopmentDataSeeder
 
         var collection = new CollectionTransaction
         {
-            Id = Guid.Parse("60000000-0000-0000-0000-000000000101"), CollectionClientId = client.Id, PurposeOptionId = purpose.Id, AmountOptionId = amount.Id,
+            Id = Guid.Parse("60000000-0000-0000-0000-000000000101"), CollectionClientId = client.Id, PurposeOptionId = purpose.Id, Purpose = purpose.Name, AmountOptionId = amount.Id,
             TellerUserId = UserIds[UserRole.Teller], PayorName = "Development Payor", PayorEmail = "payor@example.test", PayorTelephone = "8765550100",
             ReferenceNumber = "DEV-COL-001", Method = CollectionMethod.Pos, Amount = amount.Amount, ProcessingFee = 25.00m,
             PaymentDateUtc = now, CreatedAtUtc = now

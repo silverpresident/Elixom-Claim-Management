@@ -43,7 +43,7 @@ public class CollectionService : ICollectionService
         if (command.PurposeOptionId.HasValue && purpose is null)
             return Result.Failure<CollectionTransaction>("Choose a purpose suggestion belonging to the selected client.");
 
-        var purposeText = (command.Purpose ?? purpose?.Name)?.Trim();
+        var purposeText = string.IsNullOrWhiteSpace(command.Purpose) ? purpose?.Name : command.Purpose.Trim();
         if (string.IsNullOrWhiteSpace(purposeText) || purposeText.Length > 200)
             return Result.Failure<CollectionTransaction>("A purpose of 200 characters or fewer is required.");
         purpose ??= await _dbContext.CollectionPurposeOptions.SingleOrDefaultAsync(o => o.CollectionClientId == client.Id && o.IsActive && o.Name == purposeText, cancellationToken);

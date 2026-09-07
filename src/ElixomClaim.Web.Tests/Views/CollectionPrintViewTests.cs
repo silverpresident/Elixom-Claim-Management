@@ -28,5 +28,6 @@ public class CollectionPrintViewTests
         Assert.Contains("Intl.DateTimeFormat", content);
         Assert.Contains("local-payment-date", content);
         Assert.DoesNotContain("PayorTelephone", content);
+        Assert.Contains("Model.Purpose", content);
     }
 }

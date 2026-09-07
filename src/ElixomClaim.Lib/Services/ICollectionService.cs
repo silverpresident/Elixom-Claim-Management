@@ -12,8 +12,8 @@ public interface ICollectionService
 public record RecordCollectionCommand(
     Guid TellerUserId,
     Guid CollectionClientId,
-    Guid PurposeOptionId,
-    Guid AmountOptionId,
+    Guid? PurposeOptionId,
+    Guid? AmountOptionId,
     string PayorName,
     string? PayorEmail,
     CollectionMethod Method,

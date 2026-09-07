@@ -55,6 +55,26 @@ public class CollectionServiceTests
     }
 
     [Fact]
+    public async Task RecordAsync_AllowsCustomPurposeAndAmountWithoutCreatingConfiguration()
+    {
+        await using var db = CreateDb();
+        var teller = User(UserRole.Teller, "teller@anonymized.example.com");
+        var client = new CollectionClient { Name = "Acme" };
+        db.AddRange(teller, client);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RecordAsync(new(teller.Id, client.Id, null, null, "Payor", null, CollectionMethod.Cash, 0m, DateTime.UtcNow, Purpose: "One-time service", Amount: 123.45m));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("One-time service", result.Value!.Purpose);
+        Assert.Equal(123.45m, result.Value.Amount);
+        Assert.Null(result.Value.PurposeOptionId);
+        Assert.Null(result.Value.AmountOptionId);
+        Assert.Empty(db.CollectionPurposeOptions);
+        Assert.Empty(db.CollectionAmountOptions);
+    }
+
+    [Fact]
     public async Task RecordAsync_MissingOptionalPayorEmail_IsRecordedAsSkippedWithoutBlockingSystemReceipt()
     {
         await using var db = CreateDb();

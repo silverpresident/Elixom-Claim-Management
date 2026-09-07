@@ -107,7 +107,7 @@ public sealed class EmailTools
             return new EmailPreviewResponse(false, "Collection record not found.", null, null, null);
         }
 
-        var html = ComposeReceiptHtml(collection, collection.CollectionClient, collection.PurposeOption, collection.AmountOption);
+        var html = ComposeReceiptHtml(collection, collection.CollectionClient);
         var subject = $"Collection receipt #{collection.Id}";
 
         var recipients = new List<string>();
@@ -208,7 +208,7 @@ public sealed class EmailTools
             .ToList();
 
         int queuedCount = 0;
-        var html = ComposeReceiptHtml(collection, collection.CollectionClient, collection.PurposeOption, collection.AmountOption);
+        var html = ComposeReceiptHtml(collection, collection.CollectionClient);
         var subject = $"Collection receipt #{collection.Id}";
 
         foreach (var recipient in recipients)
@@ -305,8 +305,8 @@ public sealed class EmailTools
         return new EmailQueueSendResponse(true, null, queuedCount);
     }
 
-    private static string ComposeReceiptHtml(CollectionTransaction collection, CollectionClient client, CollectionPurposeOption purpose, CollectionAmountOption amount) =>
-        $"<article><h1>Collection receipt</h1><p>Receipt #{collection.Id}</p><dl><dt>Client</dt><dd>{HtmlEncoder.Default.Encode(client.Name)}</dd><dt>Purpose</dt><dd>{HtmlEncoder.Default.Encode(purpose.Name)}</dd><dt>Amount</dt><dd>{amount.Amount:N2} JMD</dd><dt>Payment date (UTC)</dt><dd>{collection.PaymentDateUtc:yyyy-MM-dd HH:mm}</dd><dt>Method</dt><dd>{collection.Method}</dd></dl></article>";
+    private static string ComposeReceiptHtml(CollectionTransaction collection, CollectionClient client) =>
+        $"<article><h1>Collection receipt</h1><p>Receipt #{collection.Id}</p><dl><dt>Client</dt><dd>{HtmlEncoder.Default.Encode(client.Name)}</dd><dt>Purpose</dt><dd>{HtmlEncoder.Default.Encode(collection.Purpose)}</dd><dt>Amount</dt><dd>{collection.Amount:N2} JMD</dd><dt>Payment date (UTC)</dt><dd>{collection.PaymentDateUtc:yyyy-MM-dd HH:mm}</dd><dt>Method</dt><dd>{collection.Method}</dd></dl></article>";
 
     private static string ComposePayoutHtml(JobPayment job, bool canViewFullBankDetails)
     {

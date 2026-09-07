@@ -80,7 +80,7 @@ Draft ──submit──> Submitted ──accept──> Accepted ──attach to
 
 ### Collections and receipts
 
-A teller records a collection against a `CollectionClient`: payor details, Administrator-configured purpose and amount options, collection method (`Cash`, `Pos`, `BankTransfer`, `CreditNote`), payment date, and internal processing fee. On confirmation, persist the collection, queue the responsive HTML receipt to the payor (when supplied), client recipients, and configured system-copy address, and expose a printable HTML route. Never generate PDFs.
+A teller records a collection against a `CollectionClient`: payor details, Administrator-configured purpose and amount suggestions (or an immutable transaction-only purpose/amount entry), collection method (`Cash`, `Pos`, `BankTransfer`, `CreditNote`), payment date, and internal processing fee. A matching active suggestion remains linked to the transaction; a teller-entered value never changes client configuration. The form accepts payment date/time in the teller's browser-local time and stores the converted UTC instant. On confirmation, persist the collection, queue the responsive HTML receipt to the payor (when supplied), client recipients, and configured system-copy address, and expose a printable HTML route. Never generate PDFs.
 
 Collections may only move forward:
 

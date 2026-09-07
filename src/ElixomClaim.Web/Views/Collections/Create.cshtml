@@ -33,30 +33,32 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label asp-for="PurposeOptionId" class="form-label fw-bold">Purpose</label>
-                            <select asp-for="PurposeOptionId" class="form-select" required>
-                                <option value="">Choose a purpose</option>
-                                @foreach(var option in purposes)
-                                {
-                                    <option value="@option.Id" data-client="@option.CollectionClientId">@option.Name</option>
-                                }
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label asp-for="AmountOptionId" class="form-label fw-bold">Amount</label>
-                            <select asp-for="AmountOptionId" class="form-select" required>
-                                <option value="">Choose an amount</option>
-                                @foreach(var option in amounts)
-                                {
-                                    <option value="@option.Id" data-client="@option.CollectionClientId">@option.Name — @option.Amount.ToString("N2") JMD</option>
-                                }
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
                             <label asp-for="Method" class="form-label fw-bold">Payment Method</label>
                             <select asp-for="Method" asp-items="Html.GetEnumSelectList<CollectionMethod>()" class="form-select"></select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Purpose" class="form-label fw-bold">Purpose</label>
+                            <input asp-for="Purpose" class="form-control" list="purpose-suggestions" maxlength="200" placeholder="Enter or choose a purpose" required />
+                            <datalist id="purpose-suggestions">
+                                @foreach(var option in purposes)
+                                {
+                                    <option value="@option.Name" data-client="@option.CollectionClientId"></option>
+                                }
+                            </datalist>
+                            <div class="form-text">Choose a suggestion or enter a different purpose.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Amount" class="form-label fw-bold">Amount (JMD)</label>
+                            <input asp-for="Amount" type="number" class="form-control" list="amount-suggestions" min="0.01" step="0.01" placeholder="Enter or choose an amount" required />
+                            <datalist id="amount-suggestions">
+                                @foreach(var option in amounts)
+                                {
+                                    <option value="@option.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" label="@option.Name" data-client="@option.CollectionClientId"></option>
+                                }
+                            </datalist>
+                            <div class="form-text">Choose a suggested amount or enter another positive JMD amount.</div>
                         </div>
 
                         <div class="col-md-6">
@@ -80,8 +82,10 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label asp-for="PaymentDateUtc" class="form-label fw-bold">Payment Date/Time (UTC)</label>
-                            <input asp-for="PaymentDateUtc" type="datetime-local" class="form-control" />
+                            <label asp-for="PaymentDateLocal" class="form-label fw-bold">Payment Date/Time</label>
+                            <input asp-for="PaymentDateLocal" type="datetime-local" class="form-control" required />
+                            <input asp-for="PaymentDateUtc" type="hidden" />
+                            <div class="form-text">Shown in your local time and stored as UTC.</div>
                         </div>
 
                         <div class="col-md-6">
@@ -105,11 +109,22 @@
         $(function(){
             const filter=()=>{
                 const c=$('#CollectionClientId').val();
-                $('#PurposeOptionId option[data-client],#AmountOptionId option[data-client]').each(function(){
+                $('#purpose-suggestions option[data-client],#amount-suggestions option[data-client]').each(function(){
                     $(this).prop('hidden', !!c && $(this).data('client') != c);
                 });
             };
             $('#CollectionClientId').on('change',filter);
+            const localInput = document.getElementById('PaymentDateLocal');
+            const utcInput = document.getElementById('PaymentDateUtc');
+            if (!localInput.value) {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                localInput.value = now.toISOString().slice(0, 16);
+            }
+            $('form').on('submit', function () {
+                const localDate = new Date(localInput.value);
+                utcInput.value = Number.isNaN(localDate.getTime()) ? '' : localDate.toISOString();
+            });
             filter();
         });
     </script>
