@@ -11,6 +11,9 @@ namespace ElixomClaim.Lib.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.EnsureSchema(
+                name: "dbclaim");
+
             migrationBuilder.CreateTable(
                 name: "EmailLogs",
                 schema: "dbclaim",

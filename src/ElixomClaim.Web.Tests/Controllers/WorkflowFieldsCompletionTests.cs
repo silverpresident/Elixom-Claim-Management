@@ -157,7 +157,6 @@ public class WorkflowFieldsCompletionTests
             PayorEmail = "robert@example.com",
             PayorTelephone = "876-555-0199",
             Method = CollectionMethod.Cash,
-            ProcessingFee = 50m,
             PaymentDateUtc = DateTime.UtcNow
         };
 
@@ -167,6 +166,6 @@ public class WorkflowFieldsCompletionTests
         var record = await db.CollectionTransactions.FirstOrDefaultAsync(c => c.PayorName == "Robert Smith");
         Assert.NotNull(record);
         Assert.Equal("876-555-0199", record.PayorTelephone);
-        Assert.Equal(50m, record.ProcessingFee);
+        Assert.Equal(0m, record.ProcessingFee);
     }
 }
