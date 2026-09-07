@@ -47,7 +47,7 @@ public class CollectionsController : Controller
 
         var result = await _collectionService.RecordAsync(new(
             CurrentUserId(), input.CollectionClientId, input.PurposeOptionId, input.AmountOptionId, input.PayorName, input.PayorEmail,
-            input.Method, input.ProcessingFee, input.PaymentDateUtc.Value, input.ReferenceNumber,
+            input.Method, 0m, input.PaymentDateUtc.Value, input.ReferenceNumber,
             input.PayorTelephone, input.Purpose, input.Amount > 0 ? input.Amount : null));
         if (result.IsFailure) { ModelState.AddModelError(string.Empty, result.Error); await PopulateOptionsAsync(); return View(input); }
         TempData["SuccessMessage"] = "Collection recorded and receipt queued.";
@@ -117,7 +117,6 @@ public class RecordCollectionInput
     public string? PayorEmail { get; set; }
     public string? PayorTelephone { get; set; }
     public CollectionMethod Method { get; set; }
-    public decimal ProcessingFee { get; set; }
     public string? PaymentDateLocal { get; set; }
     public DateTime? PaymentDateUtc { get; set; }
     public string? ReferenceNumber { get; set; }
