@@ -36,6 +36,10 @@ public class DevelopmentDataSeederTests
         var transaction = await db.CollectionTransactions.FirstAsync();
         Assert.Equal("8765550100", transaction.PayorTelephone);
 
+        var transactionsAfterFirstRun = await db.CollectionTransactions.ToListAsync();
+        Assert.Equal(2, transactionsAfterFirstRun.Count);
+        Assert.Contains(transactionsAfterFirstRun, item => item.Status == CollectionStatus.Collected && item.ReferenceNumber!.StartsWith("DEV-RUN-", StringComparison.Ordinal));
+
         var jobPayment = await db.JobPayments.FirstAsync();
         Assert.False(string.IsNullOrWhiteSpace(jobPayment.PayoutBankName));
 
@@ -49,5 +53,10 @@ public class DevelopmentDataSeederTests
         Assert.NotEmpty(await db.EmailLogs.ToListAsync());
         Assert.NotEmpty(await db.AuditRecords.ToListAsync());
         Assert.NotEmpty(await db.OAuthClients.ToListAsync());
+
+        await DevelopmentDataSeeder.InitializeAsync(provider);
+        var transactionsAfterSecondRun = await db.CollectionTransactions.ToListAsync();
+        Assert.Equal(3, transactionsAfterSecondRun.Count);
+        Assert.Equal(3, transactionsAfterSecondRun.Select(item => item.Id).Distinct().Count());
     }
 }

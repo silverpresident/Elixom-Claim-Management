@@ -26,6 +26,7 @@ public static class DevelopmentDataSeeder
         await db.Database.EnsureCreatedAsync(cancellationToken);
         if (await db.Users.AnyAsync(cancellationToken))
         {
+            await AddRunCollectionTransactionAsync(db, cancellationToken);
             return;
         }
 
@@ -121,6 +122,38 @@ public static class DevelopmentDataSeeder
             new AuditRecord { Id = Guid.Parse("11000000-0000-0000-0000-000000000001"), ActorUserId = UserIds[UserRole.Administrator].ToString(), ActorEmail = "dev-administrator@example.test", Action = "DevelopmentDataSeeded", Target = "DevelopmentData", IsMcpOperation = false, TimestampUtc = now });
 
         await db.SaveChangesAsync(cancellationToken);
+        await AddRunCollectionTransactionAsync(db, cancellationToken);
         logger.LogInformation("Seeded development-only in-memory sample data for {UserCount} roles.", users.Length);
+    }
+
+    private static async Task AddRunCollectionTransactionAsync(ApplicationDbContext db, CancellationToken cancellationToken)
+    {
+        var client = await db.CollectionClients
+            .SingleAsync(candidate => candidate.Id == Guid.Parse("20000000-0000-0000-0000-000000000001"), cancellationToken);
+        var purpose = await db.CollectionPurposeOptions
+            .SingleAsync(option => option.CollectionClientId == client.Id && option.Name == "Membership fee", cancellationToken);
+        var amount = await db.CollectionAmountOptions
+            .SingleAsync(option => option.CollectionClientId == client.Id && option.Name == "Standard amount", cancellationToken);
+        var now = DateTime.UtcNow;
+
+        db.CollectionTransactions.Add(new CollectionTransaction
+        {
+            Id = Guid.NewGuid(),
+            CollectionClientId = client.Id,
+            PurposeOptionId = purpose.Id,
+            Purpose = purpose.Name,
+            AmountOptionId = amount.Id,
+            TellerUserId = UserIds[UserRole.Teller],
+            PayorName = "Development walk-in payor",
+            ReferenceNumber = $"DEV-RUN-{now:yyyyMMddHHmmssfff}",
+            Method = CollectionMethod.Cash,
+            Status = CollectionStatus.Collected,
+            Amount = amount.Amount,
+            ProcessingFee = client.PerTransactionFee,
+            PaymentDateUtc = now,
+            CreatedAtUtc = now
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }
