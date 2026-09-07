@@ -7,9 +7,9 @@
 
 ## Overall conclusion
 
-The implementation is materially more complete than the 2026-09-03 review. Missing domain fields, profile management, manager/accountant workflows, audit trigger, development data, OAuth consent/lifetime work, rate limiting, and migration startup wiring have largely been added. Sprint 12 has also established the API/MCP transport contract, introduced the `api:access` scope, and added a shared authenticated-actor resolver.
+The implementation is materially more complete than the 2026-09-03 review. Missing domain fields, profile management, manager/accountant workflows, audit trigger, development data, OAuth consent/lifetime work, rate limiting, and migration startup wiring have largely been added. Sprint 12 now also establishes the standard MCP transport at `/mcp`, with a separate `api:access` scope and shared authenticated-actor resolver.
 
-It is still **not complete or release-ready**. The standard MCP transport is not registered or mapped, and the new actor resolver is not yet used by the running `/mcp/*` controllers. The application therefore continues to expose bespoke REST endpoints under `/mcp/*`. A second high-impact problem is incorrect collection-fee sourcing/allocation. Multi-instance migration locking, email/audit-schema fidelity, and the universal logging/layering requirements are also incomplete.
+It is still **not complete or release-ready**. The standard MCP transport is mapped and the legacy `/mcp/*` controllers are gone, but tool hardening is in progress and the separately contracted `/api/v1` REST API is not implemented. A second high-impact problem is incorrect collection-fee sourcing/allocation. The full relational suite remains blocked by an empty-database migration failure; multi-instance migration locking, email/audit-schema fidelity, and universal logging/layering requirements are also incomplete.
 
 ## Material change since the previous review
 
@@ -21,7 +21,7 @@ It is still **not complete or release-ready**. The standard MCP transport is not
 | Mutable audit records | Migration [`20260903090000_AddAuditRecordAppendOnlyTrigger.cs`](../src/ElixomClaim.Lib/Migrations/20260903090000_AddAuditRecordAppendOnlyTrigger.cs) creates an Azure SQL UPDATE/DELETE trigger. | Resolved at the SQL boundary. |
 | OAuth consent/lifetime/redirect/rate-limit gaps | OAuth service, consent persistence, strict redirect validation, and rate-limit configuration exist. | Substantially resolved. |
 | Process-local MCP operation records | [`OperationRecordService.cs`](../src/ElixomClaim.Lib/Services/OperationRecordService.cs) persists idempotency records. | Resolved for durable records. |
-| No transport-neutral actor boundary or separate REST scope | [`ActorResolver.cs`](../src/ElixomClaim.Web/Services/ActorResolver.cs), ADR 0005, and `api:access` OAuth scope are now present. | Partial remediation: no current `/mcp` or `/api/v1` endpoint consumes the boundary. |
+| No standard MCP transport or shared actor boundary | [`Program.cs`](../src/ElixomClaim.Web/Program.cs) maps official stateless Streamable HTTP at `/mcp`; `McpToolActorAccessor` resolves callers through `IActorResolver`; legacy controllers are removed. | MCP transport resolved. Tool hardening is in progress; `/api/v1` remains unimplemented. |
 | Profile/bank, collection capture/receipt, client-bank, and record-number usability gaps | Sprint 12 items 2a–2f add optional user display names; bank branch/account-type fields; traditional printable receipts; custom collection purpose/amount snapshots; client-bank metadata; durable user-facing sequence numbers; and per-run Development collection samples. | Mostly resolved; clean relational migration verification currently fails (finding 8). |
 
 ## Requirement assessment
@@ -36,29 +36,28 @@ It is still **not complete or release-ready**. The standard MCP transport is not
 | Job payments, deductions, lifecycle, settlement cascade, adjustment flow | Mostly implemented | Database constraint, shared service, MVC workflows, and lifecycle tests cover the core. Payout presentation remains incomplete. |
 | Salary recurrence, generated payroll, adjustments/custom entries, submit-to-job | Implemented | Planner, service, hosted scheduler, MVC actions, and tests are present. |
 | Durable email outbox, SMTP/ACS, retry, receipt/payout notifications | Mostly implemented | Outbox/sender implementations work, but the literal email-log/header schema is incomplete. |
-| OAuth code + PKCE, rotation/revocation, consent, redirect validation, throttling, transport scopes | Mostly implemented | Core OAuth controls and both `mcp:access` / `api:access` scope definitions exist. Scope separation is not enforceable until the MCP/API transports are mapped. |
-| Standard MCP server transport and registered-tool discovery | Missing | The package, contract, and actor boundary exist, but startup does not configure/map an MCP server and no standard MCP tools are registered. |
+| OAuth code + PKCE, rotation/revocation, consent, redirect validation, throttling, transport scopes | Mostly implemented | Core OAuth controls and both `mcp:access` / `api:access` scope definitions exist. `mcp:access` is enforced at `/mcp`; API-scope separation awaits the unimplemented `/api/v1` surface. |
+| Standard MCP server transport and registered-tool discovery | Mostly implemented | Official stateless Streamable HTTP is mapped at `/mcp`, protected by Bearer + `mcp:access` + MCP rate limiting, and registers all six domain tool classes with SDK discovery attributes. Tool hardening/integration evidence remains in progress. |
 | Audit trail and append-only SQL enforcement | Mostly implemented | Audit service/redaction and the SQL trigger exist. The record shape differs from the specified EntityType/EntityId model. |
 | Privacy, CDN frontend dependencies, favicon, HTML-only printing | Implemented | Layout, privacy page, the plum-and-gold SVG favicon, and assets conform. |
 | Development-only samples and role switching | Implemented | Seeder and Development-only login route are guarded by environment/configuration. |
 
 ## Open differences and defects
 
-### 1. Standard MCP transport is absent — high priority
+### 1. Standard MCP transport is implemented; tool hardening and REST replacement remain — high priority
 
-Sprint 12 correctly identifies and plans the MCP transport defect. Its first two items are complete: ADR 0005 documents the `/mcp` versus `/api/v1` contract, `api:access` is now an OAuth scope, and [`ActorResolver.cs`](../src/ElixomClaim.Web/Services/ActorResolver.cs) centralizes active-user, scope, correlation, IP, and audit-context resolution. The actual runtime remains incomplete:
+Sprint 12 item 3 resolves the former transport gap:
 
-- [`Program.cs`](../src/ElixomClaim.Web/Program.cs) registers the actor resolver and tool classes as ordinary DI services only. It has no MCP-server registration or endpoint mapping, and does not expose `/api/v1`.
-- No `MapMcp`, `McpServerTool`, `McpServerToolType`, or `IMcpActorResolver` implementation exists in source.
-- Legacy REST controllers remain at `/mcp/claims`, `/mcp/collections`, `/mcp/email`, `/mcp/job-payments`, `/mcp/operations`, and `/mcp/payroll`; see [`McpClaimsController.cs`](../src/ElixomClaim.Web/Controllers/McpClaimsController.cs).
+- [`Program.cs`](../src/ElixomClaim.Web/Program.cs) registers official `ModelContextProtocol.AspNetCore` stateless Streamable HTTP, registers all six tool classes, and maps the sole MCP endpoint at `/mcp`.
+- `/mcp` requires the custom Bearer scheme, an authenticated `mcp:access` user, and the MCP rate-limit policy.
+- The six bespoke `Mcp*Controller` routes are removed; each discovered tool class has SDK discovery attributes and resolves its concrete actor through [`McpToolActorAccessor.cs`](../src/ElixomClaim.Web/Mcp/Tools/McpToolActorAccessor.cs) and `IActorResolver`.
 
-These custom bearer-authenticated APIs are not a discoverable/invocable standard MCP server, so a conforming MCP client cannot use the claimed transport. The scope contract is currently documentary/available to future adapters: the legacy controllers still perform their own actor resolution and string-split scope checks.
+The work is not complete:
 
-Related problems:
-
-- `McpPayrollController` applies an Accountant policy but does not enforce the `mcp:access` scope required by other MCP REST controllers.
-- Several tool classes query `ApplicationDbContext` directly instead of delegating to shared domain services, conflicting with the thin-adapter requirement.
-- The MCP controllers/tools omit `ILogger<T>`.
+- Sprint 12 item 4 is in progress in the current worktree. It adds per-invocation audit attribution, cancellation propagation, redacted errors, and safer tool projections; final integration/contract evidence is still required.
+- Several tool classes still query `ApplicationDbContext` directly for reads. This may be acceptable for safely projected queries, but violates the stricter requirement that shared services own reusable authorization/business decisions unless those queries are moved behind services or explicitly justified.
+- The separate, scope-isolated `/api/v1` REST API promised by ADR 0005 is not implemented (Sprint 12 items 6–8).
+- The tool classes still do not inject `ILogger<T>`.
 
 ### 2. Collection-fee source and job allocation are wrong — high priority
 
@@ -104,8 +103,9 @@ Sprint 12 item 2a records the same clean-SQL baseline migration defect as separa
 ### 9. Documentation and delivery evidence need final reconciliation
 
 - README says the implementation “has not yet been scaffolded,” though the repository contains an extensive implementation.
-- Historical Sprint 08 completion language and an older `MEMORY.md` decision-log entry claim standard MCP transport registration and REST-controller retirement. The current `MEMORY.md` baseline correctly supersedes that statement: Sprint 12 is in progress because the runtime still has neither.
-- The current full test command fails as described above. Historical 181/182-test sprint totals are not current full-suite evidence.
+- README still says the implementation “has not yet been scaffolded,” though the repository contains a substantial implementation.
+- The current `MEMORY.md` baseline correctly records the mapped MCP endpoint and its remaining Sprint 12 work. Older Sprint 08 wording is historical and should not be used as current evidence.
+- The non-integration suite passes as recorded below, while the unfiltered full suite remains blocked by finding 8. Historical sprint totals alone are not current release evidence.
 
 ## Intentional or acceptable variations
 

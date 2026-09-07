@@ -1,10 +1,10 @@
 # CLAUDE VERIFY
 verify the completeness of the implementation against the claude-specs.md file.
-Create a detailed report of differences, variations and what is done. Put your report in an md file.
+Create a detailed report of differences, variations and what is done. Put your report in `/docs/claude-specs-completeness-report.md` file.
 ---
 # GEMINI VERIFY
 Verify the completeness of the implementation against the gemini-specs.md file.
-Create a detailed report of differences, variations and what is done. Put your report in an md file.
+Create a detailed report of differences, variations and what is done. Put your report in `/docs/gemini-specs-completeness-report.md` file.
 ---
 # SPRINTS VERIFY
 Verify that all sprints are complete end to end.
