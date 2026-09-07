@@ -59,15 +59,9 @@ The work is not complete:
 - The separate, scope-isolated `/api/v1` REST API promised by ADR 0005 is not implemented (Sprint 12 items 6–8).
 - The tool classes still do not inject `ILogger<T>`.
 
-### 2. Collection-fee source and job allocation are wrong — high priority
+### 2. Collection-fee source and job allocation — corrected 2026-09-07
 
-`CollectionClient` now has `PerJobProcessingFee` and `PerTransactionFee`, but the services do not treat them as financial authority:
-
-- [`CollectionService.cs`](../src/ElixomClaim.Lib/Services/CollectionService.cs) accepts caller-provided `ProcessingFee` instead of deriving/snapshotting the client’s configured per-transaction fee.
-- [`JobPaymentService.cs`](../src/ElixomClaim.Lib/Services/JobPaymentService.cs) sums collection processing fees into `ClientProcessingFee` and sets `TotalTxnProcessingFee = 0m`.
-- `PerJobProcessingFee` is absent from the calculation.
-
-This reverses the required semantics: a client per-job fee should populate `ClientProcessingFee`, collection transaction fees should populate `TotalTxnProcessingFee`, and both must reduce `TotalPaid`. It can produce incorrect payment totals and lets input fees diverge from configuration.
+`CollectionService` now ignores caller-provided fee values and snapshots the active collection client's configured `PerTransactionFee` on each transaction. `JobPaymentService` applies the client `PerJobProcessingFee` once as `ClientProcessingFee`, sums attached transaction snapshots as `TotalTxnProcessingFee`, and subtracts both from `TotalPaid`. Regression tests cover source authority, immutability after client configuration changes, and exact allocation. Existing financial records retain their persisted transaction snapshots; processing jobs recalculate on their next line-item change.
 
 ### 3. Migration single-runner protection is process-local — high priority for production
 
@@ -89,7 +83,7 @@ The payout service includes claims, collections, deductions, and headline totals
 
 ### 7. Required logging coverage is incomplete
 
-Controllers without `ILogger<T>` include `AdminController`, `ClaimsController`, `HomeController`, `JobPaymentsController`, `ManagerClaimsController`, `ProfileController`, and all `Mcp*Controller` classes. The specification says every controller, service, and hosted service should inject structured logging.
+Controllers without `ILogger<T>` include `AdminController`, `ClaimsController`, `HomeController`, `JobPaymentsController`, `ManagerClaimsController`, and `ProfileController`; the current MCP tool classes also omit it. The specification says every controller, service, and hosted service should inject structured logging.
 
 ### 8. Clean relational migration baseline fails — high priority
 
@@ -102,7 +96,6 @@ Sprint 12 item 2a records the same clean-SQL baseline migration defect as separa
 
 ### 9. Documentation and delivery evidence need final reconciliation
 
-- README says the implementation “has not yet been scaffolded,” though the repository contains an extensive implementation.
 - README still says the implementation “has not yet been scaffolded,” though the repository contains a substantial implementation.
 - The current `MEMORY.md` baseline correctly records the mapped MCP endpoint and its remaining Sprint 12 work. Older Sprint 08 wording is historical and should not be used as current evidence.
 - The non-integration suite passes as recorded below, while the unfiltered full suite remains blocked by finding 8. Historical sprint totals alone are not current release evidence.
@@ -119,11 +112,13 @@ Sprint 12 item 2a records the same clean-SQL baseline migration defect as separa
 
 ## Verification performed
 
+The latest unfiltered run was:
+
 ```bash
 dotnet test ElixomClaim.slnx --no-restore
 ```
 
-The command **failed** in one relational Lib test. It emitted:
+It **failed** in one relational Lib test. It emitted:
 
 - a high-severity dependency vulnerability warning for `SSH.NET` `2025.1.0` (`GHSA-q939-rpr3-3284`) in the Lib test project;
 - two non-blocking `NU1510` warnings for likely unnecessary options packages in `ElixomClaim.Lib`;
@@ -133,10 +128,18 @@ The command **failed** in one relational Lib test. It emitted:
 
 The current revision therefore does not have a passing full solution suite. The historical 181/182-test counts in sprint rows are not current full-suite evidence.
 
+The current transport-focused non-integration verification does pass:
+
+```bash
+dotnet test ElixomClaim.slnx --no-restore --filter 'Category!=Integration'
+```
+
+Result: **117 Lib tests passed** and **71 Web tests passed** (188 total), with the same SSH.NET, NU1510, and obsolete Testcontainers warnings.
+
 ## Recommended completion order
 
 1. Repair the empty-database migration/schema creation order and restore the relational audit test before claiming release verification.
-2. Complete Sprint 12: wire the standard MCP transport and domain tools at `/mcp`, add the scope-separated `/api/v1` adapters, and retire legacy `/mcp/*` controller routes.
+2. Complete Sprint 12 tool hardening, add the scope-separated `/api/v1` adapters, and produce real MCP transport integration/contract evidence.
 3. Correct collection-fee snapshotting/job calculation, then add regression tests for fee allocation and exact `TotalPaid` values.
 4. Make production migrations safe across instances through a single-runner topology or database/distributed lock, with explicit production opt-in.
 5. Resolve the SSH.NET advisory and unnecessary package references.

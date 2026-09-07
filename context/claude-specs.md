@@ -235,7 +235,9 @@ concurrent roles are actually needed):
 - `Title`, `Description` (sent to payee), `InternalNote` (never sent/printed)
 - `JobTotal`, `TotalDeductions`, `ClientProcessingFee`,
   `TotalTxnProcessingFee`, `TotalPaid` (computed: JobTotal − fees −
-  deductions)
+  deductions). For a collection job, the configured client `PerJobProcessingFee`
+  is applied once as `ClientProcessingFee`; immutable collection transaction-fee
+  snapshots are summed as `TotalTxnProcessingFee`.
 - Payout details: `PaidToName`, `PaidToAccountNo`, `PaidToBankName`,
   `PaidToBranch`, `PaymentTransactionNumber`
 - `PaymentStatus`: `Processing` → `Submitted` → `Scheduled` → `Paid`. Only

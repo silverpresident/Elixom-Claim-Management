@@ -14,7 +14,7 @@ public class JobPaymentServiceTests
     {
         await using var db = CreateDb();
         var manager = User(UserRole.Manager, "manager@anonymized.example.com");
-        var client = new CollectionClient { Name = "Acme" }; var otherClient = new CollectionClient { Name = "Other" };
+        var client = new CollectionClient { Name = "Acme", PerJobProcessingFee = 10m }; var otherClient = new CollectionClient { Name = "Other" };
         db.AddRange(manager, client, otherClient); await db.SaveChangesAsync();
         var job = new JobPayment { CollectionClientId = client.Id };
         var valid = new CollectionTransaction { CollectionClientId = client.Id, TellerUserId = manager.Id, PurposeOptionId = Guid.NewGuid(), AmountOptionId = Guid.NewGuid(), PayorName = "Payor", Amount = 1000m, ProcessingFee = 25m, PaymentDateUtc = DateTime.UtcNow };
@@ -27,7 +27,7 @@ public class JobPaymentServiceTests
 
         Assert.True(rejected.IsFailure); Assert.True(attached.IsSuccess);
         Assert.Equal(CollectionStatus.Processing, valid.Status);
-        Assert.Equal(1000m, job.JobTotal); Assert.Equal(25m, job.ClientProcessingFee); Assert.Equal(975m, job.TotalPaid);
+        Assert.Equal(1000m, job.JobTotal); Assert.Equal(10m, job.ClientProcessingFee); Assert.Equal(25m, job.TotalTxnProcessingFee); Assert.Equal(965m, job.TotalPaid);
     }
 
     [Fact]

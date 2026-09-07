@@ -16,7 +16,7 @@ public class CollectionServiceTests
     {
         await using var db = CreateDb();
         var teller = User(UserRole.Teller, "teller@anonymized.example.com");
-        var client = new CollectionClient { Name = "Acme" };
+        var client = new CollectionClient { Name = "Acme", PerTransactionFee = 12.50m };
         db.AddRange(teller, client);
         await db.SaveChangesAsync();
         var purpose = new CollectionPurposeOption { CollectionClientId = client.Id, Name = "Service" };
@@ -28,10 +28,31 @@ public class CollectionServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(500m, result.Value!.Amount);
-        Assert.Equal(20m, result.Value.ProcessingFee);
+        Assert.Equal(12.50m, result.Value.ProcessingFee);
         Assert.Equal(CollectionStatus.Collected, result.Value.Status);
         Assert.Equal(2, db.EmailOutboxItems.Count()); // payor and system-copy recipients
         Assert.Contains(db.AuditRecords, audit => audit.Action == "COLLECTION_RECORDED");
+    }
+
+    [Fact]
+    public async Task RecordAsync_SnapshotsConfiguredTransactionFeeInsteadOfCallerValue()
+    {
+        await using var db = CreateDb();
+        var teller = User(UserRole.Teller, "teller@anonymized.example.com");
+        var client = new CollectionClient { Name = "Acme", PerTransactionFee = 18.75m };
+        db.AddRange(teller, client);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).RecordAsync(new(
+            teller.Id, client.Id, null, null, "Payor", null, CollectionMethod.Cash,
+            ProcessingFee: 999m, PaymentDateUtc: DateTime.UtcNow, Purpose: "Custom", Amount: 100m));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(18.75m, result.Value!.ProcessingFee);
+
+        client.PerTransactionFee = 50m;
+        await db.SaveChangesAsync();
+        Assert.Equal(18.75m, result.Value.ProcessingFee);
     }
 
     [Fact]

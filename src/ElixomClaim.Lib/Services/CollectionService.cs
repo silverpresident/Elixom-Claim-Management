@@ -29,8 +29,8 @@ public class CollectionService : ICollectionService
 
     public async Task<Result<CollectionTransaction>> RecordAsync(RecordCollectionCommand command, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(command.PayorName) || command.ProcessingFee < 0 || command.PaymentDateUtc.Kind != DateTimeKind.Utc)
-            return Result.Failure<CollectionTransaction>("Payor name, a non-negative processing fee, and a UTC payment date are required.");
+        if (string.IsNullOrWhiteSpace(command.PayorName) || command.PaymentDateUtc.Kind != DateTimeKind.Utc)
+            return Result.Failure<CollectionTransaction>("Payor name and a UTC payment date are required.");
 
         var teller = await _dbContext.Users.SingleOrDefaultAsync(u => u.Id == command.TellerUserId && u.IsActive, cancellationToken);
         if (teller is null || !teller.Role.HasMinimumRole(UserRole.Teller)) return Result.Failure<CollectionTransaction>("Teller access is required.");
@@ -76,7 +76,10 @@ public class CollectionService : ICollectionService
                 Method = command.Method,
                 Status = CollectionStatus.Collected,
                 Amount = amount.Value,
-                ProcessingFee = command.ProcessingFee,
+                // Financial fee authority belongs to the configured client.  Persist the
+                // value on the transaction so later client configuration changes cannot
+                // rewrite a collected financial record.
+                ProcessingFee = client.PerTransactionFee,
                 Currency = "JMD",
                 PaymentDateUtc = command.PaymentDateUtc,
                 CreatedAtUtc = _clock.UtcNow

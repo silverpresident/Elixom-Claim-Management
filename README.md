@@ -80,7 +80,7 @@ Draft ──submit──> Submitted ──accept──> Accepted ──attach to
 
 ### Collections and receipts
 
-A teller records a collection against a `CollectionClient`: payor details, Administrator-configured purpose and amount suggestions (or an immutable transaction-only purpose/amount entry), collection method (`Cash`, `Pos`, `BankTransfer`, `CreditNote`), payment date, and internal processing fee. Each administrator-managed client bank detail requires account holder/name/number, bank name, branch code, branch name, and an account type of Savings or Current / Chequing. A matching active suggestion remains linked to the transaction; a teller-entered value never changes client configuration. The form accepts payment date/time in the teller's browser-local time and stores the converted UTC instant. On confirmation, persist the collection, queue the responsive HTML receipt to the payor (when supplied), client recipients, and configured system-copy address, and expose a printable HTML route. Never generate PDFs.
+A teller records a collection against a `CollectionClient`: payor details, Administrator-configured purpose and amount suggestions (or an immutable transaction-only purpose/amount entry), collection method (`Cash`, `Pos`, `BankTransfer`, `CreditNote`), and payment date. The transaction's internal processing fee is a snapshot of the client-configured `PerTransactionFee`; a teller cannot supply or override it. Each administrator-managed client bank detail requires account holder/name/number, bank name, branch code, branch name, and an account type of Savings or Current / Chequing. A matching active suggestion remains linked to the transaction; a teller-entered value never changes client configuration. The form accepts payment date/time in the teller's browser-local time and stores the converted UTC instant. On confirmation, persist the collection, queue the responsive HTML receipt to the payor (when supplied), client recipients, and configured system-copy address, and expose a printable HTML route. Never generate PDFs.
 
 Collections may only move forward:
 
@@ -94,7 +94,7 @@ Only `Collected` collections can be attached. A job containing collections has o
 
 A job payment groups one payee type: either a claimant/user or a collection client, never both. It contains claims, collections, payrolls, deductions, calculated totals, descriptive/public and internal notes, destination bank details, and payout metadata.
 
-`TotalPaid = JobTotal − ClientProcessingFee − TotalTxnProcessingFee − TotalDeductions`.
+`TotalPaid = JobTotal − ClientProcessingFee − TotalTxnProcessingFee − TotalDeductions`. For a collection job, `ClientProcessingFee` is one snapshot of the collection client's configured `PerJobProcessingFee`; `TotalTxnProcessingFee` is the sum of immutable attached collection transaction-fee snapshots.
 
 Line items and deductions are editable only in `Processing`. The status flow is:
 

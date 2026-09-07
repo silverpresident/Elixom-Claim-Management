@@ -13,3 +13,5 @@ Put your report in an md file.
 Look at the codebase now and reevaulate the completeness.
 ---
 I have updated the project. Update your report based on the changes.
+---
+and update the documentations and specs where necessary.

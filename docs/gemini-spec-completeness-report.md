@@ -10,7 +10,7 @@
 
 The implementation is now **substantially complete for the core business application**. The earlier functional gaps in profile/bank management, claim job date, collection telephone, job-payment UI, salary adjustment UI, payroll custom-entry UI, audit immutability, rate limiting, OAuth consent persistence, and migration startup have been addressed. The latest changes also add durable human-facing record numbers, stronger bank-detail fields, richer payout/receipt presentation, and transaction snapshots for teller-entered collection values.
 
-It is **not fully complete against `gemini-specs.md`**, but the former primary MCP transport gap is now closed. The host registers the official SDK's stateless Streamable HTTP transport and exposes the sole MCP endpoint at `/mcp`; it is Bearer-authenticated, requires `mcp:access`, and is rate limited. All six domain tool groups are discoverable through MCP attributes, and the legacy `/mcp/*` MVC controller surface has been removed. Tool-adapter hardening remains active Sprint 12 work, and the separately scoped `/api/v1` REST API remains unimplemented.
+It is **not fully complete against `gemini-specs.md`**, but the former primary MCP transport gap is now closed. The host registers the official SDK's stateless Streamable HTTP transport and exposes the sole MCP endpoint at `/mcp`; it is Bearer-authenticated, requires `mcp:access`, and is rate limited. All six domain tool groups are discoverable through MCP attributes, and the legacy `/mcp/*` MVC controller surface has been removed. Sprint 12 has completed its base tool-contract/attribution hardening; its active item is now the durable, actor-owned operations boundary. The separately scoped `/api/v1` REST API remains unimplemented.
 
 ## Requirement coverage
 
@@ -27,12 +27,12 @@ It is **not fully complete against `gemini-specs.md`**, but the former primary M
 | Audit redaction and database-level append-only protection | Implemented | [`AddAuditRecordAppendOnlyTrigger.cs`](../src/ElixomClaim.Lib/Migrations/20260903090000_AddAuditRecordAppendOnlyTrigger.cs) |
 | OAuth authorization code + PKCE, consent persistence, token rotation/revocation, configured lifetimes and rate limiting | Mostly implemented | [`OAuthService.cs`](../src/ElixomClaim.Lib/Services/OAuthService.cs), [`OAuthController.cs`](../src/ElixomClaim.Web/Controllers/OAuthController.cs), [`RateLimitingConfiguration.cs`](../src/ElixomClaim.Web/Configuration/RateLimitingConfiguration.cs); Sprint 12 adds an `api:access` contract but not live API enforcement. |
 | Guarded application-start migration execution | Implemented with deployment qualification | [`Program.cs`](../src/ElixomClaim.Web/Program.cs), [`DatabaseMigrationExtensions.cs`](../src/ElixomClaim.Lib/Data/DatabaseMigrationExtensions.cs) |
-| Standard MCP server transport and tool discovery/invocation | **Implemented; hardening in progress** | [`Program.cs`](../src/ElixomClaim.Web/Program.cs) calls `AddMcpServer().WithHttpTransport().WithTools<…>()` and maps `/mcp` with the Bearer `McpAccess` policy and MCP rate limit. The six classes in [`Mcp/Tools`](../src/ElixomClaim.Web/Mcp/Tools) use `McpServerToolType`/`McpServerTool`; [`McpToolActorAccessor.cs`](../src/ElixomClaim.Web/Mcp/Tools/McpToolActorAccessor.cs) delegates concrete actor resolution/audit context to [`ActorResolver.cs`](../src/ElixomClaim.Web/Services/ActorResolver.cs). Contract, error, audit, and adapter-boundary hardening is still item 4 of Sprint 12. |
+| Standard MCP server transport and tool discovery/invocation | **Implemented; operations boundary in progress** | [`Program.cs`](../src/ElixomClaim.Web/Program.cs) calls `AddMcpServer().WithHttpTransport().WithTools<…>()` and maps `/mcp` with the Bearer `McpAccess` policy and MCP rate limit. The six classes in [`Mcp/Tools`](../src/ElixomClaim.Web/Mcp/Tools) use `McpServerToolType`/`McpServerTool`; [`McpToolActorAccessor.cs`](../src/ElixomClaim.Web/Mcp/Tools/McpToolActorAccessor.cs) delegates concrete actor resolution/audit context to [`ActorResolver.cs`](../src/ElixomClaim.Web/Services/ActorResolver.cs). Sprint 12 item 4 completed stable tool names, cancellation propagation, safe adapter errors, correlated audit attribution, and basic redaction tests; item 5 is replacing direct operations execution with a durable actor-owned command boundary. |
 | CDN Bootstrap/jQuery, refined plum-and-gold SVG favicon, responsive HTML print, privacy page | Implemented | [`favicon.svg`](../src/ElixomClaim.Web/wwwroot/favicon.svg), [`_Layout.cshtml`](../src/ElixomClaim.Web/Views/Shared/_Layout.cshtml), [`Privacy.cshtml`](../src/ElixomClaim.Web/Views/Home/Privacy.cshtml) |
 
 ## Remaining differences and risks
 
-### 1. MCP transport is implemented; tool hardening is incomplete
+### 1. MCP transport and base tool adapters are implemented; durable operations are incomplete
 
 The Gemini example endpoint is `/mcp/sse`; the implementation uses the current official SDK's standard stateless Streamable HTTP endpoint at **`/mcp`** instead. This is an acceptable protocol evolution, not a missing transport.
 
@@ -41,11 +41,10 @@ The Gemini example endpoint is `/mcp/sse`; the implementation uses the current o
 - The six former proprietary `Mcp*Controller` adapters are absent. A repository route search finds no live `/mcp/*` controller replacement, and no `/api/v1` endpoint has been added yet.
 - Tool discovery currently exposes 14 stable names across Claims, Collections, Job Payments, Payroll, Email, and Operations; `McpToolContractTests` asserts the names and basic collection-data redaction.
 
-The active hardening work should not yet be treated as complete:
+Sprint 12 item 4 is recorded complete: stable names are tested, tool handlers resolve the concrete actor through the shared resolver, read adapters use safe failure responses and cancellation propagation, and collection DTOs omit payor email and internal processing fees. The remaining concerns are narrower but material:
 
 - Several adapters still query `ApplicationDbContext` and compose/queue outbox messages directly instead of delegating every domain decision to a shared Lib service. That conflicts with the stated thin-adapter boundary.
 - Invocations currently produce both adapter-level `MCP_TOOL_*` audit records and underlying `MCP_*` audit records, so a single request can be audited more than once. The intended single, complete attribution model needs to be settled and tested.
-- Claims, collections, and job-payment read tools convert unexpected exceptions to generic safe errors and propagate cancellation; this pattern is not consistently applied across Email, Payroll, and Operations.
 - `operations_outbox_wakeup` directly calls `IOutboxService.DispatchDueAsync`, which is dispatch work rather than a durable request for background work. `operations_status` retrieves by idempotency key without an apparent actor-ownership check. Both points need correction before the operations tools meet the MCP guardrails.
 
 ### 2. Claim comments are not threaded
@@ -78,7 +77,7 @@ These are protocol-hardening issues rather than missing business workflows.
 
 - `dotnet list ... package --vulnerable --include-transitive` reports a **high-severity** transitive `SSH.NET` vulnerability (`GHSA-q939-rpr3-3284`) in `ElixomClaim.Lib.Tests`.
 - The top-level README still says the implementation "has not yet been scaffolded," which is materially outdated.
-- Sprint 12 items 1–3 are complete and item 4 (tool-adapter hardening) is in progress. Items 5–8, including the separately scoped `/api/v1` API and its integration/contract evidence, are not started.
+- Sprint 12 items 1–4 are complete. Item 5 is in progress to replace direct payroll/outbox execution with durable, actor-owned, idempotent operation requests; items 6–8, including the separately scoped `/api/v1` API and its integration/contract evidence, are not started.
 - The collection-client bank-detail migration preserves existing records with empty branch-name/account-type fields. An Administrator must correct those legacy rows before they are relied on for a payout.
 - The independent OAuth security review remains an open risk in `MEMORY.md`; no code-only review can close it.
 
@@ -99,10 +98,10 @@ These are protocol-hardening issues rather than missing business workflows.
 dotnet test src/ElixomClaim.Web.Tests/ElixomClaim.Web.Tests.csproj --no-restore
 ```
 
-- The current Web test suite passed: **70 passed, 0 failed**.
-- Sprint 12 records focused passing evidence for the new profile, receipt, free-entry collection, bank-detail, sequence-number, development-seed, and MCP transport changes. Its item-3 evidence records a passing non-integration solution run: **186 passed**. The active item-4 changes were inspected for this report but not independently re-tested here.
+- The current Web test suite passed: **71 passed, 0 failed** (including the new MCP tool-contract tests). The build emitted only the existing `NU1510` unnecessary-package-reference warnings for `Microsoft.Extensions.Options` packages.
+- Sprint 12 records focused passing evidence for the new profile, receipt, free-entry collection, bank-detail, sequence-number, development-seed, MCP transport, and MCP adapter changes. Its item-3 evidence records a passing non-integration solution run: **186 passed**; item 4 records **13 focused MCP tests passed**. The Web suite was re-run for this report; broader MCP transport/authorization integration and contract testing remains Sprint 12 work.
 - The last package scan recorded a vulnerable transitive `SSH.NET` test dependency and two unnecessary `Microsoft.Extensions.Options` package references; re-run the scan in a normal build environment before release.
 
 ## Overall assessment
 
-The product is now **functionally close to complete** against the Gemini business specification. The current authenticated, standard MCP transport and discovered tools close the previous protocol-level gap; the legacy proprietary MCP controller surface is retired. It should not be represented as fully complete or production-release ready until Sprint 12 finishes adapter/operation hardening and `/api/v1` scope separation, OAuth client/scope policy is made explicit, threaded comments and the configured-choice collection variation are consciously resolved, and the outstanding dependency, migration-topology, and independent-security-review risks are closed.
+The product is now **functionally close to complete** against the Gemini business specification. The current authenticated, standard MCP transport and discovered tools close the previous protocol-level gap; the legacy proprietary MCP controller surface is retired. It should not be represented as fully complete or production-release ready until Sprint 12 finishes its durable operations boundary and `/api/v1` scope separation, OAuth client/scope policy is made explicit, threaded comments and the configured-choice collection variation are consciously resolved, and the outstanding dependency, migration-topology, and independent-security-review risks are closed.

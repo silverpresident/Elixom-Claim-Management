@@ -187,8 +187,22 @@ public class JobPaymentService : IJobPaymentService
 
     private async Task RecalculateAsync(JobPayment job, CancellationToken ct)
     {
-        var claims = await _db.JobPaymentClaims.Where(x => x.JobPaymentId == job.Id).Select(x => x.Claim.Amount).ToListAsync(ct); var collections = await _db.JobPaymentCollections.Where(x => x.JobPaymentId == job.Id).Select(x => new { x.CollectionTransaction.Amount, x.CollectionTransaction.ProcessingFee }).ToListAsync(ct); var payrolls = await _db.JobPaymentPayrolls.Where(x => x.JobPaymentId == job.Id).Select(x => x.Payroll.PayrollTotal).ToListAsync(ct); var deductions = await _db.JobPaymentDeductions.Where(x => x.JobPaymentId == job.Id).Select(x => x.Amount).ToListAsync(ct);
-        job.JobTotal = claims.Sum() + collections.Sum(x => x.Amount) + payrolls.Sum(); job.ClientProcessingFee = collections.Sum(x => x.ProcessingFee); job.TotalTxnProcessingFee = 0m; job.TotalDeductions = deductions.Sum(); job.TotalPaid = job.JobTotal - job.ClientProcessingFee - job.TotalTxnProcessingFee - job.TotalDeductions;
+        var claims = await _db.JobPaymentClaims.Where(x => x.JobPaymentId == job.Id).Select(x => x.Claim.Amount).ToListAsync(ct);
+        var collections = await _db.JobPaymentCollections.Where(x => x.JobPaymentId == job.Id).Select(x => new { x.CollectionTransaction.Amount, x.CollectionTransaction.ProcessingFee }).ToListAsync(ct);
+        var payrolls = await _db.JobPaymentPayrolls.Where(x => x.JobPaymentId == job.Id).Select(x => x.Payroll.PayrollTotal).ToListAsync(ct);
+        var deductions = await _db.JobPaymentDeductions.Where(x => x.JobPaymentId == job.Id).Select(x => x.Amount).ToListAsync(ct);
+
+        // A client fee applies once to a collection job; immutable transaction fee
+        // snapshots apply once per attached collection transaction.
+        var clientFee = collections.Count != 0 && job.CollectionClientId.HasValue
+            ? await _db.CollectionClients.Where(c => c.Id == job.CollectionClientId.Value).Select(c => c.PerJobProcessingFee).SingleAsync(ct)
+            : 0m;
+
+        job.JobTotal = claims.Sum() + collections.Sum(x => x.Amount) + payrolls.Sum();
+        job.ClientProcessingFee = clientFee;
+        job.TotalTxnProcessingFee = collections.Sum(x => x.ProcessingFee);
+        job.TotalDeductions = deductions.Sum();
+        job.TotalPaid = job.JobTotal - job.ClientProcessingFee - job.TotalTxnProcessingFee - job.TotalDeductions;
     }
     private async Task<Result<JobPayment>> ProcessingJobAsync(Guid actor, Guid id, CancellationToken ct) { var auth = await AuthorizeAsync(actor, ct); if (auth.IsFailure) return Result.Failure<JobPayment>(auth.Error); var job = await _db.JobPayments.SingleOrDefaultAsync(j => j.Id == id, ct); return job is null ? Result.Failure<JobPayment>("Job payment was not found.") : job.Status != JobPaymentStatus.Processing ? Result.Failure<JobPayment>("Only Processing job payments can be changed.") : Result.Success(job); }
     private async Task<Result> AuthorizeAsync(Guid actor, CancellationToken ct) { var role = await _db.Users.Where(u => u.Id == actor && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct); return role is { } r && r.HasMinimumRole(UserRole.Manager) ? Result.Success() : Result.Failure("Manager access is required."); }
