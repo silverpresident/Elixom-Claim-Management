@@ -139,7 +139,11 @@ A client has among the relevant fields
   - Account Name
   - bank AccountNo
   - Bank Name
-  - bank Branch
+  - bank Branch Code
+  - bank Branch Name
+  - bank Account Type (Savings or Current / Chequing)
+
+Users can set an optional display name for application-facing greetings without changing their Google-provided full name.
 
 
 The notification email (only sent when marked as paid) must have a well composed messages

@@ -63,7 +63,7 @@ public class Sprint11EndToEndSecurityAndWorkflowTests
 
         var auditService = new AuditService(db, NullLogger<AuditService>.Instance);
         var httpContext = new DefaultHttpContext();
-        var controller = new ProfileController(db, auditService)
+        var controller = new ProfileController(db, auditService, NullLogger<ProfileController>.Instance)
         {
             ControllerContext = CreateControllerContext(user, httpContext),
             TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())
@@ -82,7 +82,9 @@ public class Sprint11EndToEndSecurityAndWorkflowTests
             BankAccountName: "Test Account",
             BankAccountNumber: "0987654321",
             BankName: "Test Bank",
-            BankBranchCode: "002"
+            BankBranchCode: "002",
+            BankBranchName: "New Kingston",
+            BankAccountType: "Current"
         );
         var redirectResult = Assert.IsType<RedirectToActionResult>(await controller.UpdateBankDetails(updateInput));
         Assert.Equal("Index", redirectResult.ActionName);

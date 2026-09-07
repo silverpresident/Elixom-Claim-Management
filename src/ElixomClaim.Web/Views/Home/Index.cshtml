@@ -8,7 +8,7 @@
 <div class="container my-4">
     <div class="p-4 mb-4 bg-light rounded-3 shadow-sm border">
         <div class="container-fluid py-2">
-            <h1 class="display-6 fw-bold text-primary mb-2">Welcome, @(Model.CurrentUser?.FullName ?? "User")!</h1>
+            <h1 class="display-6 fw-bold text-primary mb-2">Welcome, @(Model.CurrentUser?.DisplayName ?? Model.CurrentUser?.FullName ?? "User")!</h1>
             <p class="fs-5 text-muted mb-0">Role: <span class="badge bg-secondary">@role</span> | Elixom Claim &amp; Payment Operations Portal</p>
         </div>
     </div>

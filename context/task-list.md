@@ -1,9 +1,10 @@
 
 # Remaining Tasks
 
-- For a regular user on the my profile page. There needs to be an option to enter ones display name.
-- Payout Bank Details needs a Branch Name field and Entry and a Bank account type (e.g. Saving, current, checquing etc)
-- Change the colour of the system's display icon to a bit of elegance, pop and class.
+- [x] A regular user can set an optional display name on My Profile; their Google-provided full name remains unchanged.
+- [x] Payout Bank Details include Branch Name and a required account-type selection (Savings or Current / Chequing).
+- [x] The shared system display icon now uses an elegant plum gradient with a gold accent.
+- [x] Authenticated navigation includes an anti-forgery-protected Sign out action.
 - Add a SequenceNo field to the following entites and where a display term is needed use it instead of the GUID id: 
   - Claim
 

@@ -30,7 +30,7 @@ It is still **not complete or release-ready**. The standard MCP transport is not
 | .NET 10 MVC, Lib/Web/test split, EF Core, `dbclaim`, JMD precision | Implemented | Project structure, DbContext, migrations, and model/service tests support the baseline. |
 | Google provisioned-user sign-in, bootstrap administrator, hierarchical roles | Implemented | Authentication configuration, validation, policies, and authorization tests support the intended model. |
 | Claims lifecycle, ownership, comments, soft deletion, dates | Mostly implemented | [`ClaimService.cs`](../src/ElixomClaim.Lib/Services/ClaimService.cs), entities, MVC pages, and tests cover the workflow. Comment append-only behavior is not a database invariant. |
-| Ordinary-user profile, bank details, payment history | Implemented | [`ProfileController.cs`](../src/ElixomClaim.Web/Controllers/ProfileController.cs), Razor view, masking helper, and dashboard history are present. |
+| Ordinary-user profile, bank details, payment history | Implemented | [`ProfileController.cs`](../src/ElixomClaim.Web/Controllers/ProfileController.cs), Razor view, masking helper, dashboard history, and migration `20260907090000_AddUserProfileDisplayAndBankFields` provide an optional display name plus bank branch-name/account-type fields. |
 | Collection clients, options, capture, receipt/reissue/print | Mostly implemented | Admin/teller UI, client-scoped options, durable outbox, and HTML printing exist. Fee behavior is materially incorrect; see finding 2. |
 | Job payments, deductions, lifecycle, settlement cascade, adjustment flow | Mostly implemented | Database constraint, shared service, MVC workflows, and lifecycle tests cover the core. Payout presentation remains incomplete. |
 | Salary recurrence, generated payroll, adjustments/custom entries, submit-to-job | Implemented | Planner, service, hosted scheduler, MVC actions, and tests are present. |
@@ -38,7 +38,7 @@ It is still **not complete or release-ready**. The standard MCP transport is not
 | OAuth code + PKCE, rotation/revocation, consent, redirect validation, throttling, transport scopes | Mostly implemented | Core OAuth controls and both `mcp:access` / `api:access` scope definitions exist. Scope separation is not enforceable until the MCP/API transports are mapped. |
 | Standard MCP server transport and registered-tool discovery | Missing | The package, contract, and actor boundary exist, but startup does not configure/map an MCP server and no standard MCP tools are registered. |
 | Audit trail and append-only SQL enforcement | Mostly implemented | Audit service/redaction and the SQL trigger exist. The record shape differs from the specified EntityType/EntityId model. |
-| Privacy, CDN frontend dependencies, favicon, HTML-only printing | Implemented | Layout, privacy page, SVG favicon, and assets conform. |
+| Privacy, CDN frontend dependencies, favicon, HTML-only printing | Implemented | Layout, privacy page, the plum-and-gold SVG favicon, and assets conform. |
 | Development-only samples and role switching | Implemented | Seeder and Development-only login route are guarded by environment/configuration. |
 
 ## Open differences and defects

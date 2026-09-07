@@ -19,6 +19,15 @@
                         <label class="form-label text-muted fw-semibold">Full Name</label>
                         <p class="fs-5 fw-bold mb-0">@Model.FullName</p>
                     </div>
+                    <form asp-action="UpdateDisplayName" method="post" class="mb-3">
+                        @Html.AntiForgeryToken()
+                        <label for="displayNameInput" class="form-label text-muted fw-semibold">Display Name</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="displayNameInput" name="displayName" value="@Model.DisplayName" maxlength="100" placeholder="How you would like to appear" autocomplete="nickname" />
+                            <button type="submit" class="btn btn-outline-primary">Save</button>
+                        </div>
+                        <div class="form-text">Optional. Your full name from sign-in remains unchanged.</div>
+                    </form>
                     <div class="mb-3">
                         <label class="form-label text-muted fw-semibold">Email Address</label>
                         <p class="fs-6 mb-0">@Model.Email</p>
@@ -69,6 +78,20 @@
                         <div class="mb-3">
                             <label for="branchCodeInput" class="form-label fw-semibold">Branch Code / Routing Number</label>
                             <input type="text" class="form-control" id="branchCodeInput" name="bankBranchCode" value="@Model.BankBranchCode" placeholder="e.g., 00123" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="branchNameInput" class="form-label fw-semibold">Branch Name</label>
+                            <input type="text" class="form-control" id="branchNameInput" name="bankBranchName" value="@Model.BankBranchName" placeholder="e.g., Half Way Tree" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="accountTypeInput" class="form-label fw-semibold">Bank Account Type</label>
+                            <select class="form-select" id="accountTypeInput" name="bankAccountType" required>
+                                <option value="">Select account type</option>
+                                <option value="Savings" selected="@(Model.BankAccountType == "Savings")">Savings</option>
+                                <option value="Current" selected="@(Model.BankAccountType == "Current")">Current / Chequing</option>
+                            </select>
                         </div>
 
                         <div class="mb-3">

@@ -44,7 +44,7 @@ public class ProfileControllerTests
         await db.SaveChangesAsync();
 
         var audit = new AuditService(db, NullLogger<AuditService>.Instance);
-        var controller = new ProfileController(db, audit);
+        var controller = new ProfileController(db, audit, NullLogger<ProfileController>.Instance);
 
         var claimsUser = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -94,7 +94,7 @@ public class ProfileControllerTests
 
         var audit = new AuditService(db, NullLogger<AuditService>.Instance);
         var httpContext = new DefaultHttpContext();
-        var controller = new ProfileController(db, audit)
+        var controller = new ProfileController(db, audit, NullLogger<ProfileController>.Instance)
         {
             TempData = new TempDataDictionary(httpContext, new TestTempDataProvider())
         };
@@ -114,7 +114,9 @@ public class ProfileControllerTests
             BankAccountName: "Jane Doe Updated",
             BankAccountNumber: "987654321",
             BankName: "First National Bank",
-            BankBranchCode: "123"
+            BankBranchCode: "123",
+            BankBranchName: "Downtown Kingston",
+            BankAccountType: "Savings"
         );
 
         var result = await controller.UpdateBankDetails(input);
@@ -127,6 +129,8 @@ public class ProfileControllerTests
         Assert.Equal("Jane Doe Updated", updatedUser.BankAccountName);
         Assert.Equal("987654321", updatedUser.BankAccountNumber);
         Assert.Equal("123", updatedUser.BankBranchCode);
+        Assert.Equal("Downtown Kingston", updatedUser.BankBranchName);
+        Assert.Equal("Savings", updatedUser.BankAccountType);
 
         var auditLog = await db.AuditRecords.FirstOrDefaultAsync(a => a.Action == "USER_BANK_DETAILS_UPDATED");
         Assert.NotNull(auditLog);
@@ -134,5 +138,38 @@ public class ProfileControllerTests
         Assert.NotNull(auditLog.AfterStateJson);
         Assert.Contains("\"BankAccountNumber\":\"[REDACTED]\"", auditLog.AfterStateJson);
         Assert.DoesNotContain("987654321", auditLog.AfterStateJson);
+    }
+
+    [Fact]
+    public async Task UpdateDisplayName_ActiveUser_UpdatesOnlyDisplayNameAndAuditsChange()
+    {
+        var db = CreateInMemoryDbContext();
+        var user = new User { Id = Guid.NewGuid(), Email = "user1@elixom.com", FullName = "Jane Doe", Role = UserRole.User, IsActive = true };
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+
+        var httpContext = new DefaultHttpContext();
+        var controller = new ProfileController(db, new AuditService(db, NullLogger<AuditService>.Instance), NullLogger<ProfileController>.Instance)
+        {
+            TempData = new TempDataDictionary(httpContext, new TestTempDataProvider()),
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                    {
+                        new SecurityClaim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                        new SecurityClaim(ClaimTypes.Role, UserRole.User.ToString())
+                    }, "TestAuth"))
+                }
+            }
+        };
+
+        var result = await controller.UpdateDisplayName(new ProfileController.UpdateDisplayNameInput("  Jay  "));
+
+        Assert.Equal("Index", Assert.IsType<RedirectToActionResult>(result).ActionName);
+        Assert.Equal("Jay", (await db.Users.FindAsync(user.Id))!.DisplayName);
+        var auditLog = await db.AuditRecords.SingleAsync(a => a.Action == "USER_DISPLAY_NAME_UPDATED");
+        Assert.Contains("Jay", auditLog.AfterStateJson);
     }
 }

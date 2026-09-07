@@ -60,6 +60,15 @@
                         <li class="nav-item">
                             <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
                         </li>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item d-flex align-items-lg-center">
+                                <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-link nav-link border-0">Sign out</button>
+                                </form>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>

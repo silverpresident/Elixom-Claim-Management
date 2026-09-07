@@ -10,6 +10,12 @@ public class User
 
     public string FullName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Optional name chosen by the user for application-facing greetings and profile display.
+    /// The identity provider's <see cref="FullName"/> remains unchanged.
+    /// </summary>
+    public string? DisplayName { get; set; }
+
     public UserRole Role { get; set; } = UserRole.User;
 
     public bool IsActive { get; set; } = true;
@@ -21,6 +27,10 @@ public class User
     public string? BankName { get; set; }
 
     public string? BankBranchCode { get; set; }
+
+    public string? BankBranchName { get; set; }
+
+    public string? BankAccountType { get; set; }
 
     public string? GetMaskedBankAccountNumber()
     {
@@ -47,12 +57,15 @@ public record UserProfileSummary(
     Guid Id,
     string Email,
     string FullName,
+    string? DisplayName,
     UserRole Role,
     bool IsActive,
     string? BankAccountName,
     string? BankAccountNumber,
     string? BankName,
-    string? BankBranchCode
+    string? BankBranchCode,
+    string? BankBranchName,
+    string? BankAccountType
 )
 {
     public static UserProfileSummary FromUser(User user, bool includeFullBankDetails = false)
@@ -61,12 +74,15 @@ public record UserProfileSummary(
             user.Id,
             user.Email,
             user.FullName,
+            user.DisplayName,
             user.Role,
             user.IsActive,
             user.BankAccountName,
             includeFullBankDetails ? user.BankAccountNumber : user.GetMaskedBankAccountNumber(),
             user.BankName,
-            user.BankBranchCode
+            user.BankBranchCode,
+            user.BankBranchName,
+            user.BankAccountType
         );
     }
 }

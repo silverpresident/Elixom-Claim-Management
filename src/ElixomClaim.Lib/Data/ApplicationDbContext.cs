@@ -80,6 +80,9 @@ public class ApplicationDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(200);
 
+            entity.Property(u => u.DisplayName)
+                .HasMaxLength(100);
+
             entity.Property(u => u.Role)
                 .IsRequired()
                 .HasConversion<string>()
@@ -99,6 +102,12 @@ public class ApplicationDbContext : DbContext
                 .HasMaxLength(200);
 
             entity.Property(u => u.BankBranchCode)
+                .HasMaxLength(50);
+
+            entity.Property(u => u.BankBranchName)
+                .HasMaxLength(200);
+
+            entity.Property(u => u.BankAccountType)
                 .HasMaxLength(50);
 
             entity.Property(u => u.CreatedAtUtc)

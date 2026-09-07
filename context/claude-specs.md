@@ -172,7 +172,9 @@ concurrent roles are actually needed):
 **User**
 - `Id`, `Email` (unique, used for Google SSO match), `DisplayName`, `Role`,
   `IsActive`
-- Bank info: `BankAccountName`, `BankAccountNo`, `BankName`, `BankBranch`
+- Bank info: `BankAccountName`, `BankAccountNo`, `BankName`, `BankBranchCode`,
+  `BankBranchName`, `BankAccountType` (`Savings` or `Current` / `Chequing`).
+  Users may update their optional display name without changing their identity-provider full name.
 
 ### 5.2 Claim
 

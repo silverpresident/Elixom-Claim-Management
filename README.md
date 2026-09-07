@@ -57,7 +57,7 @@ Roles are stored as one hierarchical application role, not a collection of unrel
 | Role | Effective capability |
 | --- | --- |
 | Blocked | No authenticated application access. |
-| User | Own claims, profile, bank details, and own payment history. |
+| User | Own claims, profile (including an optional display name), bank details, and own payment history. |
 | Teller | User capabilities plus Payment Clearing House. |
 | Manager | Teller capabilities plus claims, collections, job-payment management, and operational audit visibility. |
 | Accountant | Manager capabilities plus salaries, payroll, scheduling, and marking payments paid. |
@@ -134,12 +134,13 @@ MCP tools are grouped into related class files under `ElixomClaim.Web/Mcp/Tools/
 
 ## Frontend experience
 
-The interface is server-rendered Razor plus **Bootstrap 5.3 and jQuery 3.7 from CDN only**; do not commit local copies to `wwwroot`. Use Subresource Integrity where provided and a purposeful inline SVG favicon. The intended experience is calm and task-focused:
+The interface is server-rendered Razor plus **Bootstrap 5.3 and jQuery 3.7 from CDN only**; do not commit local copies to `wwwroot`. Use Subresource Integrity where provided and a purposeful inline SVG favicon. The icon uses a plum gradient with a restrained gold accent; the intended experience is calm and task-focused:
 
 - Put each role’s next action and work queue first; show counts and state, not decorative dashboards.
 - Use explicit status badges paired with text, clear empty states, and filters that retain their selection.
 - Present payment and receipt details in print-friendly, responsive HTML with `@media print`; internal notes never appear in print or email.
 - Build semantic forms with labels, help/error text, keyboard support, focused validation summaries, and high-contrast state indicators.
+- Let users set an optional display name without altering their Google-provided full name. Payout-bank forms collect bank name, account-holder name/number, branch code, branch name, and account type (Savings or Current / Chequing); account numbers remain masked outside authorised full-detail views.
 - Provide a real privacy page linked from the footer, describing Google sign-in, financial/contact data, email delivery, audit retention, and user rights under the laws of Jamaica. The privacy and support contact is `privacy@elixom.com`. Legal review is required before production launch.
 
 ## Configuration

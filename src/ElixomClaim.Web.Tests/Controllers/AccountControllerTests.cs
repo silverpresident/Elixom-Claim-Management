@@ -121,6 +121,26 @@ public class AccountControllerTests
         Assert.NotEmpty(controller.Response.Headers.SetCookie.ToString());
     }
 
+    [Fact]
+    public async Task Logout_ClearsCookieAndRedirectsToLogin()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie();
+        await using var provider = services.BuildServiceProvider();
+
+        var controller = CreateController();
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { RequestServices = provider }
+        };
+
+        var result = await controller.Logout();
+
+        Assert.Equal(nameof(AccountController.Login), Assert.IsType<RedirectToActionResult>(result).ActionName);
+        Assert.NotEmpty(controller.Response.Headers.SetCookie.ToString());
+    }
+
     private sealed class TestHostEnvironment : Microsoft.Extensions.Hosting.IHostEnvironment
     {
         public string EnvironmentName { get; set; } = "Production";

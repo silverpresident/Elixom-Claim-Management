@@ -114,6 +114,7 @@ public class AccountController : Controller
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        _logger.LogInformation("User signed out.");
         return RedirectToAction(nameof(Login));
     }
 }
