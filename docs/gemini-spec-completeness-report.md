@@ -1,6 +1,6 @@
 # Gemini Specification Completeness Report
 
-**Re-evaluated:** 2026-09-06
+**Re-evaluated:** 2026-09-07
 
 **Source specification:** [`context/gemini-specs.md`](../context/gemini-specs.md)
 
@@ -10,7 +10,7 @@
 
 The implementation is now **substantially complete for the core business application**. The earlier functional gaps in profile/bank management, claim job date, collection telephone, job-payment UI, salary adjustment UI, payroll custom-entry UI, audit immutability, rate limiting, OAuth consent persistence, and migration startup have been addressed.
 
-It is **not fully complete against `gemini-specs.md`**, chiefly because no actual MCP server transport is registered or mapped. The project includes the `ModelContextProtocol.AspNetCore` package, but no `AddMcpServer`, `MapMcp`, MCP tool annotation, actor resolver, or `/mcp`/`/mcp/sse` endpoint exists in the runtime. The legacy bearer-authenticated REST controllers under `/mcp/*` remain the live integration surface.
+It is **not fully complete against `gemini-specs.md`**, chiefly because no actual MCP server transport is registered or mapped. Sprint 12 has added a documented `/mcp`/`/api/v1` contract, `api:access`, and a tested shared `IActorResolver`, but the host still has no `AddMcpServer`/`MapMcp` calls, MCP tool annotations, `/mcp` endpoint, or `/api/v1` endpoints. The legacy bearer-authenticated REST controllers under `/mcp/*` remain the live integration surface.
 
 ## Requirement coverage
 
@@ -25,9 +25,9 @@ It is **not fully complete against `gemini-specs.md`**, chiefly because no actua
 | Job creation, attachment/removal, deductions, metadata, submit/schedule/settle, adjustment workflow | Implemented | [`JobPaymentService.cs`](../src/ElixomClaim.Lib/Services/JobPaymentService.cs), [`JobPaymentsController.cs`](../src/ElixomClaim.Web/Controllers/JobPaymentsController.cs) |
 | Salary definitions, adjustments, recurrence engine, payroll custom entries and payroll-to-job flow | Implemented | [`SalaryPayrollService.cs`](../src/ElixomClaim.Lib/Services/SalaryPayrollService.cs), [`PayrollController.cs`](../src/ElixomClaim.Web/Controllers/PayrollController.cs) |
 | Audit redaction and database-level append-only protection | Implemented | [`AddAuditRecordAppendOnlyTrigger.cs`](../src/ElixomClaim.Lib/Migrations/20260903090000_AddAuditRecordAppendOnlyTrigger.cs) |
-| OAuth authorization code + PKCE, consent persistence, token rotation/revocation, configured lifetimes and rate limiting | Mostly implemented | [`OAuthService.cs`](../src/ElixomClaim.Lib/Services/OAuthService.cs), [`OAuthController.cs`](../src/ElixomClaim.Web/Controllers/OAuthController.cs), [`RateLimitingConfiguration.cs`](../src/ElixomClaim.Web/Configuration/RateLimitingConfiguration.cs) |
+| OAuth authorization code + PKCE, consent persistence, token rotation/revocation, configured lifetimes and rate limiting | Mostly implemented | [`OAuthService.cs`](../src/ElixomClaim.Lib/Services/OAuthService.cs), [`OAuthController.cs`](../src/ElixomClaim.Web/Controllers/OAuthController.cs), [`RateLimitingConfiguration.cs`](../src/ElixomClaim.Web/Configuration/RateLimitingConfiguration.cs); Sprint 12 adds an `api:access` contract but not live API enforcement. |
 | Guarded application-start migration execution | Implemented with deployment qualification | [`Program.cs`](../src/ElixomClaim.Web/Program.cs), [`DatabaseMigrationExtensions.cs`](../src/ElixomClaim.Lib/Data/DatabaseMigrationExtensions.cs) |
-| Standard MCP server transport and tool discovery/invocation | **Not implemented** | Package reference only in [`ElixomClaim.Web.csproj`](../src/ElixomClaim.Web/ElixomClaim.Web.csproj); legacy REST controllers remain in [`Controllers`](../src/ElixomClaim.Web/Controllers) |
+| Standard MCP server transport and tool discovery/invocation | **Not implemented; groundwork added** | Package reference and shared [`ActorResolver.cs`](../src/ElixomClaim.Web/Services/ActorResolver.cs) exist, but no standard MCP registration/mapping or tool discovery is present; legacy REST controllers remain in [`Controllers`](../src/ElixomClaim.Web/Controllers). |
 | CDN Bootstrap/jQuery, SVG favicon, responsive HTML print, privacy page | Implemented | [`_Layout.cshtml`](../src/ElixomClaim.Web/Views/Shared/_Layout.cshtml), [`Privacy.cshtml`](../src/ElixomClaim.Web/Views/Home/Privacy.cshtml) |
 
 ## Remaining differences and risks
@@ -39,10 +39,10 @@ This is the primary remaining implementation gap.
 - The Gemini specification requires Model Context Protocol interaction through an MCP transport endpoint, exemplified as `/mcp/sse`.
 - The project references `ModelContextProtocol.AspNetCore` 2.2.0, but no source code calls MCP registration or mapping APIs.
 - None of the six tool classes have MCP server tool annotations.
-- No `IMcpActorResolver` or equivalent standard-transport identity bridge exists.
+- A transport-neutral [`IActorResolver`](../src/ElixomClaim.Web/Services/ActorResolver.cs) now resolves active bearer users, scopes, correlation ID, IP address, and audit classification. It is registered and unit-tested, but no current MCP or REST adapter consumes it.
 - The runtime instead exposes legacy REST adapters at `/mcp/claims`, `/mcp/collections`, `/mcp/email`, `/mcp/job-payments`, `/mcp/operations`, and `/mcp/payroll`.
 
-The REST adapters do enforce bearer authentication and mostly enforce the `mcp:access` scope, but they are not a discoverable/invocable standard MCP server. This also contradicts the completion claims in Sprint 08 and `MEMORY.md`; those records should be reconciled with the actual runtime wiring.
+The REST adapters do enforce bearer authentication and mostly enforce the `mcp:access` scope, but they are not a discoverable/invocable standard MCP server. Sprint 12 now correctly records this as an active corrective delivery item rather than a completed feature.
 
 ### 2. Claim comments are not threaded
 
@@ -56,6 +56,7 @@ Two policy boundaries remain unclear or absent in code:
 
 - Requested authorization scopes are not checked against `OAuthClient.AllowedScopes` before consent/code issuance.
 - The token endpoint describes `client_secret_post` during registration, but code/refresh exchanges treat the client secret as optional. That can be valid for explicitly configured public clients with PKCE, but the application currently has no explicit public-versus-confidential client policy.
+- Although `api:access` was added to the OAuth defaults and the transport contract says it is separate from `mcp:access`, the default authorization request now asks for both scopes and no `/api/v1` endpoint exists to enforce the separation. Scope isolation is therefore contractual groundwork, not live behavior.
 
 These are protocol-hardening issues rather than missing business workflows.
 
@@ -67,7 +68,7 @@ These are protocol-hardening issues rather than missing business workflows.
 
 - `dotnet list ... package --vulnerable --include-transitive` reports a **high-severity** transitive `SSH.NET` vulnerability (`GHSA-q939-rpr3-3284`) in `ElixomClaim.Lib.Tests`.
 - The top-level README still says the implementation "has not yet been scaffolded," which is materially outdated.
-- `MEMORY.md` and Sprint 08 assert a standard MCP implementation that the current source does not contain.
+- Sprint 12 is now explicitly in progress to correct the unmapped MCP transport and replace the legacy `/mcp/*` controllers with a separately scoped `/api/v1` API. Items 1 and 2 are complete; the endpoint/tool/API items are not started.
 - The independent OAuth security review remains an open risk in `MEMORY.md`; no code-only review can close it.
 
 ## Intentional and acceptable variations
@@ -80,17 +81,15 @@ These are protocol-hardening issues rather than missing business workflows.
 | No adjustment process specified for paid records | Linked, audited adjustment/reversal workflow | Additional financial safeguard. |
 | Older numeric-style identifiers implied by examples | Uniform Guid identifiers | Valid implementation choice with an ADR and migration strategy. |
 
-## Verification performed on 2026-09-06
+## Verification performed on 2026-09-07
 
 ```bash
 dotnet test ElixomClaim.slnx --no-restore
-dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore --verbosity normal
-dotnet list ElixomClaim.slnx package --vulnerable --include-transitive
 ```
 
-- The full solution test command exited successfully; the Web suite reported **60 passed**.
-- The detailed Lib run completed without test failures in the observed output; it exercised domain, OAuth, migration, outbox, settlement, and relational-audit coverage.
-- Build/test warnings remain for the vulnerable transitive `SSH.NET` test dependency and two unnecessary `Microsoft.Extensions.Options` package references.
+- This run could not start in the managed execution sandbox: MSBuild failed while binding its local named pipe with `SocketException (13): Permission denied`. This is an environment limitation, not a code-test result.
+- Sprint 12 records 181 passing tests for its first two items, but that historical evidence was not reproduced during this review.
+- The last package scan recorded a vulnerable transitive `SSH.NET` test dependency and two unnecessary `Microsoft.Extensions.Options` package references; re-run the scan in a normal build environment before release.
 
 ## Overall assessment
 

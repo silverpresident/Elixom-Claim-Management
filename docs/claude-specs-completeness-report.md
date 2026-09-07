@@ -1,15 +1,15 @@
 # Claude Specification Completeness Report
 
-**Re-evaluated:** 2026-09-06
+**Re-evaluated:** 2026-09-07
 
 **Source specification:** [`context/claude-specs.md`](../context/claude-specs.md)
 **Method:** Source, migrations, routes, Razor views, tests, configuration, sprint ledger, and runtime wiring were reviewed. Findings are based on executable source rather than sprint-status assertions.
 
 ## Overall conclusion
 
-The implementation is materially more complete than the 2026-09-03 review. Missing domain fields, profile management, manager/accountant workflows, audit trigger, development data, OAuth consent/lifetime work, rate limiting, and migration startup wiring have largely been added.
+The implementation is materially more complete than the 2026-09-03 review. Missing domain fields, profile management, manager/accountant workflows, audit trigger, development data, OAuth consent/lifetime work, rate limiting, and migration startup wiring have largely been added. Sprint 12 has also established the API/MCP transport contract, introduced the `api:access` scope, and added a shared authenticated-actor resolver.
 
-It is still **not complete or release-ready**. The claimed standard MCP transport is not registered or mapped: the running application exposes bespoke REST endpoints under `/mcp/*` instead. A second high-impact problem is incorrect collection-fee sourcing/allocation. Multi-instance migration locking, email/audit-schema fidelity, and the universal logging/layering requirements are also incomplete.
+It is still **not complete or release-ready**. The standard MCP transport is not registered or mapped, and the new actor resolver is not yet used by the running `/mcp/*` controllers. The application therefore continues to expose bespoke REST endpoints under `/mcp/*`. A second high-impact problem is incorrect collection-fee sourcing/allocation. Multi-instance migration locking, email/audit-schema fidelity, and the universal logging/layering requirements are also incomplete.
 
 ## Material change since the previous review
 
@@ -21,6 +21,7 @@ It is still **not complete or release-ready**. The claimed standard MCP transpor
 | Mutable audit records | Migration [`20260903090000_AddAuditRecordAppendOnlyTrigger.cs`](../src/ElixomClaim.Lib/Migrations/20260903090000_AddAuditRecordAppendOnlyTrigger.cs) creates an Azure SQL UPDATE/DELETE trigger. | Resolved at the SQL boundary. |
 | OAuth consent/lifetime/redirect/rate-limit gaps | OAuth service, consent persistence, strict redirect validation, and rate-limit configuration exist. | Substantially resolved. |
 | Process-local MCP operation records | [`OperationRecordService.cs`](../src/ElixomClaim.Lib/Services/OperationRecordService.cs) persists idempotency records. | Resolved for durable records. |
+| No transport-neutral actor boundary or separate REST scope | [`ActorResolver.cs`](../src/ElixomClaim.Web/Services/ActorResolver.cs), ADR 0005, and `api:access` OAuth scope are now present. | Partial remediation: no current `/mcp` or `/api/v1` endpoint consumes the boundary. |
 
 ## Requirement assessment
 
@@ -34,8 +35,8 @@ It is still **not complete or release-ready**. The claimed standard MCP transpor
 | Job payments, deductions, lifecycle, settlement cascade, adjustment flow | Mostly implemented | Database constraint, shared service, MVC workflows, and lifecycle tests cover the core. Payout presentation remains incomplete. |
 | Salary recurrence, generated payroll, adjustments/custom entries, submit-to-job | Implemented | Planner, service, hosted scheduler, MVC actions, and tests are present. |
 | Durable email outbox, SMTP/ACS, retry, receipt/payout notifications | Mostly implemented | Outbox/sender implementations work, but the literal email-log/header schema is incomplete. |
-| OAuth code + PKCE, rotation/revocation, consent, redirect validation, throttling | Mostly implemented | [`OAuthService.cs`](../src/ElixomClaim.Lib/Services/OAuthService.cs), controller, migrations, and test coverage provide the core controls. |
-| Standard MCP server transport and registered-tool discovery | Missing | The MCP package is referenced, but startup does not configure or map an MCP server; only bespoke REST endpoints exist. |
+| OAuth code + PKCE, rotation/revocation, consent, redirect validation, throttling, transport scopes | Mostly implemented | Core OAuth controls and both `mcp:access` / `api:access` scope definitions exist. Scope separation is not enforceable until the MCP/API transports are mapped. |
+| Standard MCP server transport and registered-tool discovery | Missing | The package, contract, and actor boundary exist, but startup does not configure/map an MCP server and no standard MCP tools are registered. |
 | Audit trail and append-only SQL enforcement | Mostly implemented | Audit service/redaction and the SQL trigger exist. The record shape differs from the specified EntityType/EntityId model. |
 | Privacy, CDN frontend dependencies, favicon, HTML-only printing | Implemented | Layout, privacy page, SVG favicon, and assets conform. |
 | Development-only samples and role switching | Implemented | Seeder and Development-only login route are guarded by environment/configuration. |
@@ -44,13 +45,13 @@ It is still **not complete or release-ready**. The claimed standard MCP transpor
 
 ### 1. Standard MCP transport is absent — high priority
 
-The project references `ModelContextProtocol.AspNetCore`, and Sprint 08/`MEMORY.md` claim a standard transport. The actual runtime source contradicts this:
+Sprint 12 correctly identifies and plans the MCP transport defect. Its first two items are complete: ADR 0005 documents the `/mcp` versus `/api/v1` contract, `api:access` is now an OAuth scope, and [`ActorResolver.cs`](../src/ElixomClaim.Web/Services/ActorResolver.cs) centralizes active-user, scope, correlation, IP, and audit-context resolution. The actual runtime remains incomplete:
 
-- [`Program.cs`](../src/ElixomClaim.Web/Program.cs) registers tool classes only as ordinary DI services. It has no MCP-server registration or endpoint mapping.
+- [`Program.cs`](../src/ElixomClaim.Web/Program.cs) registers the actor resolver and tool classes as ordinary DI services only. It has no MCP-server registration or endpoint mapping, and does not expose `/api/v1`.
 - No `MapMcp`, `McpServerTool`, `McpServerToolType`, or `IMcpActorResolver` implementation exists in source.
 - Legacy REST controllers remain at `/mcp/claims`, `/mcp/collections`, `/mcp/email`, `/mcp/job-payments`, `/mcp/operations`, and `/mcp/payroll`; see [`McpClaimsController.cs`](../src/ElixomClaim.Web/Controllers/McpClaimsController.cs).
 
-These custom bearer-authenticated APIs are not a discoverable/invocable standard MCP server, so a conforming MCP client cannot use the claimed transport.
+These custom bearer-authenticated APIs are not a discoverable/invocable standard MCP server, so a conforming MCP client cannot use the claimed transport. The scope contract is currently documentary/available to future adapters: the legacy controllers still perform their own actor resolution and string-split scope checks.
 
 Related problems:
 
@@ -90,11 +91,11 @@ The payout service includes claims, collections, deductions, and headline totals
 
 Controllers without `ILogger<T>` include `AdminController`, `ClaimsController`, `HomeController`, `JobPaymentsController`, `ManagerClaimsController`, `ProfileController`, and all `Mcp*Controller` classes. The specification says every controller, service, and hosted service should inject structured logging.
 
-### 8. Documentation and delivery evidence contradict the source
+### 8. Documentation and delivery evidence need final reconciliation
 
 - README says the implementation “has not yet been scaffolded,” though the repository contains an extensive implementation.
-- Sprint 08 and `MEMORY.md` claim standard MCP transport registration and REST-controller retirement, but the runtime source has neither.
-- The current test command succeeded, but its visible output reported 60 passing Web tests and did not emit the ledger's claimed 176-total summary. Do not present the historical total as fresh verification without preserving its original artifacts/log.
+- Historical Sprint 08 completion language and an older `MEMORY.md` decision-log entry claim standard MCP transport registration and REST-controller retirement. The current `MEMORY.md` baseline correctly supersedes that statement: Sprint 12 is in progress because the runtime still has neither.
+- The current test command succeeded, but its visible output reported 65 passing Web tests and did not emit the ledger's claimed solution-wide 181-total summary. Do not present the historical total as fresh verification without preserving its original artifacts/log.
 
 ## Intentional or acceptable variations
 
@@ -116,13 +117,14 @@ The command completed successfully. It emitted:
 
 - a high-severity dependency vulnerability warning for `SSH.NET` `2025.1.0` (`GHSA-q939-rpr3-3284`) in the Lib test project;
 - two non-blocking `NU1510` warnings for likely unnecessary options packages in `ElixomClaim.Lib`;
-- a passing Web test segment with 60 tests.
+- an obsolete Testcontainers `MsSqlBuilder` constructor warning in `AuditRecordRelationalPersistenceTests`;
+- a passing Web test segment with 65 tests.
 
-The command's stdout did not provide a trustworthy solution-wide total for this run, so this report intentionally does not repeat the ledger's historical “176 tests” as current evidence.
+The command's stdout did not provide a trustworthy solution-wide total for this run, so this report intentionally does not repeat the ledger's historical “181 tests” as current evidence.
 
 ## Recommended completion order
 
-1. Implement and integration-test an actual standard MCP transport; register only intended tools, enforce `mcp:access` uniformly, and retire or explicitly retain legacy REST routes.
+1. Complete Sprint 12: wire the standard MCP transport and domain tools at `/mcp`, add the scope-separated `/api/v1` adapters, and retire legacy `/mcp/*` controller routes.
 2. Correct collection-fee snapshotting/job calculation, then add regression tests for fee allocation and exact `TotalPaid` values.
 3. Make production migrations safe across instances through a single-runner topology or database/distributed lock, with explicit production opt-in.
 4. Resolve the SSH.NET advisory and unnecessary package references.
