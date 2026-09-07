@@ -69,13 +69,6 @@ builder.Services.AddScoped<McpToolActorAccessor>();
 // Configure Application Rate Limiting / Throttling
 builder.Services.AddApplicationRateLimiting();
 
-// Register domain-scoped MCP tool adapters in DI
-builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.ClaimTools>();
-builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.CollectionTools>();
-builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.JobPaymentTools>();
-builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.PayrollTools>();
-builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.EmailTools>();
-builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.OperationsTools>();
 
 // Stateless Streamable HTTP binds each MCP invocation to the active HTTP request scope,
 // so scoped domain services and the authenticated actor cannot leak across sessions.
