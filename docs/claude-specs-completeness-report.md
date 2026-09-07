@@ -105,6 +105,7 @@ Until the obsolete Web test is updated and the initial migration/schema creation
 
 - README still says the implementation “has not yet been scaffolded,” though the repository contains a substantial implementation.
 - The current `MEMORY.md` baseline correctly records the mapped MCP endpoint and its remaining Sprint 12 work. Older Sprint 08 wording is historical and should not be used as current evidence.
+- Sprint 12 item 5 remains marked `Blocked` by the fee-allocation prerequisite even though item 5a records that prerequisite as complete. Its progress row must be reconciled before the sprint can be treated as an accurate delivery ledger.
 - The current solution suite is blocked by finding 8. Historical sprint totals alone are not current release evidence.
 
 ## Intentional or acceptable variations
