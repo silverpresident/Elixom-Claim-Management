@@ -5,6 +5,7 @@ using ElixomClaim.Web.Controllers;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.DependencyInjection;
@@ -134,6 +135,7 @@ public class AccountControllerTests
         {
             HttpContext = new DefaultHttpContext { RequestServices = provider }
         };
+        controller.Url = new TestUrlHelper();
 
         var result = await controller.Logout();
 
@@ -147,5 +149,15 @@ public class AccountControllerTests
         public string ApplicationName { get; set; } = "ElixomClaim.Web.Tests";
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
         public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+    }
+
+    private sealed class TestUrlHelper : IUrlHelper
+    {
+        public ActionContext ActionContext => new();
+        public string? Action(UrlActionContext actionContext) => "/account/login";
+        public string? Content(string? contentPath) => contentPath;
+        public bool IsLocalUrl(string? url) => true;
+        public string? Link(string? routeName, object? values) => "/account/login";
+        public string? RouteUrl(UrlRouteContext routeContext) => "/account/login";
     }
 }
