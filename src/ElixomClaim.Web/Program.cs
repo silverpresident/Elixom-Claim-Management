@@ -45,6 +45,9 @@ builder.Services.AddAuthentication(options =>
 // Add MVC controllers with views
 builder.Services.AddControllersWithViews();
 
+// Register shared actor resolver
+builder.Services.AddScoped<ElixomClaim.Web.Services.IActorResolver, ElixomClaim.Web.Services.ActorResolver>();
+
 // Configure Application Rate Limiting / Throttling
 builder.Services.AddApplicationRateLimiting();
 

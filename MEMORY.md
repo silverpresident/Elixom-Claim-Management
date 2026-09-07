@@ -68,7 +68,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 09 Domain data completion | Complete | All 6 items complete; EF migration 20260903120000_DomainDataCompletion applied; build & 159 tests passed on 2026-09-03. See `sprints/09-domain-data-completion.md`. |
 | 10 Web workflow completion | Complete | All 7 items complete; build & 170 tests passed on 2026-09-03. See `sprints/10-web-workflow-completion.md`. |
 | 11 Deployment & release verification | Complete | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification matrix (176 tests passing). See `sprints/11-deployment-and-release-verification.md`. |
-| 12 Standard MCP server & API | In progress | Resolve post-release MCP transport gap: Item 1 complete (ADR 0005 and contract spec recorded, `api:access` OAuth scope added). See `sprints/12-standard-mcp-and-api.md`. |
+| 12 Standard MCP server & API | In progress | Resolve post-release MCP transport gap: Items 1 & 2 complete (ADR 0005 recorded, `api:access` scope added, shared `IActorResolver` and `ActorContext` boundary implemented). See `sprints/12-standard-mcp-and-api.md`. |
 
 ## Open decisions / risks
 
