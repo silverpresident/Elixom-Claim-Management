@@ -69,7 +69,12 @@ public class CollectionsController : Controller
 
     private async Task<CollectionTransaction?> FindVisibleCollectionAsync(Guid id)
     {
-        var collection = await _dbContext.CollectionTransactions.AsNoTracking().Include(c => c.CollectionClient).Include(c => c.PurposeOption).Include(c => c.AmountOption).SingleOrDefaultAsync(c => c.Id == id);
+        var collection = await _dbContext.CollectionTransactions.AsNoTracking()
+            .Include(c => c.CollectionClient)
+            .Include(c => c.PurposeOption)
+            .Include(c => c.AmountOption)
+            .Include(c => c.TellerUser)
+            .SingleOrDefaultAsync(c => c.Id == id);
         if (collection is null) return null;
         var current = await _dbContext.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == CurrentUserId());
         return collection.TellerUserId == CurrentUserId() || current?.Role.HasMinimumRole(UserRole.Manager) == true ? collection : null;

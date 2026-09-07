@@ -1,3 +1,67 @@
 @model ElixomClaim.Lib.Entities.CollectionTransaction
-@{ Layout = "_Layout"; ViewData["Title"] = $"Receipt #{Model.Id}"; }
-<article class="receipt-print"><header><h1>Elixom Claim</h1><h2>Collection receipt</h2><p>Receipt #@Model.Id</p></header><dl><dt>Client</dt><dd>@Model.CollectionClient.Name</dd><dt>Purpose</dt><dd>@Model.PurposeOption.Name</dd><dt>Amount</dt><dd>@Model.Amount.ToString("N2") JMD</dd><dt>Method</dt><dd>@Model.Method</dd><dt>Payment date</dt><dd>@Model.PaymentDateUtc.ToString("yyyy-MM-dd HH:mm") UTC</dd></dl><p class="no-print"><button class="btn btn-primary" onclick="window.print()">Print</button></p></article>
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = $"Receipt #{Model.Id}";
+    var tellerName = string.IsNullOrWhiteSpace(Model.TellerUser?.DisplayName)
+        ? Model.TellerUser?.FullName ?? "Elixom Claim teller"
+        : Model.TellerUser.DisplayName;
+}
+
+<article class="receipt-print" aria-labelledby="receipt-title">
+    <header class="receipt-header">
+        <p class="receipt-brand">ELIXOM CLAIM</p>
+        <h1 id="receipt-title">Collection receipt</h1>
+        <p class="receipt-number">Receipt no. @Model.Id</p>
+    </header>
+
+    <section class="receipt-section" aria-labelledby="payment-heading">
+        <h2 id="payment-heading">Payment</h2>
+        <dl class="receipt-details">
+            <dt>Collection client</dt><dd>@Model.CollectionClient.Name</dd>
+            <dt>Purpose</dt><dd>@Model.PurposeOption.Name</dd>
+            <dt>Payment method</dt><dd>@Model.Method</dd>
+            @if (!string.IsNullOrWhiteSpace(Model.ReferenceNumber))
+            {
+                <dt>Reference no.</dt><dd>@Model.ReferenceNumber</dd>
+            }
+            <dt>Payment date</dt>
+            <dd><time class="local-payment-date" datetime="@Model.PaymentDateUtc.ToUniversalTime().ToString("O")">@Model.PaymentDateUtc.ToUniversalTime().ToString("yyyy-MM-dd HH:mm") UTC</time></dd>
+        </dl>
+    </section>
+
+    <section class="receipt-section" aria-labelledby="payor-heading">
+        <h2 id="payor-heading">Received from</h2>
+        <dl class="receipt-details">
+            <dt>Payor</dt><dd>@Model.PayorName</dd>
+            @if (!string.IsNullOrWhiteSpace(Model.PayorEmail))
+            {
+                <dt>Email</dt><dd>@Model.PayorEmail</dd>
+            }
+        </dl>
+    </section>
+
+    <section class="receipt-total" aria-label="Amount received">
+        <span>Amount received</span>
+        <strong>@Model.Amount.ToString("N2") JMD</strong>
+    </section>
+
+    <footer class="receipt-footer">
+        <p>Received by: @tellerName</p>
+        <p>Thank you for your payment.</p>
+    </footer>
+
+    <p class="no-print"><button class="btn btn-primary" onclick="window.print()">Print receipt</button></p>
+</article>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.local-payment-date').forEach(function (element) {
+            var instant = new Date(element.dateTime);
+            if (!Number.isNaN(instant.getTime())) {
+                element.textContent = new Intl.DateTimeFormat(undefined, {
+                    dateStyle: 'medium', timeStyle: 'short'
+                }).format(instant);
+            }
+        });
+    </script>
+}
