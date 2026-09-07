@@ -6,8 +6,10 @@ using ElixomClaim.Web.Configuration;
 using ElixomClaim.Web.Development;
 using ElixomClaim.Web.Middleware;
 using ElixomClaim.Web.HostedServices;
+using ElixomClaim.Web.Mcp.Tools;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using ModelContextProtocol.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var developmentTesting = builder.Environment.IsDevelopment()
@@ -45,8 +47,24 @@ builder.Services.AddAuthentication(options =>
 // Add MVC controllers with views
 builder.Services.AddControllersWithViews();
 
+// MCP clients authenticate only with an OAuth bearer token carrying the MCP scope.
+// The tools resolve the concrete active user through IActorResolver on every invocation.
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("McpAccess", policy =>
+    {
+        policy.AddAuthenticationSchemes(BearerTokenAuthenticationHandler.SchemeName);
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context => context.User.FindAll("scope")
+            .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Contains("mcp:access", StringComparer.OrdinalIgnoreCase));
+    });
+});
+
 // Register shared actor resolver
 builder.Services.AddScoped<ElixomClaim.Web.Services.IActorResolver, ElixomClaim.Web.Services.ActorResolver>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<McpToolActorAccessor>();
 
 // Configure Application Rate Limiting / Throttling
 builder.Services.AddApplicationRateLimiting();
@@ -58,6 +76,17 @@ builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.JobPaymentTools>();
 builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.PayrollTools>();
 builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.EmailTools>();
 builder.Services.AddScoped<ElixomClaim.Web.Mcp.Tools.OperationsTools>();
+
+// Stateless Streamable HTTP binds each MCP invocation to the active HTTP request scope,
+// so scoped domain services and the authenticated actor cannot leak across sessions.
+builder.Services.AddMcpServer()
+    .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
+    .WithTools<ClaimTools>()
+    .WithTools<CollectionTools>()
+    .WithTools<JobPaymentTools>()
+    .WithTools<PayrollTools>()
+    .WithTools<EmailTools>()
+    .WithTools<OperationsTools>();
 
 builder.Services.AddHostedService<OutboxDispatchHostedService>();
 builder.Services.AddHostedService<SalaryGenerationHostedService>();
@@ -91,6 +120,11 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
+
+// `/mcp` is reserved exclusively for the official Streamable HTTP MCP transport.
+app.MapMcp("/mcp")
+    .RequireAuthorization("McpAccess")
+    .RequireRateLimiting(ElixomClaim.Web.Configuration.RateLimitingConfiguration.McpPolicy);
 
 // Map Health & Readiness endpoints
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions

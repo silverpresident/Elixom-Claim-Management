@@ -1,5 +1,7 @@
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
+using ModelContextProtocol.Server;
+using System.ComponentModel;
 
 namespace ElixomClaim.Web.Mcp.Tools;
 
@@ -19,23 +21,58 @@ public sealed record OperationResponse(
     string? Error,
     OperationRecordDto? Record);
 
+[McpServerToolType]
 public sealed class OperationsTools
 {
     private readonly ISalaryPayrollService _salaryPayrollService;
     private readonly IOutboxService _outboxService;
     private readonly IOperationRecordService _operationRecordService;
     private readonly IAuditService _audit;
+    private readonly McpToolActorAccessor _actorAccessor;
 
     public OperationsTools(
         ISalaryPayrollService salaryPayrollService,
         IOutboxService outboxService,
         IOperationRecordService operationRecordService,
-        IAuditService audit)
+        IAuditService audit,
+        McpToolActorAccessor actorAccessor)
     {
         _salaryPayrollService = salaryPayrollService;
         _outboxService = outboxService;
         _operationRecordService = operationRecordService;
         _audit = audit;
+        _actorAccessor = actorAccessor;
+    }
+
+    // Retained for direct domain-adapter unit tests. MCP discovery uses the constructor above.
+    public OperationsTools(
+        ISalaryPayrollService salaryPayrollService,
+        IOutboxService outboxService,
+        IOperationRecordService operationRecordService,
+        IAuditService audit)
+        : this(salaryPayrollService, outboxService, operationRecordService, audit, null!)
+    {
+    }
+
+    [McpServerTool(Name = "operations_salary_generation"), Description("Request authorized, idempotent salary generation.")]
+    public async Task<OperationResponse> RequestSalaryGeneration(SalaryGenCommandRequest request, CancellationToken cancellationToken)
+    {
+        var actor = await _actorAccessor.ResolveAsync(cancellationToken);
+        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await RequestSalaryGenerationAsync(actor.Value!.User, request, cancellationToken);
+    }
+
+    [McpServerTool(Name = "operations_outbox_wakeup"), Description("Request an authorized, idempotent outbox dispatch wake-up.")]
+    public async Task<OperationResponse> RequestOutboxWakeUp(OutboxWakeUpRequest request, CancellationToken cancellationToken)
+    {
+        var actor = await _actorAccessor.ResolveAsync(cancellationToken);
+        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await RequestOutboxWakeUpAsync(actor.Value!.User, request, cancellationToken);
+    }
+
+    [McpServerTool(Name = "operations_status"), Description("Get the authenticated user's operation status.")]
+    public async Task<OperationResponse> GetOperationStatus(OperationStatusRequest request, CancellationToken cancellationToken)
+    {
+        var actor = await _actorAccessor.ResolveAsync(cancellationToken);
+        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await GetOperationStatusAsync(actor.Value!.User, request, cancellationToken);
     }
 
     private static OperationRecordDto MapToDto(OperationRecord record)

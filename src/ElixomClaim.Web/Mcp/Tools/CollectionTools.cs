@@ -2,6 +2,8 @@ using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using Microsoft.EntityFrameworkCore;
+using ModelContextProtocol.Server;
+using System.ComponentModel;
 
 namespace ElixomClaim.Web.Mcp.Tools;
 
@@ -24,15 +26,32 @@ public sealed record CollectionDto(
 public sealed record CollectionListResponse(bool Success, string? Error, List<CollectionDto>? Collections);
 public sealed record CollectionDetailResponse(bool Success, string? Error, CollectionDto? Collection);
 
+[McpServerToolType]
 public sealed class CollectionTools
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IAuditService _audit;
+    private readonly McpToolActorAccessor _actorAccessor;
 
-    public CollectionTools(ApplicationDbContext dbContext, IAuditService audit)
+    public CollectionTools(ApplicationDbContext dbContext, IAuditService audit, McpToolActorAccessor actorAccessor)
     {
         _dbContext = dbContext;
         _audit = audit;
+        _actorAccessor = actorAccessor;
+    }
+
+    [McpServerTool(Name = "collections_list"), Description("List collections available to the authenticated teller or manager.")]
+    public async Task<CollectionListResponse> ListCollections(ListCollectionsRequest request, CancellationToken cancellationToken)
+    {
+        var actor = await _actorAccessor.ResolveAsync(cancellationToken);
+        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await ListCollectionsAsync(actor.Value!.User, request, cancellationToken);
+    }
+
+    [McpServerTool(Name = "collections_get"), Description("Get a collection available to the authenticated teller or manager.")]
+    public async Task<CollectionDetailResponse> GetCollection(GetCollectionRequest request, CancellationToken cancellationToken)
+    {
+        var actor = await _actorAccessor.ResolveAsync(cancellationToken);
+        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await GetCollectionAsync(actor.Value!.User, request, cancellationToken);
     }
 
     public async Task<CollectionListResponse> ListCollectionsAsync(User actor, ListCollectionsRequest request, CancellationToken ct)

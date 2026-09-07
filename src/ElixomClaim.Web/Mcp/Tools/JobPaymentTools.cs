@@ -2,6 +2,8 @@ using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using Microsoft.EntityFrameworkCore;
+using ModelContextProtocol.Server;
+using System.ComponentModel;
 
 namespace ElixomClaim.Web.Mcp.Tools;
 
@@ -25,15 +27,32 @@ public sealed record JobPaymentDto(
 public sealed record JobPaymentListResponse(bool Success, string? Error, List<JobPaymentDto>? JobPayments);
 public sealed record JobPaymentDetailResponse(bool Success, string? Error, JobPaymentDto? JobPayment);
 
+[McpServerToolType]
 public sealed class JobPaymentTools
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IAuditService _audit;
+    private readonly McpToolActorAccessor _actorAccessor;
 
-    public JobPaymentTools(ApplicationDbContext dbContext, IAuditService audit)
+    public JobPaymentTools(ApplicationDbContext dbContext, IAuditService audit, McpToolActorAccessor actorAccessor)
     {
         _dbContext = dbContext;
         _audit = audit;
+        _actorAccessor = actorAccessor;
+    }
+
+    [McpServerTool(Name = "job_payments_list"), Description("List job payments visible to the authenticated user.")]
+    public async Task<JobPaymentListResponse> ListJobPayments(ListJobPaymentsRequest request, CancellationToken cancellationToken)
+    {
+        var actor = await _actorAccessor.ResolveAsync(cancellationToken);
+        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await ListJobPaymentsAsync(actor.Value!.User, request, cancellationToken);
+    }
+
+    [McpServerTool(Name = "job_payments_get"), Description("Get a job payment visible to the authenticated user.")]
+    public async Task<JobPaymentDetailResponse> GetJobPayment(GetJobPaymentRequest request, CancellationToken cancellationToken)
+    {
+        var actor = await _actorAccessor.ResolveAsync(cancellationToken);
+        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null) : await GetJobPaymentAsync(actor.Value!.User, request, cancellationToken);
     }
 
     public async Task<JobPaymentListResponse> ListJobPaymentsAsync(User actor, ListJobPaymentsRequest request, CancellationToken ct)

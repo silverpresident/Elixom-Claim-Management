@@ -6,6 +6,8 @@ using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.Server;
+using System.ComponentModel;
 
 namespace ElixomClaim.Web.Mcp.Tools;
 
@@ -24,23 +26,51 @@ public sealed record EmailQueueSendResponse(
     string? Error,
     int QueuedCount);
 
+[McpServerToolType]
 public sealed class EmailTools
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IAuditService _audit;
     private readonly ISystemClock _clock;
     private readonly NotificationOptions _notificationOptions;
+    private readonly McpToolActorAccessor _actorAccessor;
 
     public EmailTools(
         ApplicationDbContext dbContext,
         IAuditService audit,
         ISystemClock clock,
-        IOptions<NotificationOptions> notificationOptions)
+        IOptions<NotificationOptions> notificationOptions,
+        McpToolActorAccessor actorAccessor)
     {
         _dbContext = dbContext;
         _audit = audit;
         _clock = clock;
         _notificationOptions = notificationOptions.Value;
+        _actorAccessor = actorAccessor;
+    }
+
+    // Retained for direct domain-adapter unit tests. MCP discovery uses the constructor above.
+    public EmailTools(
+        ApplicationDbContext dbContext,
+        IAuditService audit,
+        ISystemClock clock,
+        IOptions<NotificationOptions> notificationOptions)
+        : this(dbContext, audit, clock, notificationOptions, null!)
+    {
+    }
+
+    [McpServerTool(Name = "email_preview"), Description("Preview an approved email template with redacted content and recipients.")]
+    public async Task<EmailPreviewResponse> Preview(EmailPreviewRequest request, CancellationToken cancellationToken)
+    {
+        var actor = await _actorAccessor.ResolveAsync(cancellationToken);
+        return !actor.IsSuccess ? new(false, "MCP authorization failed.", null, null, null) : await PreviewAsync(actor.Value!.User, request, cancellationToken);
+    }
+
+    [McpServerTool(Name = "email_queue"), Description("Queue an approved template email only to its authorized recipients.")]
+    public async Task<EmailQueueSendResponse> QueueSend(EmailQueueSendRequest request, CancellationToken cancellationToken)
+    {
+        var actor = await _actorAccessor.ResolveAsync(cancellationToken);
+        return !actor.IsSuccess ? new(false, "MCP authorization failed.", 0) : await QueueSendAsync(actor.Value!.User, request, cancellationToken);
     }
 
     public async Task<EmailPreviewResponse> PreviewAsync(User actor, EmailPreviewRequest request, CancellationToken ct)

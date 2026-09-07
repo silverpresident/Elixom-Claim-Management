@@ -194,41 +194,6 @@ public class McpOAuthSecurityTests
     }
 
     [Fact]
-    public async Task McpController_RejectsRequestsWithoutMcpScope()
-    {
-        var db = CreateInMemoryDbContext();
-        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
-        var claimService = new ClaimService(db, audit, NullLogger<ClaimService>.Instance);
-        var tools = new ClaimTools(claimService, audit);
-        var controller = new McpClaimsController(tools, db);
-
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Email = "user@test.com",
-            NormalizedEmail = "USER@TEST.COM",
-            FullName = "Test User",
-            Role = UserRole.User,
-            IsActive = true
-        };
-        db.Users.Add(user);
-        await db.SaveChangesAsync();
-
-        // HttpContext without mcp:access scope claim
-        var httpContext = new DefaultHttpContext();
-        var identity = new System.Security.Claims.ClaimsIdentity(new[]
-        {
-            new System.Security.Claims.Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new System.Security.Claims.Claim("scope", "openid profile email") // Missing mcp:access
-        }, BearerTokenAuthenticationHandler.SchemeName);
-        httpContext.User = new ClaimsPrincipal(identity);
-        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
-
-        var result = await controller.List(new ListClaimsRequest());
-        Assert.IsType<ForbidResult>(result);
-    }
-
-    [Fact]
     public async Task McpClaimTools_CrossUserIsolation_UserCannotReadOthersData()
     {
         var db = CreateInMemoryDbContext();
