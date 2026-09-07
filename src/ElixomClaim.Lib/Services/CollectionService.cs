@@ -89,7 +89,7 @@ public class CollectionService : ICollectionService
                 var skippedPayor = new EmailOutboxItem
                 {
                     Recipient = string.Empty,
-                    Subject = $"Collection receipt #{collection.Id}",
+                    Subject = $"Collection receipt #{collection.SequenceNo}",
                     HtmlBody = ComposeReceiptHtml(collection, client),
                     RelatedEntityType = "CollectionTransaction",
                     RelatedEntityId = collection.Id.ToString(),
@@ -124,7 +124,7 @@ public class CollectionService : ICollectionService
                 _dbContext.EmailOutboxItems.Add(new EmailOutboxItem
                 {
                     Recipient = recipient!,
-                    Subject = $"Collection receipt #{collection.Id}",
+                    Subject = $"Collection receipt #{collection.SequenceNo}",
                     HtmlBody = ComposeReceiptHtml(collection, client),
                     RelatedEntityType = "CollectionTransaction",
                     RelatedEntityId = collection.Id.ToString(),
@@ -163,7 +163,7 @@ public class CollectionService : ICollectionService
             _dbContext.EmailOutboxItems.Add(new EmailOutboxItem
             {
                 Recipient = recipient,
-                Subject = $"Collection receipt reissue #{collection.Id}",
+                Subject = $"Collection receipt reissue #{collection.SequenceNo}",
                 HtmlBody = ComposeReceiptHtml(collection, collection.CollectionClient),
                 RelatedEntityType = "CollectionTransaction",
                 RelatedEntityId = collection.Id.ToString(),
@@ -185,5 +185,5 @@ public class CollectionService : ICollectionService
     }
 
     private static string ComposeReceiptHtml(CollectionTransaction collection, CollectionClient client) =>
-        $"<article><h1>Collection receipt</h1><p>Receipt #{collection.Id}</p><dl><dt>Client</dt><dd>{HtmlEncoder.Default.Encode(client.Name)}</dd><dt>Purpose</dt><dd>{HtmlEncoder.Default.Encode(collection.Purpose)}</dd><dt>Amount</dt><dd>{collection.Amount:N2} JMD</dd><dt>Payment date (UTC)</dt><dd>{collection.PaymentDateUtc:yyyy-MM-dd HH:mm}</dd><dt>Method</dt><dd>{collection.Method}</dd></dl></article>";
+        $"<article><h1>Collection receipt</h1><p>Receipt #{collection.SequenceNo}</p><dl><dt>Client</dt><dd>{HtmlEncoder.Default.Encode(client.Name)}</dd><dt>Purpose</dt><dd>{HtmlEncoder.Default.Encode(collection.Purpose)}</dd><dt>Amount</dt><dd>{collection.Amount:N2} JMD</dd><dt>Payment date (UTC)</dt><dd>{collection.PaymentDateUtc:yyyy-MM-dd HH:mm}</dd><dt>Method</dt><dd>{collection.Method}</dd></dl></article>";
 }

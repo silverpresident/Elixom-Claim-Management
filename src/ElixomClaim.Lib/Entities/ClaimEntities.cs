@@ -3,6 +3,7 @@ namespace ElixomClaim.Lib.Entities;
 public class Claim
 {
     public Guid Id { get; set; }
+    public long SequenceNo { get; set; }
     public Guid ClaimantUserId { get; set; }
     public User ClaimantUser { get; set; } = null!;
     public string Title { get; set; } = string.Empty;
@@ -25,6 +26,7 @@ public class Claim
 public class ClaimComment
 {
     public Guid Id { get; set; }
+    public long SequenceNo { get; set; }
     public Guid ClaimId { get; set; }
     public Claim Claim { get; set; } = null!;
     public Guid AuthorUserId { get; set; }

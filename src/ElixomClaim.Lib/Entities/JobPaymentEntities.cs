@@ -32,6 +32,7 @@ public enum PayrollEntryType
 public class SalaryDefinition
 {
     public Guid Id { get; set; }
+    public long SequenceNo { get; set; }
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
     public string Description { get; set; } = string.Empty;
@@ -54,6 +55,7 @@ public class SalaryDefinition
 public class SalaryAdjustment
 {
     public Guid Id { get; set; }
+    public long SequenceNo { get; set; }
     public Guid SalaryDefinitionId { get; set; }
     public SalaryDefinition SalaryDefinition { get; set; } = null!;
     public string Title { get; set; } = string.Empty;
@@ -66,6 +68,7 @@ public class SalaryAdjustment
 public class Payroll
 {
     public Guid Id { get; set; }
+    public long SequenceNo { get; set; }
     public Guid SalaryDefinitionId { get; set; }
     public SalaryDefinition SalaryDefinition { get; set; } = null!;
     public Guid UserId { get; set; }
@@ -84,6 +87,7 @@ public class Payroll
 public class PayrollEntry
 {
     public Guid Id { get; set; }
+    public long SequenceNo { get; set; }
     public Guid PayrollId { get; set; }
     public Payroll Payroll { get; set; } = null!;
     public string Description { get; set; } = string.Empty;
@@ -97,6 +101,7 @@ public class PayrollEntry
 public class JobPayment
 {
     public Guid Id { get; set; }
+    public long SequenceNo { get; set; }
     public Guid? PayeeUserId { get; set; }
     public User? PayeeUser { get; set; }
     public Guid? CollectionClientId { get; set; }

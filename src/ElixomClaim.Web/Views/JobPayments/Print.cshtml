@@ -1,8 +1,8 @@
 @model ElixomClaim.Lib.Entities.JobPayment
-@{ ViewData["Title"] = $"Job payment #{Model.Id}"; }
+@{ ViewData["Title"] = $"Job payment #{Model.SequenceNo}"; }
 <article>
     <h1>Job payment summary</h1>
-    <p>Payment #@Model.Id</p>
+    <p>Payment #@Model.SequenceNo</p>
     <p>Payee: @(Model.PayeeUser?.FullName ?? Model.CollectionClient?.Name)</p>
     <p>Status: @Model.Status</p>
     <p>Total paid: @Model.TotalPaid.ToString("N2") JMD</p>
@@ -14,7 +14,7 @@
             <p>Reason: @Model.AdjustmentReason</p>
             @if (Model.OriginalJobPaymentId.HasValue)
             {
-                <p>Original payment: #@Model.OriginalJobPaymentId</p>
+                <p>Original payment: #@Model.OriginalJobPayment?.SequenceNo</p>
             }
         </section>
     }
@@ -22,13 +22,13 @@
     <section>
         <h2>Claims</h2>
         @if (!Model.Claims.Any()) { <p>None.</p> }
-        <ul>@foreach (var item in Model.Claims) { <li>@item.Claim.Title — @item.Claim.Amount.ToString("N2") JMD</li> }</ul>
+        <ul>@foreach (var item in Model.Claims) { <li>Claim #@item.Claim.SequenceNo — @item.Claim.Title — @item.Claim.Amount.ToString("N2") JMD</li> }</ul>
     </section>
 
     <section>
         <h2>Collection transactions</h2>
         @if (!Model.Collections.Any()) { <p>None.</p> }
-        <ul>@foreach (var item in Model.Collections) { <li>@item.CollectionTransaction.Purpose — @item.CollectionTransaction.Amount.ToString("N2") JMD (transaction fee: @item.CollectionTransaction.ProcessingFee.ToString("N2") JMD)</li> }</ul>
+        <ul>@foreach (var item in Model.Collections) { <li>Collection #@item.CollectionTransaction.SequenceNo — @item.CollectionTransaction.Purpose — @item.CollectionTransaction.Amount.ToString("N2") JMD (transaction fee: @item.CollectionTransaction.ProcessingFee.ToString("N2") JMD)</li> }</ul>
     </section>
 
     <section>
@@ -38,10 +38,10 @@
         @foreach (var item in Model.Payrolls)
         {
             <li>
-                Payroll ending @item.Payroll.PeriodEndingDate.ToString("yyyy-MM-dd") (@item.Payroll.Status) — @item.Payroll.PayrollTotal.ToString("N2") JMD
+                Payroll #@item.Payroll.SequenceNo ending @item.Payroll.PeriodEndingDate.ToString("yyyy-MM-dd") (@item.Payroll.Status) — @item.Payroll.PayrollTotal.ToString("N2") JMD
                 @if (item.Payroll.Entries.Any())
                 {
-                    <ul>@foreach (var entry in item.Payroll.Entries.OrderBy(entry => entry.SortOrder)) { <li>@entry.Description (@entry.Type): @entry.Amount.ToString("N2") JMD</li> }</ul>
+                    <ul>@foreach (var entry in item.Payroll.Entries.OrderBy(entry => entry.SortOrder)) { <li>Entry #@entry.SequenceNo — @entry.Description (@entry.Type): @entry.Amount.ToString("N2") JMD</li> }</ul>
                 }
             </li>
         }

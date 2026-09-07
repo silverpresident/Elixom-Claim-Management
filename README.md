@@ -46,7 +46,7 @@ All database objects use the Azure SQL schema **`dbclaim`**. EF migrations are a
 - `ElixomClaim.Web` owns HTTP, Razor UI, Google sign-in wiring, OAuth endpoint plumbing, MCP transport, and thin hosted-service schedulers.
 - Controllers and MCP tools call the same Lib services. Neither is allowed to reimplement authorization or state-transition rules.
 - This is a single-company application; do not add tenant identifiers or tenant-resolution infrastructure.
-- Use `decimal(18,2)` for money, **JMD** as the sole currency, UTC timestamps for persisted instants, and a single identifier convention consistently. Preserve exact two-decimal values; do not introduce intermediate, display, or payout rounding beyond the database scale.
+- Use `decimal(18,2)` for money, **JMD** as the sole currency, UTC timestamps for persisted instants, and Guid primary/foreign keys. Claims, comments, job payments, collection clients/transactions, and salary/payroll records also have durable database-generated `SequenceNo` values for user-facing labels; never display a Guid where that sequence number is available. Preserve exact two-decimal values; do not introduce intermediate, display, or payout rounding beyond the database scale.
 
 ## Identity, roles, and authorization
 

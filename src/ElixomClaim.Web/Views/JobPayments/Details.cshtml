@@ -1,6 +1,6 @@
 @model ElixomClaim.Lib.Entities.JobPayment
 @{
-    ViewData["Title"] = $"Job Payment #{Model.Id}";
+    ViewData["Title"] = $"Job Payment #{Model.SequenceNo}";
     var isManagerOrAbove = User.IsInRole("Manager") || User.IsInRole("Accountant") || User.IsInRole("Administrator");
     var isAccountantOrAdmin = User.IsInRole("Accountant") || User.IsInRole("Administrator");
     var isAdmin = User.IsInRole("Administrator");
@@ -12,7 +12,7 @@
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
                     <h2 class="fw-bold mb-1">
-                        @(Model.Title ?? "Job Payment") <small class="text-muted">#@Model.Id</small>
+                        @(Model.Title ?? "Job Payment") <small class="text-muted">#@Model.SequenceNo</small>
                         @if (Model.IsAdjustment)
                         {
                             <span class="badge bg-warning text-dark ms-2">Adjustment Record</span>
@@ -71,7 +71,7 @@
                     <strong>Linked adjustment:</strong> @Model.AdjustmentReason
                     @if (Model.OriginalJobPayment != null)
                     {
-                        <span> for <a asp-action="Details" asp-route-id="@Model.OriginalJobPaymentId">job payment #@Model.OriginalJobPaymentId</a>.</span>
+                        <span> for <a asp-action="Details" asp-route-id="@Model.OriginalJobPaymentId">job payment #@Model.OriginalJobPayment?.SequenceNo</a>.</span>
                     }
                 </div>
             }
@@ -217,7 +217,7 @@
                             {
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
                                     <div>
-                                        <strong>Collection #@item.CollectionTransactionId</strong>
+                                        <strong>Collection #@item.CollectionTransaction.SequenceNo</strong>
                                         <div><small class="text-muted">$@item.CollectionTransaction.Amount.ToString("N2") JMD (Fee: $@item.CollectionTransaction.ProcessingFee.ToString("N2"))</small></div>
                                     </div>
                                     @if (Model.Status == ElixomClaim.Lib.Entities.JobPaymentStatus.Processing)
@@ -247,7 +247,7 @@
                                 <li class="list-group-item">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <strong>Payroll ending @item.Payroll.PeriodEndingDate.ToString("yyyy-MM-dd")</strong>
+                                            <strong>Payroll #@item.Payroll.SequenceNo ending @item.Payroll.PeriodEndingDate.ToString("yyyy-MM-dd")</strong>
                                             <span class="badge bg-secondary ms-2">@item.Payroll.Status</span>
                                             @if (isAccountantOrAdmin)
                                             {
@@ -261,7 +261,7 @@
                                         <ul class="mb-0 mt-2 small">
                                             @foreach (var entry in item.Payroll.Entries.OrderBy(entry => entry.SortOrder))
                                             {
-                                                <li>@entry.Description (@entry.Type): @entry.Amount.ToString("N2") JMD</li>
+                                                <li>Entry #@entry.SequenceNo — @entry.Description (@entry.Type): @entry.Amount.ToString("N2") JMD</li>
                                             }
                                         </ul>
                                     }

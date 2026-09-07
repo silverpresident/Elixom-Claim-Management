@@ -84,7 +84,7 @@ The `/mcp` endpoint uses the official `ModelContextProtocol.AspNetCore` HTTP ser
 
 ### 1. `ClaimTools`
 - `list_claims` — List claims accessible to the authenticated user.
-- `get_claim` — Retrieve detailed claim information by Guid.
+- `get_claim` — Retrieve detailed claim information by Guid. Guid identifiers remain transport keys; `SequenceNo` is the human-facing record number returned/displayed for supported domain records.
 - `submit_claim` — Submit a draft claim owned by the user.
 
 ### 2. `CollectionTools`

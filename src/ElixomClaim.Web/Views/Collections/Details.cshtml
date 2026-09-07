@@ -1,12 +1,12 @@
 @model ElixomClaim.Lib.Entities.CollectionTransaction
-@{ ViewData["Title"] = $"Collection #{Model.Id}"; }
+@{ ViewData["Title"] = $"Collection #{Model.SequenceNo}"; }
 
 <div class="container my-4">
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                    <h2 class="fw-bold mb-1">Collection #@Model.Id</h2>
+                    <h2 class="fw-bold mb-1">Collection #@Model.SequenceNo</h2>
                     <p class="text-muted mb-0">Recorded @Model.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
                 </div>
                 <span class="badge bg-success fs-6">@Model.Status</span>

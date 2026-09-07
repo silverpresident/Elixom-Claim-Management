@@ -109,6 +109,8 @@ Allows defining a default administrator email that is automatically provisioned 
 4. Select **Method of Collection** (`Cash`, `POS`, `BankTransfer`, `CreditNote`).
 5. Payment Date defaults to current timestamp.
 
+Collection-client bank details are administrator-managed and require the account name and number, bank name, branch code, branch name, and an account-type selection of Savings or Current / Chequing.
+
 
 * **Confirmation Trigger:**
 * Saves transaction record to `dbclaim.CollectionTransactions`.
@@ -216,6 +218,7 @@ All security events, role modifications, status transitions, collection entries,
 7. **Audit Logging:** Log all mutations, OAuth2 token issuances, and MCP tool executions to `dbclaim.AuditLogs` via `IAuditService`.
 8. **CDN Front-End:** Do not serve Bootstrap or jQuery locally in `wwwroot`. Use defined CDN links exclusively.
 9. **Code Cleanliness:** Permanently remove `Class1.cs` upon initialization.
+10. **User-facing record numbers:** Keep Guid keys for technical identity and relationships, but show durable `SequenceNo` values for claims, comments, job payments, collection clients/transactions, and salary/payroll records in screens, printable documents, and notifications.
 
 ```
 

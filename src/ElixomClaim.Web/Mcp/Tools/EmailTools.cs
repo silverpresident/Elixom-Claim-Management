@@ -108,7 +108,7 @@ public sealed class EmailTools
         }
 
         var html = ComposeReceiptHtml(collection, collection.CollectionClient);
-        var subject = $"Collection receipt #{collection.Id}";
+        var subject = $"Collection receipt #{collection.SequenceNo}";
 
         var recipients = new List<string>();
         if (!string.IsNullOrWhiteSpace(collection.PayorEmail)) recipients.Add(RedactEmail(collection.PayorEmail));
@@ -148,7 +148,7 @@ public sealed class EmailTools
         }
 
         var html = ComposePayoutHtml(job, actor.Role.HasMinimumRole(UserRole.Accountant));
-        var subject = $"Payout summary #{job.Id}";
+        var subject = $"Payout summary #{job.SequenceNo}";
 
         var recipients = new List<string>();
         if (job.PayeeUser != null && !string.IsNullOrWhiteSpace(job.PayeeUser.Email))
@@ -209,7 +209,7 @@ public sealed class EmailTools
 
         int queuedCount = 0;
         var html = ComposeReceiptHtml(collection, collection.CollectionClient);
-        var subject = $"Collection receipt #{collection.Id}";
+        var subject = $"Collection receipt #{collection.SequenceNo}";
 
         foreach (var recipient in recipients)
         {
@@ -275,7 +275,7 @@ public sealed class EmailTools
 
         int queuedCount = 0;
         var html = ComposePayoutHtml(job, canViewFullBankDetails: true);
-        var subject = $"Payout summary #{job.Id}";
+        var subject = $"Payout summary #{job.SequenceNo}";
 
         foreach (var recipient in recipients.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -306,13 +306,13 @@ public sealed class EmailTools
     }
 
     private static string ComposeReceiptHtml(CollectionTransaction collection, CollectionClient client) =>
-        $"<article><h1>Collection receipt</h1><p>Receipt #{collection.Id}</p><dl><dt>Client</dt><dd>{HtmlEncoder.Default.Encode(client.Name)}</dd><dt>Purpose</dt><dd>{HtmlEncoder.Default.Encode(collection.Purpose)}</dd><dt>Amount</dt><dd>{collection.Amount:N2} JMD</dd><dt>Payment date (UTC)</dt><dd>{collection.PaymentDateUtc:yyyy-MM-dd HH:mm}</dd><dt>Method</dt><dd>{collection.Method}</dd></dl></article>";
+        $"<article><h1>Collection receipt</h1><p>Receipt #{collection.SequenceNo}</p><dl><dt>Client</dt><dd>{HtmlEncoder.Default.Encode(client.Name)}</dd><dt>Purpose</dt><dd>{HtmlEncoder.Default.Encode(collection.Purpose)}</dd><dt>Amount</dt><dd>{collection.Amount:N2} JMD</dd><dt>Payment date (UTC)</dt><dd>{collection.PaymentDateUtc:yyyy-MM-dd HH:mm}</dd><dt>Method</dt><dd>{collection.Method}</dd></dl></article>";
 
     private static string ComposePayoutHtml(JobPayment job, bool canViewFullBankDetails)
     {
         Func<string, string> encode = HtmlEncoder.Default.Encode;
         var claims = string.Join("", job.Claims.Select(x => $"<li>{encode(x.Claim.Title)} — {x.Claim.Amount:N2} JMD</li>"));
-        var collections = string.Join("", job.Collections.Select(x => $"<li>Collection #{x.CollectionTransactionId} — {x.CollectionTransaction.Amount:N2} JMD</li>"));
+        var collections = string.Join("", job.Collections.Select(x => $"<li>Collection #{x.CollectionTransaction.SequenceNo} — {x.CollectionTransaction.Amount:N2} JMD</li>"));
         var deductions = string.Join("", job.Deductions.Select(x => $"<li>{encode(x.Description)} — {x.Amount:N2} JMD</li>"));
 
         string bankInfo;
@@ -329,7 +329,7 @@ public sealed class EmailTools
             bankInfo = "Collection client payout";
         }
 
-        return $"<article style=\"font-family:Arial,sans-serif;max-width:720px;margin:auto\"><h1>Payout summary</h1><p>Payment #{job.Id}</p><p>{bankInfo}</p><p>Payment date: {job.PaymentDateUtc:yyyy-MM-dd} UTC<br/>Transaction: {encode(canViewFullBankDetails ? (job.PaymentTransactionNumber ?? string.Empty) : (job.PaymentTransactionNumber != null && job.PaymentTransactionNumber.Length > 4 ? "****" + job.PaymentTransactionNumber[^4..] : "****"))}</p><h2>Claims</h2><ul>{claims}</ul><h2>Collections</h2><ul>{collections}</ul><h2>Deductions</h2><ul>{deductions}</ul><table><tr><th>Job total</th><td>{job.JobTotal:N2} JMD</td></tr><tr><th>Client fee</th><td>{job.ClientProcessingFee:N2} JMD</td></tr><tr><th>Deductions</th><td>{job.TotalDeductions:N2} JMD</td></tr><tr><th>Total paid</th><td><strong>{job.TotalPaid:N2} JMD</strong></td></tr></table></article>";
+        return $"<article style=\"font-family:Arial,sans-serif;max-width:720px;margin:auto\"><h1>Payout summary</h1><p>Payment #{job.SequenceNo}</p><p>{bankInfo}</p><p>Payment date: {job.PaymentDateUtc:yyyy-MM-dd} UTC<br/>Transaction: {encode(canViewFullBankDetails ? (job.PaymentTransactionNumber ?? string.Empty) : (job.PaymentTransactionNumber != null && job.PaymentTransactionNumber.Length > 4 ? "****" + job.PaymentTransactionNumber[^4..] : "****"))}</p><h2>Claims</h2><ul>{claims}</ul><h2>Collections</h2><ul>{collections}</ul><h2>Deductions</h2><ul>{deductions}</ul><table><tr><th>Job total</th><td>{job.JobTotal:N2} JMD</td></tr><tr><th>Client fee</th><td>{job.ClientProcessingFee:N2} JMD</td></tr><tr><th>Deductions</th><td>{job.TotalDeductions:N2} JMD</td></tr><tr><th>Total paid</th><td><strong>{job.TotalPaid:N2} JMD</strong></td></tr></table></article>";
     }
 
     private static string RedactEmail(string email)

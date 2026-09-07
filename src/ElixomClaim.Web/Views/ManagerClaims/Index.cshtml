@@ -31,7 +31,7 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Claim ID</th>
+                                <th>Claim no.</th>
                                 <th>Claimant</th>
                                 <th>Title</th>
                                 <th>Amount (JMD)</th>
@@ -44,7 +44,7 @@
                             @foreach (var claim in Model)
                             {
                                 <tr>
-                                    <td>#@claim.Id</td>
+                                    <td>#@claim.SequenceNo</td>
                                     <td>@claim.ClaimantUser?.FullName (@claim.ClaimantUser?.Email)</td>
                                     <td><strong>@claim.Title</strong></td>
                                     <td>$@claim.Amount.ToString("N2") JMD</td>

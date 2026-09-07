@@ -39,7 +39,7 @@
                             {
                                 <tr>
                                     <td>
-                                        <a asp-action="Details" asp-route-id="@job.Id" class="fw-bold text-decoration-none">#@job.Id</a>
+                                        <a asp-action="Details" asp-route-id="@job.Id" class="fw-bold text-decoration-none">#@job.SequenceNo</a>
                                         @if (job.IsAdjustment)
                                         {
                                             <div><span class="badge bg-warning text-dark">Adjustment</span></div>

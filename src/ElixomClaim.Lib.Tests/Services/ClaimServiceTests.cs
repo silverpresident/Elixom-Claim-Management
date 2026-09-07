@@ -32,6 +32,7 @@ public class ClaimServiceTests
         Assert.Equal(ClaimPaymentStatus.Unpaid, claim.PaymentStatus);
         Assert.Equal("Taxi Fare", claim.Title);
         Assert.Equal(1500.00m, claim.Amount);
+        Assert.True(claim.SequenceNo > 0);
     }
 
     [Fact]
@@ -87,6 +88,8 @@ public class ClaimServiceTests
         var claim = await claimService.CreateDraftAsync(new CreateClaimCommand(claimant.Id, "Taxi Fare", "Travel", 1000m));
         await claimService.AddCommentAsync(new AddClaimCommentCommand(claim.Id, claimant.Id, "Public Note", IsPrivate: false));
         await claimService.AddCommentAsync(new AddClaimCommentCommand(claim.Id, manager.Id, "Private Manager Note", IsPrivate: true));
+
+        Assert.All(await db.ClaimComments.ToListAsync(), comment => Assert.True(comment.SequenceNo > 0));
 
         // Claimant retrieves claim
         var claimantView = await claimService.GetByIdAsync(claim.Id, claimant);

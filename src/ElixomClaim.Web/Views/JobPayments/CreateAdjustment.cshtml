@@ -11,7 +11,7 @@
                     <h4 class="mb-0">Create Linked Payment Adjustment</h4>
                 </div>
                 <div class="card-body p-4">
-                    <p class="text-muted">Adjustments link to original paid job payment #@original.Id ($@original.TotalPaid.ToString("N2") JMD) without altering original immutable records.</p>
+                    <p class="text-muted">Adjustments link to original paid job payment #@original.SequenceNo ($@original.TotalPaid.ToString("N2") JMD) without altering original immutable records.</p>
 
                     <form asp-action="CreateAdjustment" method="post">
                         @Html.AntiForgeryToken()

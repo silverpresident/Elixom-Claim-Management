@@ -159,7 +159,7 @@ public class JobPaymentService : IJobPaymentService
                 ? new[] { job.PayeeUser.Email }
                 : await _db.CollectionClientUsers.Where(x => x.CollectionClientId == job.CollectionClientId && x.User.IsActive).Select(x => x.User.Email).ToArrayAsync(ct);
             foreach (var recipient in recipients.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
-                _db.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient, Subject = $"Payout summary #{job.Id}", HtmlBody = ComposePayoutHtml(job), RelatedEntityType = "JobPayment", RelatedEntityId = job.Id.ToString(), IdempotencyKey = $"job-payment-paid:{job.Id}:{recipient.ToUpperInvariant()}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
+                _db.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient, Subject = $"Payout summary #{job.SequenceNo}", HtmlBody = ComposePayoutHtml(job), RelatedEntityType = "JobPayment", RelatedEntityId = job.Id.ToString(), IdempotencyKey = $"job-payment-paid:{job.Id}:{recipient.ToUpperInvariant()}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
             await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_PAID", job, actorUserId, ct); if (transaction is not null) await transaction.CommitAsync(ct); return Result.Success();
         }
         catch (DbUpdateConcurrencyException) { if (transaction is not null) await transaction.RollbackAsync(ct); return Result.Failure("The job payment was changed by another operation; refresh and retry."); }
@@ -198,12 +198,12 @@ public class JobPaymentService : IJobPaymentService
     {
         Func<string, string> encode = System.Text.Encodings.Web.HtmlEncoder.Default.Encode;
         var claims = string.Join("", job.Claims.Select(x => $"<li>{encode(x.Claim.Title)} — {x.Claim.Amount:N2} JMD</li>"));
-        var collections = string.Join("", job.Collections.Select(x => $"<li>Collection #{x.CollectionTransactionId} — {x.CollectionTransaction.Amount:N2} JMD</li>"));
+        var collections = string.Join("", job.Collections.Select(x => $"<li>Collection #{x.CollectionTransaction.SequenceNo} — {x.CollectionTransaction.Amount:N2} JMD</li>"));
         var deductions = string.Join("", job.Deductions.Select(x => $"<li>{encode(x.Description)} — {x.Amount:N2} JMD</li>"));
         var acctNumber = job.PayoutBankAccountNumber ?? job.PayeeUser?.BankAccountNumber;
         var bank = string.IsNullOrWhiteSpace(acctNumber)
             ? "Collection client payout"
             : $"Bank account ending {encode(acctNumber[^Math.Min(4, acctNumber.Length)..])}";
-        return $"<article style=\"font-family:Arial,sans-serif;max-width:720px;margin:auto\"><h1>Payout summary</h1><p>Payment #{job.Id}</p><p>{bank}</p><p>Payment date: {job.PaymentDateUtc:yyyy-MM-dd} UTC<br/>Transaction: {encode(job.PaymentTransactionNumber ?? string.Empty)}</p><h2>Claims</h2><ul>{claims}</ul><h2>Collections</h2><ul>{collections}</ul><h2>Deductions</h2><ul>{deductions}</ul><table><tr><th>Job total</th><td>{job.JobTotal:N2} JMD</td></tr><tr><th>Client fee</th><td>{job.ClientProcessingFee:N2} JMD</td></tr><tr><th>Deductions</th><td>{job.TotalDeductions:N2} JMD</td></tr><tr><th>Total paid</th><td><strong>{job.TotalPaid:N2} JMD</strong></td></tr></table></article>";
+        return $"<article style=\"font-family:Arial,sans-serif;max-width:720px;margin:auto\"><h1>Payout summary</h1><p>Payment #{job.SequenceNo}</p><p>{bank}</p><p>Payment date: {job.PaymentDateUtc:yyyy-MM-dd} UTC<br/>Transaction: {encode(job.PaymentTransactionNumber ?? string.Empty)}</p><h2>Claims</h2><ul>{claims}</ul><h2>Collections</h2><ul>{collections}</ul><h2>Deductions</h2><ul>{deductions}</ul><table><tr><th>Job total</th><td>{job.JobTotal:N2} JMD</td></tr><tr><th>Client fee</th><td>{job.ClientProcessingFee:N2} JMD</td></tr><tr><th>Deductions</th><td>{job.TotalDeductions:N2} JMD</td></tr><tr><th>Total paid</th><td><strong>{job.TotalPaid:N2} JMD</strong></td></tr></table></article>";
     }
 }

@@ -380,6 +380,8 @@ All notifications are also written to `EmailLog`.
 
 ## 9. Open items to confirm before/while implementing
 
+Technical Guid identifiers are retained for routes and relationships. User-facing claims, comments, job payments, collection clients/transactions, salary definitions/adjustments, payrolls, and payroll entries use durable sequential record numbers instead.
+
 These are places where the requirements are either implicit or could be
 read more than one way — worth a quick confirmation rather than guessing
 silently during build:

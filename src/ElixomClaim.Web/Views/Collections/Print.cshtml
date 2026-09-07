@@ -1,7 +1,7 @@
 @model ElixomClaim.Lib.Entities.CollectionTransaction
 @{
     Layout = "_Layout";
-    ViewData["Title"] = $"Receipt #{Model.Id}";
+    ViewData["Title"] = $"Receipt #{Model.SequenceNo}";
     var tellerName = string.IsNullOrWhiteSpace(Model.TellerUser?.DisplayName)
         ? Model.TellerUser?.FullName ?? "Elixom Claim teller"
         : Model.TellerUser.DisplayName;
@@ -11,7 +11,7 @@
     <header class="receipt-header">
         <p class="receipt-brand">ELIXOM CLAIM</p>
         <h1 id="receipt-title">Collection receipt</h1>
-        <p class="receipt-number">Receipt no. @Model.Id</p>
+        <p class="receipt-number">Receipt no. @Model.SequenceNo</p>
     </header>
 
     <section class="receipt-section" aria-labelledby="payment-heading">

@@ -18,6 +18,7 @@ public enum CollectionStatus
 public class CollectionClient
 {
     public Guid Id { get; set; }
+    public long SequenceNo { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Notes { get; set; } // Internal notes
@@ -94,6 +95,7 @@ public class CollectionAmountOption
 public class CollectionTransaction
 {
     public Guid Id { get; set; }
+    public long SequenceNo { get; set; }
     public Guid CollectionClientId { get; set; }
     public CollectionClient CollectionClient { get; set; } = null!;
     public Guid? PurposeOptionId { get; set; }

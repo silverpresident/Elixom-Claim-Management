@@ -27,7 +27,7 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Employee</th>
+                                <th>Salary no. / Employee</th>
                                 <th>Description</th>
                                 <th>Base Amount</th>
                                 <th>Adjustments</th>
@@ -40,7 +40,7 @@
                             {
                                 <tr>
                                     <td>
-                                        <strong>@definition.User.FullName</strong>
+                                        <strong>Salary #@definition.SequenceNo — @definition.User.FullName</strong>
                                         <div class="small text-muted">@definition.User.Email</div>
                                     </td>
                                     <td>@definition.Description</td>
@@ -53,7 +53,7 @@
                                                 {
                                                     <li>
                                                         <span class="badge @(adj.Type == SalaryAdjustmentType.Benefit ? "bg-success" : "bg-danger")">@adj.Type</span>
-                                                        @adj.Title (@(adj.PercentageRate > 0 ? $"{adj.PercentageRate * 100:N0}%" : $"${adj.FixedValue:N2} JMD"))
+                                                        Adjustment #@adj.SequenceNo — @adj.Title (@(adj.PercentageRate > 0 ? $"{adj.PercentageRate * 100:N0}%" : $"${adj.FixedValue:N2} JMD"))
                                                     </li>
                                                 }
                                             </ul>
@@ -126,7 +126,7 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Employee</th>
+                                <th>Payroll no. / Employee</th>
                             <th>Period Ending</th>
                             <th>Itemized Entries</th>
                             <th>Payroll Total</th>
@@ -139,7 +139,7 @@
                         {
                             <tr id="payroll-@payroll.Id">
                                 <td>
-                                    <strong>@payroll.User.FullName</strong>
+                                    <strong>Payroll #@payroll.SequenceNo — @payroll.User.FullName</strong>
                                     <div class="small text-muted">@payroll.User.Email</div>
                                 </td>
                                 <td>@payroll.PeriodEndingDate.ToString("yyyy-MM-dd")</td>
@@ -148,7 +148,7 @@
                                         @foreach (var entry in payroll.Entries.OrderBy(e => e.SortOrder))
                                         {
                                             <li>
-                                                <code>[@entry.Type]</code> @entry.Description: <strong>$@entry.Amount.ToString("N2") JMD</strong>
+                                                <code>Entry #@entry.SequenceNo [@entry.Type]</code> @entry.Description: <strong>$@entry.Amount.ToString("N2") JMD</strong>
                                             </li>
                                         }
                                     </ul>

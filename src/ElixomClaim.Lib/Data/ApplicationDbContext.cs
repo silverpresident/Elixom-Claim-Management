@@ -9,6 +9,7 @@ namespace ElixomClaim.Lib.Data;
 public class ApplicationDbContext : DbContext
 {
     public const string DefaultSchema = "dbclaim";
+    private static long _inMemorySequenceNo;
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -213,6 +214,7 @@ public class ApplicationDbContext : DbContext
         {
             entity.ToTable("Claims");
             entity.HasKey(c => c.Id);
+            entity.Property(c => c.SequenceNo).IsRequired().ValueGeneratedOnAdd().HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[ClaimSequenceNo]");
             entity.Property(c => c.Title).IsRequired().HasMaxLength(200);
             entity.Property(c => c.Description).IsRequired().HasMaxLength(4000);
             entity.Property(c => c.Amount).IsRequired().HasPrecision(18, 2);
@@ -233,6 +235,7 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(c => c.ClaimantUserId);
+            entity.HasIndex(c => c.SequenceNo).IsUnique();
             entity.HasIndex(c => c.Status);
             entity.HasIndex(c => c.PaymentStatus);
         });
@@ -241,6 +244,7 @@ public class ApplicationDbContext : DbContext
         {
             entity.ToTable("ClaimComments");
             entity.HasKey(cc => cc.Id);
+            entity.Property(cc => cc.SequenceNo).IsRequired().ValueGeneratedOnAdd().HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[ClaimCommentSequenceNo]");
             entity.Property(cc => cc.Content).IsRequired().HasMaxLength(4000);
             entity.Property(cc => cc.IsPrivate).IsRequired().HasDefaultValue(false);
             entity.Property(cc => cc.IsDeleted).IsRequired().HasDefaultValue(false);
@@ -256,12 +260,14 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(cc => cc.ClaimId);
+            entity.HasIndex(cc => cc.SequenceNo).IsUnique();
         });
 
         modelBuilder.Entity<CollectionClient>(entity =>
         {
             entity.ToTable("CollectionClients");
             entity.HasKey(c => c.Id);
+            entity.Property(c => c.SequenceNo).IsRequired().ValueGeneratedOnAdd().HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[CollectionClientSequenceNo]");
             entity.Property(c => c.Name).IsRequired().HasMaxLength(200);
             entity.Property(c => c.Description).HasMaxLength(1000);
             entity.Property(c => c.Notes).HasMaxLength(4000);
@@ -269,6 +275,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(c => c.PerTransactionFee).IsRequired().HasPrecision(18, 2);
             entity.Property(c => c.IsActive).IsRequired().HasDefaultValue(true);
             entity.HasIndex(c => c.Name).IsUnique();
+            entity.HasIndex(c => c.SequenceNo).IsUnique();
         });
 
         modelBuilder.Entity<CollectionClientUser>(entity =>
@@ -330,6 +337,7 @@ public class ApplicationDbContext : DbContext
         {
             entity.ToTable("CollectionTransactions");
             entity.HasKey(c => c.Id);
+            entity.Property(c => c.SequenceNo).IsRequired().ValueGeneratedOnAdd().HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[CollectionTransactionSequenceNo]");
             entity.Property(c => c.PayorName).IsRequired().HasMaxLength(200);
             entity.Property(c => c.Purpose).IsRequired().HasMaxLength(200);
             entity.Property(c => c.PayorEmail).HasMaxLength(256);
@@ -351,6 +359,7 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(c => new { c.CollectionClientId, c.Status, c.PaymentDateUtc });
             entity.HasIndex(c => new { c.TellerUserId, c.CreatedAtUtc });
+            entity.HasIndex(c => c.SequenceNo).IsUnique();
         });
 
         modelBuilder.Entity<EmailOutboxItem>(entity =>
@@ -397,18 +406,21 @@ public class ApplicationDbContext : DbContext
                 table.HasCheckConstraint("CK_SalaryDefinitions_NearestWeekday", "[NearestWeekday] >= 0 AND [NearestWeekday] <= 6");
             });
             entity.HasKey(s => s.Id);
+            entity.Property(s => s.SequenceNo).IsRequired().ValueGeneratedOnAdd().HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[SalaryDefinitionSequenceNo]");
             entity.Property(s => s.Description).IsRequired().HasMaxLength(500);
             entity.Property(s => s.BaseAmount).IsRequired().HasPrecision(18, 2);
             entity.Property(s => s.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(s => s.RowVersion).IsRowVersion().Metadata.SetValueComparer(rowVersionComparer);
             entity.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(s => new { s.UserId, s.IsActive });
+            entity.HasIndex(s => s.SequenceNo).IsUnique();
         });
 
         modelBuilder.Entity<SalaryAdjustment>(entity =>
         {
             entity.ToTable("SalaryAdjustments", table => table.HasCheckConstraint("CK_SalaryAdjustments_Range", "[PercentageRate] >= 0 AND [PercentageRate] <= 1 AND [FixedValue] >= 0"));
             entity.HasKey(a => a.Id);
+            entity.Property(a => a.SequenceNo).IsRequired().ValueGeneratedOnAdd().HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[SalaryAdjustmentSequenceNo]");
             entity.Property(a => a.Title).IsRequired().HasMaxLength(500);
             entity.Property(a => a.PercentageRate).IsRequired().HasPrecision(18, 3);
             entity.Property(a => a.FixedValue).IsRequired().HasPrecision(18, 2);
@@ -416,12 +428,14 @@ public class ApplicationDbContext : DbContext
             entity.Property(a => a.CreatedAtUtc).IsRequired();
             entity.HasOne(a => a.SalaryDefinition).WithMany(s => s.Adjustments).HasForeignKey(a => a.SalaryDefinitionId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(a => new { a.SalaryDefinitionId, a.Type });
+            entity.HasIndex(a => a.SequenceNo).IsUnique();
         });
 
         modelBuilder.Entity<Payroll>(entity =>
         {
             entity.ToTable("Payrolls");
             entity.HasKey(p => p.Id);
+            entity.Property(p => p.SequenceNo).IsRequired().ValueGeneratedOnAdd().HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[PayrollSequenceNo]");
             entity.Property(p => p.Description).IsRequired().HasMaxLength(500);
             entity.Property(p => p.PayrollTotal).IsRequired().HasPrecision(18, 2);
             entity.Property(p => p.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
@@ -431,24 +445,28 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(p => p.SalaryDefinition).WithMany(s => s.Payrolls).HasForeignKey(p => p.SalaryDefinitionId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(p => new { p.UserId, p.Status });
             entity.HasIndex(p => new { p.SalaryDefinitionId, p.PeriodEndingDate }).IsUnique();
+            entity.HasIndex(p => p.SequenceNo).IsUnique();
         });
 
         modelBuilder.Entity<PayrollEntry>(entity =>
         {
             entity.ToTable("PayrollEntries");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.SequenceNo).IsRequired().ValueGeneratedOnAdd().HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[PayrollEntrySequenceNo]");
             entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Amount).IsRequired().HasPrecision(18, 2);
             entity.Property(e => e.Type).IsRequired().HasConversion<string>().HasMaxLength(20);
             entity.Property(e => e.IsLocked).IsRequired().HasDefaultValue(false);
             entity.HasOne(e => e.Payroll).WithMany(p => p.Entries).HasForeignKey(e => e.PayrollId).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => new { e.PayrollId, e.SortOrder }).IsUnique();
+            entity.HasIndex(e => e.SequenceNo).IsUnique();
         });
 
         modelBuilder.Entity<JobPayment>(entity =>
         {
             entity.ToTable("JobPayments", table => table.HasCheckConstraint("CK_JobPayments_ExactlyOnePayee", "([PayeeUserId] IS NOT NULL AND [CollectionClientId] IS NULL) OR ([PayeeUserId] IS NULL AND [CollectionClientId] IS NOT NULL)"));
             entity.HasKey(j => j.Id);
+            entity.Property(j => j.SequenceNo).IsRequired().ValueGeneratedOnAdd().HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[JobPaymentSequenceNo]");
             entity.Property(j => j.Title).HasMaxLength(200);
             entity.Property(j => j.Status).IsRequired().HasConversion<string>().HasMaxLength(50);
             entity.Property(j => j.PublicNote).HasMaxLength(4000);
@@ -473,6 +491,7 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(j => new { j.Status, j.ScheduledAtUtc });
             entity.HasIndex(j => j.PayeeUserId);
             entity.HasIndex(j => j.CollectionClientId);
+            entity.HasIndex(j => j.SequenceNo).IsUnique();
         });
 
         modelBuilder.Entity<JobPaymentClaim>(entity =>
@@ -536,6 +555,32 @@ public class ApplicationDbContext : DbContext
         configurationBuilder
             .Properties<DateTime?>()
             .HaveConversion<NullableUtcDateTimeConverter>();
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        AssignInMemorySequenceNumbers();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        AssignInMemorySequenceNumbers();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void AssignInMemorySequenceNumbers()
+    {
+        if (!Database.IsInMemory()) return;
+
+        foreach (var entry in ChangeTracker.Entries().Where(entry => entry.State == EntityState.Added && entry.Entity is Claim or ClaimComment or JobPayment or CollectionClient or CollectionTransaction or SalaryDefinition or SalaryAdjustment or Payroll or PayrollEntry))
+        {
+            var property = entry.Property("SequenceNo");
+            if ((long)property.CurrentValue! == 0)
+            {
+                property.CurrentValue = Interlocked.Increment(ref _inMemorySequenceNo);
+            }
+        }
     }
 }
 
