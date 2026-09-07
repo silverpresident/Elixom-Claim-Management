@@ -85,7 +85,7 @@ public class OAuthController : Controller
             return BadRequest(new { error = "invalid_request", error_description = "PKCE S256 code_challenge is required" });
         }
 
-        var reqScope = scope ?? "openid profile email mcp:access";
+        var reqScope = scope ?? "openid profile email mcp:access api:access";
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (!string.IsNullOrEmpty(userId) && await _oauthService.HasConsentAsync(userId, clientId, reqScope))
@@ -153,7 +153,7 @@ public class OAuthController : Controller
             return Unauthorized();
         }
 
-        var reqScope = scope ?? "openid profile email mcp:access";
+        var reqScope = scope ?? "openid profile email mcp:access api:access";
         await _oauthService.RecordConsentAsync(userId, clientId, reqScope);
 
         var code = await _oauthService.CreateAuthorizationCodeAsync(
