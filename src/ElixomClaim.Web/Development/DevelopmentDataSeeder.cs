@@ -60,7 +60,7 @@ public static class DevelopmentDataSeeder
         var amount = new CollectionAmountOption { Id = Guid.Parse("40000000-0000-0000-0000-000000000102"), CollectionClientId = client.Id, Name = "Standard amount", Amount = 2500.00m, DisplayOrder = 1 };
         db.AddRange(client, purpose, amount,
             new CollectionClientUser { CollectionClientId = client.Id, UserId = UserIds[UserRole.User], AssignedAtUtc = now },
-            new CollectionClientBankDetail { Id = Guid.Parse("21000000-0000-0000-0000-000000000001"), CollectionClientId = client.Id, AccountName = "Development Client", BankName = "Example Bank", BranchCode = "DEV-001", AccountNumber = "DEV-CLIENT-001", CreatedAtUtc = now });
+            new CollectionClientBankDetail { Id = Guid.Parse("21000000-0000-0000-0000-000000000001"), CollectionClientId = client.Id, AccountName = "Development Client", BankName = "Example Bank", BranchCode = "DEV-001", BranchName = "Development Branch", AccountType = CollectionBankAccountTypes.Current, AccountNumber = "DEV-CLIENT-001", CreatedAtUtc = now });
 
         var draftClaim = new Claim { Id = Guid.Parse("50000000-0000-0000-0000-000000000101"), ClaimantUserId = UserIds[UserRole.User], Title = "Development mileage", Description = "Sample draft claim", DateOfJob = now, Amount = 1200.00m, Status = ClaimStatus.Draft, CreatedAtUtc = now, UpdatedAtUtc = now };
         var acceptedClaim = new Claim { Id = Guid.Parse("50000000-0000-0000-0000-000000000102"), ClaimantUserId = UserIds[UserRole.User], Title = "Development supplies", Description = "Sample accepted claim", DateOfJob = now, Amount = 3400.00m, Status = ClaimStatus.Accepted, PaymentStatus = ClaimPaymentStatus.Processing, CreatedAtUtc = now, UpdatedAtUtc = now };

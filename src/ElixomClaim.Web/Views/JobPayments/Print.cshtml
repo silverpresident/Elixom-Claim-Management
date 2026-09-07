@@ -1,3 +1,62 @@
 @model ElixomClaim.Lib.Entities.JobPayment
 @{ ViewData["Title"] = $"Job payment #{Model.Id}"; }
-<article><h1>Job payment summary</h1><p>Payment #@Model.Id</p><p>Payee: @(Model.PayeeUser?.FullName ?? Model.CollectionClient?.Name)</p><p>Total: @Model.TotalPaid.ToString("N2") JMD</p><h2>Claims</h2><ul>@foreach(var item in Model.Claims){<li>@item.Claim.Title — @item.Claim.Amount.ToString("N2") JMD</li>}</ul><p class="no-print"><button onclick="window.print()">Print</button></p></article>
+<article>
+    <h1>Job payment summary</h1>
+    <p>Payment #@Model.Id</p>
+    <p>Payee: @(Model.PayeeUser?.FullName ?? Model.CollectionClient?.Name)</p>
+    <p>Status: @Model.Status</p>
+    <p>Total paid: @Model.TotalPaid.ToString("N2") JMD</p>
+
+    @if (Model.IsAdjustment)
+    {
+        <section>
+            <h2>Adjustment</h2>
+            <p>Reason: @Model.AdjustmentReason</p>
+            @if (Model.OriginalJobPaymentId.HasValue)
+            {
+                <p>Original payment: #@Model.OriginalJobPaymentId</p>
+            }
+        </section>
+    }
+
+    <section>
+        <h2>Claims</h2>
+        @if (!Model.Claims.Any()) { <p>None.</p> }
+        <ul>@foreach (var item in Model.Claims) { <li>@item.Claim.Title — @item.Claim.Amount.ToString("N2") JMD</li> }</ul>
+    </section>
+
+    <section>
+        <h2>Collection transactions</h2>
+        @if (!Model.Collections.Any()) { <p>None.</p> }
+        <ul>@foreach (var item in Model.Collections) { <li>@item.CollectionTransaction.Purpose — @item.CollectionTransaction.Amount.ToString("N2") JMD (transaction fee: @item.CollectionTransaction.ProcessingFee.ToString("N2") JMD)</li> }</ul>
+    </section>
+
+    <section>
+        <h2>Linked payrolls</h2>
+        @if (!Model.Payrolls.Any()) { <p>None.</p> }
+        <ul>
+        @foreach (var item in Model.Payrolls)
+        {
+            <li>
+                Payroll ending @item.Payroll.PeriodEndingDate.ToString("yyyy-MM-dd") (@item.Payroll.Status) — @item.Payroll.PayrollTotal.ToString("N2") JMD
+                @if (item.Payroll.Entries.Any())
+                {
+                    <ul>@foreach (var entry in item.Payroll.Entries.OrderBy(entry => entry.SortOrder)) { <li>@entry.Description (@entry.Type): @entry.Amount.ToString("N2") JMD</li> }</ul>
+                }
+            </li>
+        }
+        </ul>
+    </section>
+
+    <section>
+        <h2>Deductions</h2>
+        @if (!Model.Deductions.Any()) { <p>None.</p> }
+        <ul>@foreach (var item in Model.Deductions) { <li>@item.Description — -@item.Amount.ToString("N2") JMD</li> }</ul>
+    </section>
+
+    <section>
+        <h2>Total calculation</h2>
+        <p>Job total: @Model.JobTotal.ToString("N2") JMD; client fee: -@Model.ClientProcessingFee.ToString("N2") JMD; transaction fees: -@Model.TotalTxnProcessingFee.ToString("N2") JMD; deductions: -@Model.TotalDeductions.ToString("N2") JMD.</p>
+    </section>
+    <p class="no-print"><button onclick="window.print()">Print</button></p>
+</article>

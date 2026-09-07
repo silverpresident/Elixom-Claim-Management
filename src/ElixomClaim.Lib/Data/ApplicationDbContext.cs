@@ -289,6 +289,8 @@ public class ApplicationDbContext : DbContext
             entity.Property(b => b.AccountName).IsRequired().HasMaxLength(200);
             entity.Property(b => b.BankName).IsRequired().HasMaxLength(200);
             entity.Property(b => b.BranchCode).IsRequired().HasMaxLength(50);
+            entity.Property(b => b.BranchName).IsRequired().HasMaxLength(200);
+            entity.Property(b => b.AccountType).IsRequired().HasMaxLength(50);
             entity.Property(b => b.AccountNumber).IsRequired().HasMaxLength(100);
             entity.Property(b => b.Notes).HasMaxLength(4000);
             entity.Property(b => b.IsActive).IsRequired().HasDefaultValue(true);

@@ -43,6 +43,28 @@ public class CollectionClientAdministrationServiceTests
         Assert.Empty(db.CollectionAmountOptions);
     }
 
+    [Fact]
+    public async Task AddBankDetailAsync_RequiresBranchNameAndApprovedAccountType()
+    {
+        await using var db = CreateDb();
+        var admin = new User { Email = "admin@anonymized.example.com", NormalizedEmail = "ADMIN@ANONYMIZED.EXAMPLE.COM", FullName = "Admin", Role = UserRole.Administrator };
+        var client = new CollectionClient { Name = "Acme" };
+        db.AddRange(admin, client);
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+
+        var missingBranch = await service.AddBankDetailAsync(new(admin.Id, client.Id, "Acme", "Example Bank", "001", "", CollectionBankAccountTypes.Savings, "123456"));
+        var invalidType = await service.AddBankDetailAsync(new(admin.Id, client.Id, "Acme", "Example Bank", "001", "Kingston", "Deposit", "123456"));
+        var created = await service.AddBankDetailAsync(new(admin.Id, client.Id, "Acme", "Example Bank", "001", "Kingston", CollectionBankAccountTypes.Current, "123456"));
+
+        Assert.True(missingBranch.IsFailure);
+        Assert.True(invalidType.IsFailure);
+        Assert.True(created.IsSuccess);
+        Assert.Equal("Kingston", created.Value!.BranchName);
+        Assert.Equal(CollectionBankAccountTypes.Current, created.Value.AccountType);
+        Assert.Contains(db.AuditRecords, record => record.Action == "COLLECTION_CLIENT_BANK_DETAIL_ADDED");
+    }
+
     private static ApplicationDbContext CreateDb() => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
 
     private static CollectionClientAdministrationService CreateService(ApplicationDbContext db) => new(

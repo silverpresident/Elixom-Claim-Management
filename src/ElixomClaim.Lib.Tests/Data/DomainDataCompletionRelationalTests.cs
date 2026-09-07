@@ -39,6 +39,8 @@ public class DomainDataCompletionRelationalTests
             AccountName = "Acme Operating",
             BankName = "First National Bank",
             BranchCode = "001",
+            BranchName = "New Kingston",
+            AccountType = CollectionBankAccountTypes.Current,
             AccountNumber = "9988776655",
             Notes = "Internal wire instructions note"
         };
@@ -55,6 +57,8 @@ public class DomainDataCompletionRelationalTests
         var fetchedBank = await db.CollectionClientBankDetails.FindAsync(bankDetail.Id);
         Assert.NotNull(fetchedBank);
         Assert.Equal("Internal wire instructions note", fetchedBank.Notes);
+        Assert.Equal("New Kingston", fetchedBank.BranchName);
+        Assert.Equal(CollectionBankAccountTypes.Current, fetchedBank.AccountType);
     }
 
     [Fact]

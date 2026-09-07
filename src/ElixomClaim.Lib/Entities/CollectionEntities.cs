@@ -50,10 +50,22 @@ public class CollectionClientBankDetail
     public string AccountName { get; set; } = string.Empty;
     public string BankName { get; set; } = string.Empty;
     public string BranchCode { get; set; } = string.Empty;
+    public string BranchName { get; set; } = string.Empty;
+    /// <summary>One of <see cref="CollectionBankAccountTypes.Savings"/> or <see cref="CollectionBankAccountTypes.Current"/>.</summary>
+    public string AccountType { get; set; } = string.Empty;
     public string AccountNumber { get; set; } = string.Empty;
     public string? Notes { get; set; } // Internal notes
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public static class CollectionBankAccountTypes
+{
+    public const string Savings = "Savings";
+    public const string Current = "Current";
+
+    public static bool IsValid(string? accountType) =>
+        accountType is Savings or Current;
 }
 
 public class CollectionPurposeOption

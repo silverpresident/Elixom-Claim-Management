@@ -201,7 +201,7 @@ concurrent roles are actually needed):
 
 **CollectionClient** (the "payee" a teller collects on behalf of)
 - `Id`, `Name`, `Notes`, `PerJobProcessingFee`, `PerTransactionFee`
-- Bank info: `BankAccountName`, `BankAccountNo`, `BankName`, `BankBranch`
+- Bank info: `BankAccountName`, `BankAccountNo`, `BankName`, `BankBranchCode`, and required `BankBranchName`; the required account-type selection is `Savings` or `Current` (displayed as Current / Chequing).
 - `PurposeOptions` — configurable list of purpose-of-payment values scoped to
   this client
 - `AmountOptions` — configurable list of preset/allowed amounts scoped to

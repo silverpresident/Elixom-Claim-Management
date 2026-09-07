@@ -135,8 +135,10 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         var authorization = await EnsureAdministratorAsync(command.ActorUserId, cancellationToken);
         if (authorization.IsFailure) return Result.Failure<CollectionClientBankDetail>(authorization.Error);
         if (!await ClientExistsAsync(command.CollectionClientId, cancellationToken)) return Result.Failure<CollectionClientBankDetail>("Collection client not found.");
-        if (new[] { command.AccountName, command.BankName, command.BranchCode, command.AccountNumber }.Any(string.IsNullOrWhiteSpace))
+        if (new[] { command.AccountName, command.BankName, command.BranchCode, command.BranchName, command.AccountType, command.AccountNumber }.Any(string.IsNullOrWhiteSpace))
             return Result.Failure<CollectionClientBankDetail>("All bank detail fields are required.");
+        if (!CollectionBankAccountTypes.IsValid(command.AccountType.Trim()))
+            return Result.Failure<CollectionClientBankDetail>("Account type must be Savings or Current.");
 
         var detail = new CollectionClientBankDetail
         {
@@ -144,6 +146,8 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
             AccountName = command.AccountName.Trim(),
             BankName = command.BankName.Trim(),
             BranchCode = command.BranchCode.Trim(),
+            BranchName = command.BranchName.Trim(),
+            AccountType = command.AccountType.Trim(),
             AccountNumber = command.AccountNumber.Trim(),
             Notes = command.Notes?.Trim(),
             CreatedAtUtc = _clock.UtcNow

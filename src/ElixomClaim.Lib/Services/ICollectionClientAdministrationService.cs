@@ -26,5 +26,7 @@ public record AddCollectionClientBankDetailCommand(
     string AccountName,
     string BankName,
     string BranchCode,
+    string BranchName,
+    string AccountType,
     string AccountNumber,
     string? Notes = null);

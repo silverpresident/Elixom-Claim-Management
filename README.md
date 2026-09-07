@@ -80,7 +80,7 @@ Draft ──submit──> Submitted ──accept──> Accepted ──attach to
 
 ### Collections and receipts
 
-A teller records a collection against a `CollectionClient`: payor details, Administrator-configured purpose and amount suggestions (or an immutable transaction-only purpose/amount entry), collection method (`Cash`, `Pos`, `BankTransfer`, `CreditNote`), payment date, and internal processing fee. A matching active suggestion remains linked to the transaction; a teller-entered value never changes client configuration. The form accepts payment date/time in the teller's browser-local time and stores the converted UTC instant. On confirmation, persist the collection, queue the responsive HTML receipt to the payor (when supplied), client recipients, and configured system-copy address, and expose a printable HTML route. Never generate PDFs.
+A teller records a collection against a `CollectionClient`: payor details, Administrator-configured purpose and amount suggestions (or an immutable transaction-only purpose/amount entry), collection method (`Cash`, `Pos`, `BankTransfer`, `CreditNote`), payment date, and internal processing fee. Each administrator-managed client bank detail requires account holder/name/number, bank name, branch code, branch name, and an account type of Savings or Current / Chequing. A matching active suggestion remains linked to the transaction; a teller-entered value never changes client configuration. The form accepts payment date/time in the teller's browser-local time and stores the converted UTC instant. On confirmation, persist the collection, queue the responsive HTML receipt to the payor (when supplied), client recipients, and configured system-copy address, and expose a printable HTML route. Never generate PDFs.
 
 Collections may only move forward:
 
@@ -102,7 +102,7 @@ Line items and deductions are editable only in `Processing`. The status flow is:
 Processing ──submit──> Submitted ──accountant schedules──> Scheduled ──date + transaction no.──> Paid
 ```
 
-Marking a job paid is an atomic domain operation: it records the payment details, marks attached payrolls `Paid`, collections `Transferred`, and claims `Honoured`, then queues the HTML payout summary. The summary includes recipient and bank information, totals, and itemized claims, collections, and deductions. Retries must not duplicate the business transition or receipt; use an outbox/idempotency key.
+Marking a job paid is an atomic domain operation: it records the payment details, marks attached payrolls `Paid`, collections `Transferred`, and claims `Honoured`, then queues the HTML payout summary. The summary includes recipient and bank information, totals, itemized claims, collection transactions, linked payrolls and their entries, deductions, and adjustment context where applicable. The job-payment detail page presents the same linked payroll detail and links the accountant to its payroll-workspace record. Retries must not duplicate the business transition or receipt; use an outbox/idempotency key.
 
 Paid job payments are immutable. Corrections use a separately auditable reversal or adjustment job payment linked to the original; never edit or delete a paid financial record.
 

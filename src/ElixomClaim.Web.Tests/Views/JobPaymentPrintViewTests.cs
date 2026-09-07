@@ -13,4 +13,17 @@ public class JobPaymentPrintViewTests
         Assert.Contains("window.print()", content);
         Assert.DoesNotContain("InternalNote", content);
     }
+
+    [Fact]
+    public void PrintView_IncludesEveryPermittedJobPaymentItemType()
+    {
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "ElixomClaim.Web", "Views", "JobPayments", "Print.cshtml"));
+        var content = File.ReadAllText(path);
+
+        Assert.Contains("Collection transactions", content);
+        Assert.Contains("Linked payrolls", content);
+        Assert.Contains("Deductions", content);
+        Assert.Contains("Adjustment", content);
+        Assert.Contains("Total calculation", content);
+    }
 }

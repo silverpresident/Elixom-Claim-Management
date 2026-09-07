@@ -85,9 +85,9 @@ public class CollectionClientsAdminController : Controller
 
     [HttpPost("{id:guid}/bank-details")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddBankDetail(Guid id, [FromForm] string accountName, [FromForm] string bankName, [FromForm] string branchCode, [FromForm] string accountNumber, [FromForm] string? notes)
+    public async Task<IActionResult> AddBankDetail(Guid id, [FromForm] string accountName, [FromForm] string bankName, [FromForm] string branchCode, [FromForm] string branchName, [FromForm] string accountType, [FromForm] string accountNumber, [FromForm] string? notes)
     {
-        var result = await _service.AddBankDetailAsync(new(GetCurrentUserId(), id, accountName, bankName, branchCode, accountNumber, notes));
+        var result = await _service.AddBankDetailAsync(new(GetCurrentUserId(), id, accountName, bankName, branchCode, branchName, accountType, accountNumber, notes));
         return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
     }
 

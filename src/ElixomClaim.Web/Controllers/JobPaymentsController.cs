@@ -149,7 +149,14 @@ public class JobPaymentsController : Controller
     }
     [HttpPost("{id:guid}/resend")][ValidateAntiForgeryToken] public async Task<IActionResult> Resend(Guid id) => RedirectResult(await _service.ResendNotificationAsync(id, CurrentUserId()), id);
     [HttpGet("{id:guid}/print")] public async Task<IActionResult> Print(Guid id) { var job = await QueryJob().SingleOrDefaultAsync(j => j.Id == id); return job is null ? NotFound() : View(job); }
-    private IQueryable<JobPayment> QueryJob() => _db.JobPayments.AsNoTracking().Include(j => j.PayeeUser).Include(j => j.CollectionClient).Include(j => j.Claims).ThenInclude(x => x.Claim).Include(j => j.Collections).ThenInclude(x => x.CollectionTransaction).Include(j => j.Deductions);
+    private IQueryable<JobPayment> QueryJob() => _db.JobPayments.AsNoTracking()
+        .Include(j => j.PayeeUser)
+        .Include(j => j.CollectionClient)
+        .Include(j => j.OriginalJobPayment)
+        .Include(j => j.Claims).ThenInclude(x => x.Claim)
+        .Include(j => j.Collections).ThenInclude(x => x.CollectionTransaction)
+        .Include(j => j.Payrolls).ThenInclude(x => x.Payroll).ThenInclude(p => p.Entries)
+        .Include(j => j.Deductions);
     private IActionResult RedirectResult(ElixomClaim.Lib.Common.Result result, Guid id) { TempData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.IsSuccess ? "Job payment updated." : result.Error; return RedirectToAction(nameof(Details), new { id }); }
     private Guid CurrentUserId() => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("UserId"), out var id) ? id : Guid.Empty;
 }

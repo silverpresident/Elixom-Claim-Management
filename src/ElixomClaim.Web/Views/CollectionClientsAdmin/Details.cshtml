@@ -119,6 +119,7 @@
                         {
                             <li class="list-group-item">
                                 <div><strong>@detail.BankName</strong> — @detail.AccountName (<code>@detail.AccountNumber</code>)</div>
+                                <small class="text-muted">@detail.BranchName (@detail.BranchCode) · @detail.AccountType</small>
                                 @if (!string.IsNullOrWhiteSpace(detail.Notes))
                                 {
                                     <small class="text-muted">Internal note: @detail.Notes</small>
@@ -131,6 +132,12 @@
                         <input name="accountName" class="form-control mb-2" placeholder="Account name" required />
                         <input name="bankName" class="form-control mb-2" placeholder="Bank name" required />
                         <input name="branchCode" class="form-control mb-2" placeholder="Branch code" required />
+                        <input name="branchName" class="form-control mb-2" placeholder="Branch name" required />
+                        <select name="accountType" class="form-select mb-2" required>
+                            <option value="">Select account type</option>
+                            <option value="Savings">Savings</option>
+                            <option value="Current">Current / Chequing</option>
+                        </select>
                         <input name="accountNumber" class="form-control mb-2" placeholder="Account number" required />
                         <input name="notes" class="form-control mb-2" placeholder="Internal bank notes (Admin only)" />
                         <button class="btn btn-outline-primary btn-sm">Add Bank Detail</button>

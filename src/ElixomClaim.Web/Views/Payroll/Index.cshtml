@@ -137,7 +137,7 @@
                     <tbody>
                         @foreach (var payroll in Model.Payrolls)
                         {
-                            <tr>
+                            <tr id="payroll-@payroll.Id">
                                 <td>
                                     <strong>@payroll.User.FullName</strong>
                                     <div class="small text-muted">@payroll.User.Email</div>
