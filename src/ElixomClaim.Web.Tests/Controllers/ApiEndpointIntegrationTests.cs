@@ -229,6 +229,28 @@ public class ApiEndpointIntegrationTests
         Assert.Contains("OutboxWakeUp", await response.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task OperationsApi_OutboxWakeUpIsDurableAndDoesNotDispatchWork()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var administratorId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = administratorId, Email = "operation-admin@example.test", NormalizedEmail = "OPERATION-ADMIN@EXAMPLE.TEST", FullName = "Operation Admin", Role = UserRole.Administrator, IsActive = true });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", administratorId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+        var request = new { type = "OutboxWakeUp", idempotencyKey = "wake-up-1", salaryDefinitionId = (Guid?)null, asOfDate = (DateOnly?)null, batchSize = 10 };
+        Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsync("/api/v1/operations", JsonContent.Create(request))).StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsync("/api/v1/operations", JsonContent.Create(request))).StatusCode);
+        using var verifyScope = host.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Single(await verifyDb.OperationRecords.Where(record => record.OperationType == "OutboxWakeUp").ToListAsync());
+        Assert.Empty(await verifyDb.EmailOutboxItems.ToListAsync());
+    }
+
     private static async Task<IHost> CreateHostAsync(string databaseName) => await new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services =>
     {
         services.AddLogging(); services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase(databaseName));
