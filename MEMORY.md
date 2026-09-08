@@ -107,6 +107,7 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
+   The engagement procedure and completion record are documented in [the independent OAuth/MCP review runbook](docs/runbooks/independent-oauth-security-review.md).
 2. **Sprint 12 completion:** standard MCP transport is corrected, but the versioned REST replacement, full tool/operation hardening, and end-to-end protocol/security coverage remain before release readiness. Do not remove the Sprint 12 task-list entry until its acceptance evidence is complete.
 3. **Clean SQL migration ledger:** `20260903053340_InitialCreate` now creates `dbclaim`, but still creates `JobPayments` before missing core dependency tables. Its Guid designer and subsequent migration history are inconsistent. The relational audit integration test cannot apply migrations to a clean SQL Server. Sprint 12 prerequisite 5b requires a scoped, data-preserving ledger reconciliation before durable-operation or release evidence can be trusted.
 
