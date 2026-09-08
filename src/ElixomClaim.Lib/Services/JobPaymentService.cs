@@ -87,7 +87,7 @@ public class JobPaymentService : IJobPaymentService
         if (string.IsNullOrWhiteSpace(idempotencyKey)) return Result.Failure<int>("An idempotency key is required.");
         var role = await _db.Users.Where(user => user.Id == actorUserId && user.IsActive).Select(user => (UserRole?)user.Role).SingleOrDefaultAsync(ct);
         if (role is not { } activeRole || !activeRole.HasMinimumRole(UserRole.Accountant)) return Result.Failure<int>("Accountant access is required.");
-        var job = await _db.JobPayments.Include(item => item.PayeeUser).Include(item => item.Claims).ThenInclude(item => item.Claim).Include(item => item.Collections).ThenInclude(item => item.CollectionTransaction).Include(item => item.Deductions).SingleOrDefaultAsync(item => item.Id == jobPaymentId, ct);
+        var job = await _db.JobPayments.Include(item => item.PayeeUser).Include(item => item.Claims).ThenInclude(item => item.Claim).Include(item => item.Collections).ThenInclude(item => item.CollectionTransaction).Include(item => item.Payrolls).ThenInclude(item => item.Payroll).ThenInclude(item => item.Entries).Include(item => item.Deductions).SingleOrDefaultAsync(item => item.Id == jobPaymentId, ct);
         if (job is null || job.Status is not (JobPaymentStatus.Scheduled or JobPaymentStatus.Paid)) return Result.Failure<int>("Payment summary is available only for Scheduled or Paid job payments.");
         var prefix = $"approved-payment-summary:{jobPaymentId}:{idempotencyKey.Trim()}";
         if (await _db.EmailOutboxItems.AnyAsync(item => item.IdempotencyKey.StartsWith(prefix), ct)) return Result.Success(0);
@@ -282,7 +282,7 @@ public class JobPaymentService : IJobPaymentService
         var role = await _db.Users.Where(u => u.Id == actorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct);
         if (role is not { } userRole || !userRole.HasMinimumRole(UserRole.Accountant)) return Result.Failure("Accountant access is required.");
         if (paymentDateUtc.Kind != DateTimeKind.Utc || string.IsNullOrWhiteSpace(transactionNumber)) return Result.Failure("UTC payment date and transaction number are required.");
-        var job = await _db.JobPayments.Include(j => j.Claims).ThenInclude(x => x.Claim).Include(j => j.Collections).ThenInclude(x => x.CollectionTransaction).Include(j => j.Payrolls).ThenInclude(x => x.Payroll).Include(j => j.Deductions).Include(j => j.PayeeUser).SingleOrDefaultAsync(j => j.Id == jobPaymentId, ct);
+        var job = await _db.JobPayments.Include(j => j.Claims).ThenInclude(x => x.Claim).Include(j => j.Collections).ThenInclude(x => x.CollectionTransaction).Include(j => j.Payrolls).ThenInclude(x => x.Payroll).ThenInclude(x => x.Entries).Include(j => j.Deductions).Include(j => j.PayeeUser).SingleOrDefaultAsync(j => j.Id == jobPaymentId, ct);
         if (job is null || job.Status != JobPaymentStatus.Scheduled) return Result.Failure("Only Scheduled job payments can be marked paid.");
         if (await _db.EmailOutboxItems.AnyAsync(e => e.IdempotencyKey == $"job-payment-paid:{job.Id}", ct)) return Result.Failure("This job payment has already been settled.");
         await using var transaction = _db.Database.IsRelational() ? await _db.Database.BeginTransactionAsync(ct) : null;
@@ -352,11 +352,13 @@ public class JobPaymentService : IJobPaymentService
         Func<string, string> encode = System.Text.Encodings.Web.HtmlEncoder.Default.Encode;
         var claims = string.Join("", job.Claims.Select(x => $"<li>{encode(x.Claim.Title)} — {x.Claim.Amount:N2} JMD</li>"));
         var collections = string.Join("", job.Collections.Select(x => $"<li>Collection #{x.CollectionTransaction.SequenceNo} — {x.CollectionTransaction.Amount:N2} JMD</li>"));
+        var payrolls = string.Join("", job.Payrolls.Select(x => $"<li>Payroll #{x.Payroll.SequenceNo} ending {x.Payroll.PeriodEndingDate:yyyy-MM-dd} — {x.Payroll.PayrollTotal:N2} JMD<ul>{string.Join("", x.Payroll.Entries.OrderBy(entry => entry.SortOrder).Select(entry => $"<li>{encode(entry.Description)} — {entry.Amount:N2} JMD</li>"))}</ul></li>"));
         var deductions = string.Join("", job.Deductions.Select(x => $"<li>{encode(x.Description)} — {x.Amount:N2} JMD</li>"));
         var acctNumber = job.PayoutBankAccountNumber ?? job.PayeeUser?.BankAccountNumber;
         var bank = string.IsNullOrWhiteSpace(acctNumber)
             ? "Collection client payout"
             : $"Bank account ending {encode(acctNumber[^Math.Min(4, acctNumber.Length)..])}";
-        return $"<article style=\"font-family:Arial,sans-serif;max-width:720px;margin:auto\"><h1>Payout summary</h1><p>Payment #{job.SequenceNo}</p><p>{bank}</p><p>Payment date: {job.PaymentDateUtc:yyyy-MM-dd} UTC<br/>Transaction: {encode(job.PaymentTransactionNumber ?? string.Empty)}</p><h2>Claims</h2><ul>{claims}</ul><h2>Collections</h2><ul>{collections}</ul><h2>Deductions</h2><ul>{deductions}</ul><table><tr><th>Job total</th><td>{job.JobTotal:N2} JMD</td></tr><tr><th>Client fee</th><td>{job.ClientProcessingFee:N2} JMD</td></tr><tr><th>Deductions</th><td>{job.TotalDeductions:N2} JMD</td></tr><tr><th>Total paid</th><td><strong>{job.TotalPaid:N2} JMD</strong></td></tr></table></article>";
+        var adjustment = job.IsAdjustment ? $"<h2>Adjustment</h2><p>{encode(job.AdjustmentReason ?? "Approved adjustment")}</p>" : string.Empty;
+        return $"<article style=\"font-family:Arial,sans-serif;max-width:720px;margin:auto\"><h1>Payout summary</h1><p>Payment #{job.SequenceNo}</p><p>{bank}</p><p>Payment date: {job.PaymentDateUtc:yyyy-MM-dd} UTC<br/>Transaction: {encode(job.PaymentTransactionNumber ?? string.Empty)}</p>{adjustment}<h2>Claims</h2><ul>{claims}</ul><h2>Collections</h2><ul>{collections}</ul><h2>Linked payrolls</h2><ul>{payrolls}</ul><h2>Deductions</h2><ul>{deductions}</ul><table><tr><th>Job total</th><td>{job.JobTotal:N2} JMD</td></tr><tr><th>Client fee</th><td>{job.ClientProcessingFee:N2} JMD</td></tr><tr><th>Transaction fees</th><td>{job.TotalTxnProcessingFee:N2} JMD</td></tr><tr><th>Deductions</th><td>{job.TotalDeductions:N2} JMD</td></tr><tr><th>Total paid</th><td><strong>{job.TotalPaid:N2} JMD</strong></td></tr></table></article>";
     }
 }
