@@ -205,6 +205,32 @@ public class ApiEndpointIntegrationTests
     }
 
     [Fact]
+    public async Task EmailTemplatesApi_QueuesOnlyApprovedRecipientsIdempotently()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var tellerId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var collectionClient = new CollectionClient { Id = Guid.NewGuid(), Name = "Queue Client" };
+            db.Users.Add(new User { Id = tellerId, Email = "queue-teller@example.test", NormalizedEmail = "QUEUE-TELLER@EXAMPLE.TEST", FullName = "Queue Teller", Role = UserRole.Teller, IsActive = true });
+            db.CollectionClients.Add(collectionClient);
+            db.CollectionTransactions.Add(new CollectionTransaction { Id = collectionId, CollectionClientId = collectionClient.Id, TellerUserId = tellerId, PayorName = "Queue payor", PayorEmail = "payor@example.test", Purpose = "Collection", Amount = 20m, PaymentDateUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", tellerId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+        var request = new { templateType = "CollectionReceipt", entityId = collectionId, idempotencyKey = "receipt-queue-1" };
+        Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsync("/api/v1/email-templates/queue", JsonContent.Create(request))).StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsync("/api/v1/email-templates/queue", JsonContent.Create(request))).StatusCode);
+        using var verifyScope = host.Services.CreateScope();
+        var outbox = await verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().EmailOutboxItems.ToListAsync();
+        Assert.Equal(2, outbox.Count);
+        Assert.All(outbox, item => Assert.Contains(item.Recipient, new[] { "payor@example.test", "ops@example.test" }));
+    }
+
+    [Fact]
     public async Task LegacyMcpControllerRoute_IsNotMappedAsAnApiFallback()
     {
         using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
