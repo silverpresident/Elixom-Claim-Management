@@ -2,7 +2,8 @@
 
 ## Current baseline
 
-- **Stage (2026-09-08):** Sprint 12 Standard MCP Server and Versioned Operations API is complete. `/mcp` is the authenticated, rate-limited official SDK transport, `/api/v1` is its separately scoped versioned REST API, and the six legacy MCP-labelled controllers are retired. Sprint 13 Release Fidelity and Assurance is now in progress.
+- **Stage (2026-09-08):** Sprint 12 Standard MCP Server and Versioned Operations API is complete. `/mcp` is the authenticated, rate-limited official SDK transport, `/api/v1` is its separately scoped versioned REST API, and the six legacy MCP-labelled controllers are retired. Sprint 13 item 1 is blocked pending a designated release owner and production-shaped Azure SQL restore rehearsal.
+- **Literal-model migration design (2026-09-08):** ADR 0008 and the rehearsal runbook define the additive, data-preserving conversion of audit targets/timestamps and email recipients to literal audit/entity and message-header fields. Historical source columns are retained for one release, system copies are Bcc-only, append-only audit protection remains mandatory, and destructive rollback is prohibited. See [ADR 0008](adr/0008-literal-audit-email-migration-strategy.md) and [the runbook](docs/runbooks/literal-audit-email-migration.md).
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
@@ -108,12 +109,13 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 10 Web workflow completion | Complete | All 7 items complete; build & 170 tests passed on 2026-09-03. See `sprints/10-web-workflow-completion.md`. |
 | 11 Deployment & release verification | Complete | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification matrix (176 tests passing). See `sprints/11-deployment-and-release-verification.md`. |
 | 12 Standard MCP server & API | Complete | All ordered items complete. Formatter and build passed cleanly; full solution test suite passed 236 tests on 2026-09-08. See `sprints/12-standard-mcp-and-api.md`. |
-| 13 Release fidelity & assurance | In progress | Begins after Sprint 12; literal audit/email persistence, payout fidelity, protocol coverage, and independent release assurance. See `sprints/13-release-fidelity-and-assurance.md`. |
+| 13 Release fidelity & assurance | In progress (blocked) | Item 1 design is complete, but its required production-shaped Azure SQL restore rehearsal awaits a designated release owner, staging environment, and safe email-provider test account. See `sprints/13-release-fidelity-and-assurance.md`. |
 
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
    The engagement procedure and completion record are documented in [the independent OAuth/MCP review runbook](docs/runbooks/independent-oauth-security-review.md).
+2. **Literal-model rehearsal:** Sprint 13 item 1 cannot proceed to implementation until the designated release owner supplies a production-shaped Azure SQL restore, safe email-provider test account, and independently observed rehearsal execution under [the migration runbook](docs/runbooks/literal-audit-email-migration.md).
 
 ## Decision log
 
@@ -150,4 +152,5 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 2026-09-08 | Dynamic OAuth registration is public-client-only; enforce each client's persisted allow-list at consent/code issuance, while trusted confidential clients require a client secret at token and refresh endpoints. | Removes arbitrary scope issuance and makes the client credential policy explicit; see [ADR 0006](adr/0006-oauth-client-type-and-scope-admission.md). |
 | 2026-09-08 | Use literal structured audit fields and email headers; configured system copies are Bcc-only. | Product decision for source fidelity and recipient privacy; see [ADR 0007](adr/0007-literal-audit-and-email-record-model.md) and Sprint 13. |
 | 2026-09-08 | Limit Manager audit visibility to claims, collections, and job payments metadata; reserve all other domains and before/after state for Administrators. | Narrow operational scope selected for least privilege; see ADR 0007 and Sprint 13 item 5. |
+| 2026-09-08 | Use an additive, data-preserving literal audit/email migration with source columns retained for one release and PITR recovery instead of destructive rollback. | Protects regulated audit, financial, outbox, and delivery history; see ADR 0008 and Sprint 13 item 1. |
 | 2026-09-07 | Keep `FullName` as the identity-provider value and add a separate optional `DisplayName`; require branch name and account type for user payout bank details. | Supports a user-controlled application name without changing sign-in identity and makes payout instructions more complete. |

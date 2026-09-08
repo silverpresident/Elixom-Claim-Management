@@ -47,7 +47,7 @@ The product decision is literal source-model fidelity: audit records use `Entity
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Not started | — | — |
+| 1 | Blocked | 2026-09-08 (/root) | Completed the design record in ADR 0008 and the [literal-model migration rehearsal runbook](../docs/runbooks/literal-audit-email-migration.md): additive field mapping, historic backfill, retained compatibility source fields, indexing, trigger handling, Bcc-only system copies, authorized projections, validation, idempotence, and PITR rollback. Blocking acceptance evidence: a designated release owner must provide the production-shaped Azure SQL restore, safe email-provider test account, and execute the required rehearsal. No data-bearing migration was created before that evidence. |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |
