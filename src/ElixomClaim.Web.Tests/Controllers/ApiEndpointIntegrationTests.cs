@@ -469,6 +469,26 @@ public class ApiEndpointIntegrationTests
     }
 
     [Fact]
+    public async Task McpTransport_HonorsClientCancellation()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var userId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = userId, Email = "mcp-cancel@example.test", NormalizedEmail = "MCP-CANCEL@EXAMPLE.TEST", FullName = "MCP Cancel", Role = UserRole.User, IsActive = true });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", userId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "mcp:access");
+        await using var transport = new HttpClientTransport(new HttpClientTransportOptions { Endpoint = new Uri("http://localhost/mcp") }, client);
+        await using var mcp = await McpClient.CreateAsync(transport);
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await mcp.CallToolAsync("claims_list", new Dictionary<string, object?> { ["request"] = new { statusFilter = (string?)null } }, cancellationToken: cancellation.Token));
+    }
+
+    [Fact]
     public async Task PayrollApi_RunPersistsOnePayrollAndReplaysDurably()
     {
         using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
