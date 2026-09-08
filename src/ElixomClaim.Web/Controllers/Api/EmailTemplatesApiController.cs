@@ -6,8 +6,18 @@ using Microsoft.AspNetCore.Mvc;
 namespace ElixomClaim.Web.Controllers.Api;
 
 [ApiController, Route("api/v1/email-templates"), Authorize(Policy = "ApiAccess")]
-public sealed class EmailTemplatesApiController(ICollectionService collections, IJobPaymentService jobPayments, IActorResolver actors, ILogger<EmailTemplatesApiController> logger) : ControllerBase
+public sealed class EmailTemplatesApiController(ICollectionService collections, IJobPaymentService jobPayments, IApprovedEmailPreviewService previews, IActorResolver actors, ILogger<EmailTemplatesApiController> logger) : ControllerBase
 {
+    [HttpPost("preview")]
+    public async Task<ActionResult<ApiEmailPreviewResult>> Preview([FromBody] ApiEmailPreviewRequest request, CancellationToken ct)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.TemplateType)) return Problem(statusCode: 400, detail: "templateType and entityId are required.");
+        var actor = await actors.ResolveActorAsync(HttpContext, "api:access", false, ct); if (!actor.IsSuccess) return Forbid();
+        var result = await previews.PreviewAsync(actor.Value!.User.Id, request.TemplateType, request.EntityId, ct);
+        if (result.IsFailure) return Problem(statusCode: 403, detail: result.Error);
+        logger.LogInformation("API approved email preview {TemplateType} requested by {ActorId}", request.TemplateType, actor.Value.User.Id);
+        return Ok(new ApiEmailPreviewResult(result.Value!.Subject, result.Value.RedactedHtmlBody, result.Value.RecipientSummary));
+    }
     [HttpPost("queue")]
     public async Task<ActionResult<ApiEmailQueueResult>> Queue([FromBody] ApiEmailQueueRequest request, CancellationToken ct)
     {
@@ -28,3 +38,5 @@ public sealed class EmailTemplatesApiController(ICollectionService collections, 
 }
 public sealed record ApiEmailQueueRequest(string TemplateType, Guid EntityId, string IdempotencyKey);
 public sealed record ApiEmailQueueResult(int QueuedCount, bool WasIdempotent);
+public sealed record ApiEmailPreviewRequest(string TemplateType, Guid EntityId);
+public sealed record ApiEmailPreviewResult(string Subject, string RedactedHtmlBody, IReadOnlyList<string> RecipientSummary);

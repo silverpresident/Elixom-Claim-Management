@@ -39,6 +39,7 @@ public sealed class EmailTools
     private readonly ILogger<EmailTools> _logger;
     private readonly ICollectionService? _collections;
     private readonly IJobPaymentService? _jobPayments;
+    private readonly IApprovedEmailPreviewService? _previews;
 
     public EmailTools(
         ApplicationDbContext dbContext,
@@ -48,7 +49,8 @@ public sealed class EmailTools
         McpToolActorAccessor actorAccessor,
         ILogger<EmailTools> logger,
         ICollectionService collections,
-        IJobPaymentService jobPayments)
+        IJobPaymentService jobPayments,
+        IApprovedEmailPreviewService previews)
     {
         _dbContext = dbContext;
         _audit = audit;
@@ -58,6 +60,7 @@ public sealed class EmailTools
         _logger = logger;
         _collections = collections;
         _jobPayments = jobPayments;
+        _previews = previews;
     }
 
     // Retained for direct domain-adapter unit tests. MCP discovery uses the constructor above.
@@ -66,7 +69,7 @@ public sealed class EmailTools
         IAuditService audit,
         ISystemClock clock,
         IOptions<NotificationOptions> notificationOptions)
-        : this(dbContext, audit, clock, notificationOptions, null!, NullLogger<EmailTools>.Instance, null!, null!)
+        : this(dbContext, audit, clock, notificationOptions, null!, NullLogger<EmailTools>.Instance, null!, null!, new ApprovedEmailPreviewService(dbContext, notificationOptions, audit))
     {
     }
 
@@ -94,6 +97,13 @@ public sealed class EmailTools
 
     public async Task<EmailPreviewResponse> PreviewAsync(User actor, EmailPreviewRequest request, CancellationToken ct)
     {
+        if (_previews is not null)
+        {
+            var result = await _previews.PreviewAsync(actor.Id, request.TemplateType, request.EntityId, ct);
+            return result.IsSuccess
+                ? new EmailPreviewResponse(true, null, result.Value!.Subject, result.Value.RedactedHtmlBody, result.Value.RecipientSummary.ToList())
+                : new EmailPreviewResponse(false, result.Error, null, null, null);
+        }
         if (string.IsNullOrWhiteSpace(request.TemplateType))
         {
             return new EmailPreviewResponse(false, "TemplateType is required.", null, null, null);

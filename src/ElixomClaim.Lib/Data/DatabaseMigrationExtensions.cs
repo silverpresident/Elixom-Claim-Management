@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Data;
 
 namespace ElixomClaim.Lib.Data;
 
@@ -41,18 +42,44 @@ public static class DatabaseMigrationExtensions
             logger?.LogInformation("Checking database state and applying EF Core migrations for schema '{Schema}'... ({Config})",
                 ApplicationDbContext.DefaultSchema, dbOptions?.ToRedactedString());
 
-            var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync(cancellationToken);
-            var pendingList = pendingMigrations.ToList();
-
-            if (pendingList.Count > 0)
+            var sqlServerLockHeld = false;
+            if (isProduction && string.Equals(dbContext.Database.ProviderName, "Microsoft.EntityFrameworkCore.SqlServer", StringComparison.Ordinal))
             {
-                logger?.LogInformation("Found {Count} pending migrations: {Migrations}", pendingList.Count, string.Join(", ", pendingList));
-                await dbContext.Database.MigrateAsync(cancellationToken);
-                logger?.LogInformation("Successfully applied pending database migrations.");
+                await dbContext.Database.OpenConnectionAsync(cancellationToken);
+                await using var acquire = dbContext.Database.GetDbConnection().CreateCommand();
+                acquire.CommandText = "EXEC @result = sp_getapplock @Resource = N'ElixomClaim:SchemaMigration', @LockMode = 'Exclusive', @LockOwner = 'Session', @LockTimeout = 60000;";
+                var result = acquire.CreateParameter(); result.ParameterName = "@result"; result.Direction = ParameterDirection.Output; result.DbType = DbType.Int32; acquire.Parameters.Add(result);
+                await acquire.ExecuteNonQueryAsync(cancellationToken);
+                if (result.Value is not int code || code < 0) throw new InvalidOperationException("Could not acquire the SQL Server schema migration lock.");
+                sqlServerLockHeld = true;
+                logger?.LogInformation("Acquired SQL Server application lock for schema migration.");
             }
-            else
+
+            try
             {
-                logger?.LogInformation("Database schema '{Schema}' is up-to-date. No pending migrations.", ApplicationDbContext.DefaultSchema);
+                var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync(cancellationToken);
+                var pendingList = pendingMigrations.ToList();
+
+                if (pendingList.Count > 0)
+                {
+                    logger?.LogInformation("Found {Count} pending migrations: {Migrations}", pendingList.Count, string.Join(", ", pendingList));
+                    await dbContext.Database.MigrateAsync(cancellationToken);
+                    logger?.LogInformation("Successfully applied pending database migrations.");
+                }
+                else
+                {
+                    logger?.LogInformation("Database schema '{Schema}' is up-to-date. No pending migrations.", ApplicationDbContext.DefaultSchema);
+                }
+            }
+            finally
+            {
+                if (sqlServerLockHeld)
+                {
+                    await using var release = dbContext.Database.GetDbConnection().CreateCommand();
+                    release.CommandText = "EXEC sp_releaseapplock @Resource = N'ElixomClaim:SchemaMigration', @LockOwner = 'Session';";
+                    await release.ExecuteNonQueryAsync(cancellationToken);
+                    await dbContext.Database.CloseConnectionAsync();
+                }
             }
 
             // Seed bootstrap administrator if configured

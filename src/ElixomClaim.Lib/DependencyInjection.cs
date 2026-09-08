@@ -75,6 +75,7 @@ public static class DependencyInjection
         services.AddScoped<ISalaryPayrollService, SalaryPayrollService>();
         services.AddScoped<IOperationRecordService, OperationRecordService>();
         services.AddScoped<IApprovedOperationService, ApprovedOperationService>();
+        services.AddScoped<IApprovedEmailPreviewService, ApprovedEmailPreviewService>();
         services.AddSingleton<FakeEmailSender>();
         services.AddScoped<SmtpEmailSender>();
         services.AddScoped<AcsEmailSender>();

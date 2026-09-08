@@ -2,7 +2,7 @@
 
 Elixom Claim is a secure, auditable claims and payment-operations system for employees, contractors, tellers, managers, accountants, and administrators. It combines four connected workflows—claims, payment collections, job payments, and recurring payroll—into one ASP.NET Core MVC application.
 
-> **Status:** design and delivery plan. The implementation has not yet been scaffolded. Work in the ordered [`sprints/`](sprints) backlog.
+> **Status:** implementation is actively being delivered. Sprint 12 is in progress; see [`MEMORY.md`](MEMORY.md) and the ordered [`sprints/`](sprints) backlog for current scope and verification evidence.
 
 ## Product outcomes
 
