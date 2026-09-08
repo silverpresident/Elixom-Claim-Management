@@ -1,116 +1,77 @@
 # Gemini Specification Completeness Report
 
-**Re-evaluated:** 2026-09-07
+**Reviewed:** 2026-09-08
 
-**Source specification:** [`context/gemini-specs.md`](../context/gemini-specs.md)
-
-**Method:** Code, migration, runtime-wiring, package, sprint-ledger, and automated-test review. This report reflects the current checkout rather than the 2026-09-03 assessment.
+**Source:** [`context/gemini-specs.md`](../context/gemini-specs.md)
+**Method:** Static review of the solution, migrations, runtime composition, MVC/MCP routes, domain and security services, tests, and the current Sprint 12 ledger. This is an implementation assessment, not a production security certification.
 
 ## Executive conclusion
 
-The implementation is now **substantially complete for the core business application**, but it currently has release-blocking test failures. The earlier functional gaps in profile/bank management, claim job date, collection telephone, job-payment UI, salary adjustment UI, payroll custom-entry UI, audit immutability, rate limiting, OAuth consent persistence, and migration startup have been addressed. The latest changes also add durable human-facing record numbers, stronger bank-detail fields, richer payout/receipt presentation, transaction snapshots for teller-entered collection values, and corrected collection-fee allocation for job-payment totals.
+The core claims, collections, job-payment, payroll, identity, audit, notification, and browser UI workflows are substantially implemented. The solution has the required .NET 10 Lib/Web/test-project split, EF Core `dbclaim` model, Google allow-list sign-in, hierarchical roles, durable email outbox, HTML print views, and a standard authenticated MCP server.
 
-It is **not fully complete against `gemini-specs.md`**, but the former primary MCP transport gap is now closed. The host registers the official SDK's stateless Streamable HTTP transport and exposes the sole MCP endpoint at `/mcp`; it is Bearer-authenticated, requires `mcp:access`, and is rate limited. All six domain tool groups are discoverable through MCP attributes, and the legacy `/mcp/*` MVC controller surface has been removed. Sprint 12 has completed its base tool-contract/attribution hardening; its next durable, actor-owned operations boundary is currently marked blocked pending ledger reconciliation. The separately scoped `/api/v1` REST API remains unimplemented.
+It is **not fully complete** against `gemini-specs.md`. Material open differences are: comments are chronological rather than threaded; collection options are suggestions rather than mandatory choices; MCP operations are not durably recorded before execution and one can dispatch work directly; OAuth does not check requested scopes against each client's allowed scopes; and clean-SQL migration evidence remains unresolved. The Gemini `/mcp/sse` endpoint is deliberately superseded by the current SDK's Streamable HTTP `/mcp` endpoint.
 
 ## Requirement coverage
 
-| Requirement area | Status | Evidence |
+| Gemini requirement | Status | Evidence and assessment |
 | --- | --- | --- |
-| .NET 10 MVC, Lib/Web/test split, EF Core, Azure SQL `dbclaim`, JMD money precision | Implemented | [`ApplicationDbContext.cs`](../src/ElixomClaim.Lib/Data/ApplicationDbContext.cs), [`DependencyInjection.cs`](../src/ElixomClaim.Lib/DependencyInjection.cs) |
-| Google allow-list authentication, blocked-user denial, hierarchical application roles | Implemented | [`UserValidationEvents.cs`](../src/ElixomClaim.Web/Authentication/UserValidationEvents.cs), [`AuthorizationHandlers.cs`](../src/ElixomClaim.Lib/Authorization/AuthorizationHandlers.cs) |
-| Claims lifecycle, soft deletion, job date, comments, claimant dashboard/history | Mostly implemented | [`ClaimEntities.cs`](../src/ElixomClaim.Lib/Entities/ClaimEntities.cs), [`ClaimsController.cs`](../src/ElixomClaim.Web/Controllers/ClaimsController.cs); durable `SequenceNo` values provide safe human-facing labels while Guids remain technical keys. |
-| Profile and bank-detail management with masked display, optional display name, branch name/account type, and audit logging | Implemented | [`ProfileController.cs`](../src/ElixomClaim.Web/Controllers/ProfileController.cs), [`Profile/Index.cshtml`](../src/ElixomClaim.Web/Views/Profile/Index.cshtml), migration `20260907090000_AddUserProfileDisplayAndBankFields` |
-| Collections, client options/fees, complete client bank details, payor email/telephone, receipts, HTML print/reissue | Mostly implemented | [`CollectionEntities.cs`](../src/ElixomClaim.Lib/Entities/CollectionEntities.cs), [`CollectionClientAdministrationService.cs`](../src/ElixomClaim.Lib/Services/CollectionClientAdministrationService.cs), [`CollectionService.cs`](../src/ElixomClaim.Lib/Services/CollectionService.cs), and [`JobPaymentService.cs`](../src/ElixomClaim.Lib/Services/JobPaymentService.cs): transaction fees are immutable client-configured snapshots; a collection job applies its client's per-job fee once and sums attached transaction snapshots. The workflow intentionally permits transaction-only custom purpose/amount values, differing from Gemini's configured-choice-only workflow. |
-| Durable SMTP/ACS outbox, retries, idempotency, email logs, HTML-only notifications | Implemented | [`OutboxService.cs`](../src/ElixomClaim.Lib/Services/OutboxService.cs), [`EmailSenders.cs`](../src/ElixomClaim.Lib/Services/EmailSenders.cs) |
-| Job creation, attachment/removal, deductions, metadata, submit/schedule/settle, adjustment workflow | Implemented | [`JobPaymentService.cs`](../src/ElixomClaim.Lib/Services/JobPaymentService.cs), [`JobPaymentsController.cs`](../src/ElixomClaim.Web/Controllers/JobPaymentsController.cs); detail/print presentation now includes linked collection, payroll, entry, deduction, and adjustment context. |
-| Salary definitions, adjustments, recurrence engine, payroll custom entries and payroll-to-job flow | Implemented | [`SalaryPayrollService.cs`](../src/ElixomClaim.Lib/Services/SalaryPayrollService.cs), [`PayrollController.cs`](../src/ElixomClaim.Web/Controllers/PayrollController.cs) |
-| Audit redaction and database-level append-only protection | Implemented | [`AddAuditRecordAppendOnlyTrigger.cs`](../src/ElixomClaim.Lib/Migrations/20260903090000_AddAuditRecordAppendOnlyTrigger.cs) |
-| OAuth authorization code + PKCE, consent persistence, token rotation/revocation, configured lifetimes and rate limiting | Mostly implemented | [`OAuthService.cs`](../src/ElixomClaim.Lib/Services/OAuthService.cs), [`OAuthController.cs`](../src/ElixomClaim.Web/Controllers/OAuthController.cs), [`RateLimitingConfiguration.cs`](../src/ElixomClaim.Web/Configuration/RateLimitingConfiguration.cs); Sprint 12 adds an `api:access` contract but not live API enforcement. |
-| Guarded application-start migration execution | Implemented with deployment qualification | [`Program.cs`](../src/ElixomClaim.Web/Program.cs), [`DatabaseMigrationExtensions.cs`](../src/ElixomClaim.Lib/Data/DatabaseMigrationExtensions.cs) |
-| Standard MCP server transport and tool discovery/invocation | **Implemented; durable operations boundary pending** | [`Program.cs`](../src/ElixomClaim.Web/Program.cs) calls `AddMcpServer().WithHttpTransport().WithTools<…>()` and maps `/mcp` with the Bearer `McpAccess` policy and MCP rate limit. The six classes in [`Mcp/Tools`](../src/ElixomClaim.Web/Mcp/Tools) use `McpServerToolType`/`McpServerTool`; [`McpToolActorAccessor.cs`](../src/ElixomClaim.Web/Mcp/Tools/McpToolActorAccessor.cs) delegates concrete actor resolution/audit context to [`ActorResolver.cs`](../src/ElixomClaim.Web/Services/ActorResolver.cs). Sprint 12 item 4 completed stable tool names, cancellation propagation, safe adapter errors, correlated audit attribution, and basic redaction tests; item 5 must replace direct operations execution with a durable actor-owned command boundary. |
-| CDN Bootstrap/jQuery, refined plum-and-gold SVG favicon, responsive HTML print, privacy page | Implemented | [`favicon.svg`](../src/ElixomClaim.Web/wwwroot/favicon.svg), [`_Layout.cshtml`](../src/ElixomClaim.Web/Views/Shared/_Layout.cshtml), [`Privacy.cshtml`](../src/ElixomClaim.Web/Views/Home/Privacy.cshtml) |
+| .NET 10/C# 14, MVC, EF Core, Azure SQL, `dbclaim` | Implemented | [`ElixomClaim.slnx`](../ElixomClaim.slnx), [`ApplicationDbContext.cs`](../src/ElixomClaim.Lib/Data/ApplicationDbContext.cs), and the project files use the requested platform and split. |
+| Lib/Web/test project separation | Implemented, with variation | The four projects exist. MCP tools reside in Web rather than Lib, complying with this repository's transport-adapter boundary. |
+| Startup migrations and bootstrap administrator | Implemented with deployment qualification | [`Program.cs`](../src/ElixomClaim.Web/Program.cs) invokes [`ApplyDatabaseMigrationsAsync`](../src/ElixomClaim.Lib/Data/DatabaseMigrationExtensions.cs) outside development and seeds/promotes the configured administrator. Its lock is process-local; production requires a single migration runner. |
+| Google SSO and active-user allow list | Implemented | Google wiring and [`UserValidationEvents.cs`](../src/ElixomClaim.Web/Authentication/UserValidationEvents.cs) authenticate only active provisioned users. |
+| Role hierarchy/access matrix | Implemented | [`UserRoleExtensions.cs`](../src/ElixomClaim.Lib/Entities/UserRoleExtensions.cs), shared policies, and protected controllers implement User through Administrator access; inactive/Blocked users are denied. |
+| Claims dashboard, lifecycle, own-draft editing/soft deletion, payment history | Mostly implemented | [`ClaimService.cs`](../src/ElixomClaim.Lib/Services/ClaimService.cs) and [`ClaimsController.cs`](../src/ElixomClaim.Web/Controllers/ClaimsController.cs) implement ownership/state rules, `DateOfJob`, payment states, UTC fields, row versions, and soft deletion. |
+| Public/private threaded comments | Partially implemented | [`ClaimComment`](../src/ElixomClaim.Lib/Entities/ClaimEntities.cs) has public/private chronological comments but no parent-comment/thread relation. |
+| Teller workspace, 24-hour collections, receipt reissue/print | Implemented | [`CollectionsController.cs`](../src/ElixomClaim.Web/Controllers/CollectionsController.cs) supplies collection, reissue, and print routes; [`HomeController.cs`](../src/ElixomClaim.Web/Controllers/HomeController.cs) calculates a 24-hour count. Print is `/collections/{id}/print`, not `/Teller/PrintReceipt/{id}`. |
+| Client/payor/method/bank data and configured purpose/amount | Mostly implemented | [`CollectionEntities.cs`](../src/ElixomClaim.Lib/Entities/CollectionEntities.cs) provides clients, options, required bank branch/account type, payor data, methods, and timestamps. Teller-entered purpose/amount values are permitted as immutable snapshots, instead of being restricted to configured options. |
+| Receipt delivery and HTML-only output | Implemented | [`CollectionService.cs`](../src/ElixomClaim.Lib/Services/CollectionService.cs), [`OutboxService.cs`](../src/ElixomClaim.Lib/Services/OutboxService.cs), and [`Print.cshtml`](../src/ElixomClaim.Web/Views/Collections/Print.cshtml) queue/render HTML receipts. No PDF feature/dependency was found. |
+| Manager claim/collection review and job assembly | Implemented | [`ManagerClaimsController.cs`](../src/ElixomClaim.Web/Controllers/ManagerClaimsController.cs), [`JobPaymentsController.cs`](../src/ElixomClaim.Web/Controllers/JobPaymentsController.cs), and [`JobPaymentService.cs`](../src/ElixomClaim.Lib/Services/JobPaymentService.cs) cover review, compatible attachment/removal, and deductions. |
+| Job details, fees, schedule, and atomic payment | Implemented | Job entities and service include claims, collections, payrolls, deductions, notes, payout metadata, lifecycle locks, fee snapshots, settlement updates, and idempotent notification. Paid-record adjustments/reversals add a financial safeguard beyond Gemini. |
+| Salary recurrence, adjustments, payroll generation/order/bounds | Implemented | [`SalaryPayrollService.cs`](../src/ElixomClaim.Lib/Services/SalaryPayrollService.cs) and [`SalaryRecurrencePlanner.cs`](../src/ElixomClaim.Lib/Services/SalaryRecurrencePlanner.cs) implement definitions, recurrence, generated locked entries, custom-entry non-negative validation, submission, and bound job creation. |
+| Accountant scheduling/payment execution | Implemented | Accountant queue and settlement actions are in `JobPaymentsController`; payroll actions are accountant-only in [`PayrollController.cs`](../src/ElixomClaim.Web/Controllers/PayrollController.cs). |
+| OAuth authorization code + PKCE S256 | Mostly implemented | [`OAuthController.cs`](../src/ElixomClaim.Web/Controllers/OAuthController.cs) exposes register/authorize/token/revoke. [`OAuthService.cs`](../src/ElixomClaim.Lib/Services/OAuthService.cs) validates redirects, requires S256, hashes codes/tokens, persists consent, rotates refresh tokens, and revokes tokens. It does not validate requested scopes against `AllowedScopes`; client-secret policy is optional without explicit public/confidential client types. |
+| MCP concrete identity and audit | Implemented | [`BearerTokenAuthenticationHandler.cs`](../src/ElixomClaim.Web/Authentication/BearerTokenAuthenticationHandler.cs), [`ActorResolver.cs`](../src/ElixomClaim.Web/Services/ActorResolver.cs), and [`McpToolActorAccessor.cs`](../src/ElixomClaim.Web/Mcp/Tools/McpToolActorAccessor.cs) resolve/audit the concrete active user. |
+| MCP endpoint | Implemented by protocol variation | `Program.cs` configures official `ModelContextProtocol.AspNetCore` stateless Streamable HTTP at `/mcp`, requiring Bearer authentication, `mcp:access`, and rate limiting. This replaces the older `/mcp/sse` example. |
+| MCP groups and safe email/operations behavior | Partially implemented | Six classes and 14 attributed tools exist in [`Mcp/Tools`](../src/ElixomClaim.Web/Mcp/Tools); email tools are constrained to approved templates. Several read tools query `ApplicationDbContext` directly. `operations_outbox_wakeup` calls `DispatchDueAsync` directly, operation records are written after action execution, and `operations_status` does not filter by `ActorUserId`. |
+| Audit logging | Implemented with naming variation | [`AuditService.cs`](../src/ElixomClaim.Lib/Services/AuditService.cs) stores `AuditRecords` rather than `AuditLogs`; migration `20260903090000_AddAuditRecordAppendOnlyTrigger` protects append-only persistence. |
+| SMTP/ACS async notification queue and logs | Implemented by stronger variation | The durable database outbox/hosted dispatcher supersedes Gemini's in-memory `Channel<T>`. [`EmailSenders.cs`](../src/ElixomClaim.Lib/Services/EmailSenders.cs) supports SMTP/ACS; send outcomes are retained in `EmailLogs`. |
+| CDN frontend, SVG favicon, print, privacy page | Implemented | [`_Layout.cshtml`](../src/ElixomClaim.Web/Views/Shared/_Layout.cshtml), [`favicon.svg`](../src/ElixomClaim.Web/wwwroot/favicon.svg), print styles, and [`Privacy.cshtml`](../src/ElixomClaim.Web/Views/Home/Privacy.cshtml) meet this requirement. |
+| Guid identity and user-facing record numbers | Implemented | The sequence-number migration (`20260907103000_AddUserFacingSequenceNumbers`) preserves Guid technical keys while providing durable display values. |
 
-## Remaining differences and risks
+## Differences and delivery risks
 
-### 1. MCP transport and base tool adapters are implemented; durable operations are incomplete
+1. **Threaded comments are absent.** Add a parent-comment relationship and relevant ordering/authorization tests if threading remains required.
+2. **Collection choices are permissive.** Active options are suggestions, with free-text purpose/amount accepted. Decide whether that flexibility is intended or needs an authorized exception workflow.
+3. **Durable MCP operations are incomplete.** Operations execute before a durable reservation; direct outbox dispatch violates the request-only worker boundary; operation-status lookup must enforce actor ownership.
+4. **OAuth policy needs hardening.** Enforce requested-scope subset checks and define/enforce public versus confidential client authentication.
+5. **Migration release proof is incomplete.** The initial migration visibly retains earlier numeric identifiers while the live model uses Guid keys. Sprint 12 item 5b records clean-SQL/data-preserving reconciliation as planned. Empty and existing database migrations must be proven before release.
+6. **Logging coverage is incomplete.** `AdminController`, `ClaimsController`, `HomeController`, `JobPaymentsController`, `ManagerClaimsController`, and MCP tools have no `ILogger<T>` dependency. Audit remains present but structured operational logging falls short of the stated standard.
+7. **Documentation and dependency debt remain.** `README.md` still claims the implementation is unscaffolded. A high-severity transitive `SSH.NET` advisory (`GHSA-q939-rpr3-3284`) exists in Lib tests. The OAuth/security review in `MEMORY.md` remains open.
+8. **Current repository scope remains unfinished.** `/api/v1` is absent despite being a Sprint 12 commitment; it is additional to the Gemini source specification.
 
-The Gemini example endpoint is `/mcp/sse`; the implementation uses the current official SDK's standard stateless Streamable HTTP endpoint at **`/mcp`** instead. This is an acceptable protocol evolution, not a missing transport.
+## Intentional/beneficial variations
 
-- `Program.cs` registers `ModelContextProtocol.AspNetCore` with `AddMcpServer().WithHttpTransport()` and all six tool groups, then maps only `/mcp` through `MapMcp`.
-- The endpoint requires the custom OAuth Bearer scheme, authenticated `mcp:access`, and the MCP rate-limit policy. `McpToolActorAccessor` resolves the active database user with the shared `IActorResolver`, preserving scope, role, correlation ID, IP address, and `IsMcp` audit classification.
-- The six former proprietary `Mcp*Controller` adapters are absent. A repository route search finds no live `/mcp/*` controller replacement, and no `/api/v1` endpoint has been added yet.
-- Tool discovery currently exposes 14 stable names across Claims, Collections, Job Payments, Payroll, Email, and Operations; `McpToolContractTests` asserts the names and basic collection-data redaction.
-
-Sprint 12 item 4 is recorded complete: stable names are tested, tool handlers resolve the concrete actor through the shared resolver, read adapters use safe failure responses and cancellation propagation, and collection DTOs omit payor email and internal processing fees. The remaining concerns are narrower but material:
-
-- Several adapters still query `ApplicationDbContext` and compose/queue outbox messages directly instead of delegating every domain decision to a shared Lib service. That conflicts with the stated thin-adapter boundary.
-- Invocations currently produce both adapter-level `MCP_TOOL_*` audit records and underlying `MCP_*` audit records, so a single request can be audited more than once. The intended single, complete attribution model needs to be settled and tested.
-- `operations_outbox_wakeup` directly calls `IOutboxService.DispatchDueAsync`, which is dispatch work rather than a durable request for background work. `operations_status` retrieves by idempotency key without an apparent actor-ownership check. Both points need correction before the operations tools meet the MCP guardrails.
-
-### 2. Claim comments are not threaded
-
-`ClaimComment` has claim and author references but no parent-comment/thread reference. The application supports chronological public and private comments, satisfying the newer README requirement, but not Gemini's explicit "threaded comments" requirement.
-
-### 3. Collection configuration is now suggestions rather than an exclusive catalog
-
-Gemini specifies that tellers choose configured purpose and amount values. The current collection UI presents client-scoped suggestions but also permits free-text purpose and custom amount input. The shared service preserves a custom entry as an immutable transaction snapshot and does not modify client configuration, which is a sound auditability choice, but it relaxes the specification's catalog-only validation rule.
-
-If client-configured values are intended to be mandatory financial controls, custom entries should be removed or separately authorized/audited as exceptions.
-
-### 4. OAuth policy enforcement remains incomplete
-
-The hardening improvements are real: redirect URI validation, persisted consent, PKCE S256, raw-code non-retention, configured lifetimes, replay revocation, and rate limiting are present.
-
-Two policy boundaries remain unclear or absent in code:
-
-- Requested authorization scopes are not checked against `OAuthClient.AllowedScopes` before consent/code issuance.
-- The token endpoint describes `client_secret_post` during registration, but code/refresh exchanges treat the client secret as optional. That can be valid for explicitly configured public clients with PKCE, but the application currently has no explicit public-versus-confidential client policy.
-- Although `api:access` was added to the OAuth defaults and the transport contract says it is separate from `mcp:access`, the default authorization request asks for both scopes and no `/api/v1` endpoint exists to enforce the separation. The live MCP endpoint does enforce `mcp:access`; REST scope isolation remains contractual groundwork.
-
-These are protocol-hardening issues rather than missing business workflows.
-
-### 5. Migration locking is process-local
-
-`ApplyDatabaseMigrationsAsync()` is wired on non-Development startup and honours `AutoApplyMigrations`, but its `SemaphoreSlim` prevents concurrent migration attempts only within one process. It does not coordinate multiple deployed instances. Production safety therefore still depends on the documented external single-runner deployment topology.
-
-### 6. Logging coverage is incomplete
-
-The specification requires `ILogger<T>` in controllers, services, and hosted services. Static inspection finds no such dependency in `AdminController`, `ClaimsController`, `HomeController`, `JobPaymentsController`, or `ManagerClaimsController`, and none of the six MCP tool adapters has one. This does not remove the existing audit trail, but it leaves the structured operational logging requirement incomplete.
-
-### 7. Release, test, and documentation risks
-
-- The current full suite does **not** pass. `dotnet test ElixomClaim.slnx --no-restore` fails to compile `WorkflowFieldsCompletionTests` because it still initializes the removed `RecordCollectionInput.ProcessingFee` property. The test must instead configure the client's `PerTransactionFee` and assert the service-owned snapshot.
-- The Lib-only suite also has one failing SQL Server relational audit test: applying the clean migration baseline fails because schema `dbclaim` does not exist or cannot be used. The run result was **118 passed, 1 failed**. This is the known migration/schema-order release blocker, now reproduced in this review.
-- `dotnet list ... package --vulnerable --include-transitive` reports a **high-severity** transitive `SSH.NET` vulnerability (`GHSA-q939-rpr3-3284`) in `ElixomClaim.Lib.Tests`.
-- The top-level README still says the implementation "has not yet been scaffolded," which is materially outdated.
-- Sprint 12 items 1–4 are complete. Item 5 is marked `Blocked` by prerequisite 5a, while the same ledger records 5a `Complete`; the status/reason needs reconciliation before work resumes. Items 6–8, including the separately scoped `/api/v1` API and its integration/contract evidence, are not started.
-- The collection-client bank-detail migration preserves existing records with empty branch-name/account-type fields. An Administrator must correct those legacy rows before they are relied on for a payout.
-- The independent OAuth security review remains an open risk in `MEMORY.md`; no code-only review can close it.
-
-## Intentional and acceptable variations
-
-| Gemini specification | Current implementation | Assessment |
+| Gemini specification | Implementation | Assessment |
 | --- | --- | --- |
-| `AuditLogs` | `AuditRecords` | Naming variation; append-only trigger now provides the required integrity control. |
-| In-memory `Channel<T>` email queue | Durable database outbox and hosted dispatcher | Stronger reliability and idempotency model. |
-| `/Teller/PrintReceipt/{id}` | `/collections/{id}/print` | Equivalent feature under a different route. |
-| No adjustment process specified for paid records | Linked, audited adjustment/reversal workflow | Additional financial safeguard. |
-| Older numeric-style identifiers implied by examples | Uniform Guid identifiers | Valid implementation choice with an ADR and migration strategy. |
-| Opaque Guid labels in the UI | Durable database-sequence-backed `SequenceNo` values, while Guids remain route/FK/audit keys | Usability improvement without changing technical identity. |
+| `AuditLogs` | `AuditRecords` | Naming variation; append-only trigger is stronger than an ordinary mutable log table. |
+| In-memory `Channel<T>` | Durable EF-backed outbox | Stronger restart safety, retries, and idempotency. |
+| `/Teller/PrintReceipt/{id}` | `/collections/{id}/print` | Equivalent HTML print feature under a REST-style route. |
+| `/mcp/sse` | Streamable HTTP `/mcp` | Current MCP protocol evolution, not a functional omission. |
+| No correction path specified | Audited adjustment/reversal jobs | Additional financial-control safeguard. |
+| Technical IDs only | Guid keys plus `SequenceNo` display labels | Improves usability without weakening relationships/audit identity. |
 
-## Verification performed on 2026-09-07
+## Verification performed on 2026-09-08
 
 ```bash
 dotnet test ElixomClaim.slnx --no-restore
-dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore
-dotnet list ElixomClaim.slnx package --vulnerable --include-transitive
+dotnet test src/ElixomClaim.Lib.Tests/ElixomClaim.Lib.Tests.csproj --no-restore --filter 'FullyQualifiedName!~AuditRecordRelationalPersistenceTests'
 ```
 
-- The full suite failed during Web-test compilation: `WorkflowFieldsCompletionTests.cs` references the deleted `RecordCollectionInput.ProcessingFee` property. No current passing Web-suite total can therefore be claimed; the earlier **71 passed** result pre-dates the fee-authority change.
-- The Lib-only suite compiled and ran: **118 passed, 1 failed**. The failure is `AuditRecords_RejectUpdatesAndDeletesAtTheSqlServerBoundary`, which cannot apply the clean relational migration baseline because `dbclaim` is unavailable at the point it is used.
-- The package scan confirmed the high-severity transitive `SSH.NET` advisory in the Lib test project and the two existing `NU1510` unnecessary-options-package warnings. The test runs also emit the existing obsolete Testcontainers builder warning.
-- Sprint 12 historical evidence remains useful for its completed MCP work (186 non-integration tests for item 3 and 13 focused MCP tests for item 4), but it is not a substitute for the now-failing current full suite. Broader MCP transport/authorization integration and contract testing remains unimplemented.
+- The solution invocation built Lib, Web, and both test assemblies. The Web suite passed: **71 passed, 0 failed**.
+- The SQL Server/Testcontainers relational Lib test did not return a final result within this environment's 30-second command window. It requires a Docker/SQL-capable release environment, so this report does not claim a current full-suite outcome.
+- Excluding that container-dependent test, Lib tests passed: **118 passed, 0 failed**.
+- Observed warnings: the SSH.NET advisory, two `NU1510` unnecessary package-reference warnings, and an obsolete Testcontainers builder warning.
 
 ## Overall assessment
 
-The product is now **functionally close to complete** against the Gemini business specification. The current authenticated, standard MCP transport and discovered tools close the previous protocol-level gap; the legacy proprietary MCP controller surface is retired. It should not be represented as fully complete or production-release ready until the current Web-test compilation regression and relational migration-baseline failure are fixed, Sprint 12 finishes its durable operations boundary and `/api/v1` scope separation, OAuth client/scope policy is made explicit, threaded comments and the configured-choice collection variation are consciously resolved, and the outstanding logging, dependency, migration-topology, and independent-security-review risks are closed.
+The repository is **functionally close to Gemini-spec complete**, with central business workflows implemented and broadly tested. It should not be represented as fully complete or production-ready until the threading and collection-policy decisions, durable MCP operation boundary, OAuth scope/client enforcement, clean relational migration proof, logging/dependency debt, and remaining Sprint 12 release evidence are closed.

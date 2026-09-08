@@ -17,7 +17,7 @@
     <section class="receipt-section" aria-labelledby="payment-heading">
         <h2 id="payment-heading">Payment</h2>
         <dl class="receipt-details">
-            <dt>Collection client</dt><dd>@Model.CollectionClient.Name</dd>
+            <dt>Client</dt><dd>@Model.CollectionClient.Name</dd>
             <dt>Purpose</dt><dd>@Model.Purpose</dd>
             <dt>Payment method</dt><dd>@Model.Method</dd>
             @if (!string.IsNullOrWhiteSpace(Model.ReferenceNumber))
