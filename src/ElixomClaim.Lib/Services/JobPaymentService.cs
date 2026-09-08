@@ -82,6 +82,23 @@ public class JobPaymentService : IJobPaymentService
         return job is null ? Result.Failure<JobPaymentReadModel>("Job payment was not found or is not accessible.") : Result.Success(ToReadModel(job, activeRole.HasMinimumRole(UserRole.Accountant)));
     }
 
+    public async Task<Result<int>> QueuePaymentSummaryAsync(Guid jobPaymentId, Guid actorUserId, string idempotencyKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey)) return Result.Failure<int>("An idempotency key is required.");
+        var role = await _db.Users.Where(user => user.Id == actorUserId && user.IsActive).Select(user => (UserRole?)user.Role).SingleOrDefaultAsync(ct);
+        if (role is not { } activeRole || !activeRole.HasMinimumRole(UserRole.Accountant)) return Result.Failure<int>("Accountant access is required.");
+        var job = await _db.JobPayments.Include(item => item.PayeeUser).Include(item => item.Claims).ThenInclude(item => item.Claim).Include(item => item.Collections).ThenInclude(item => item.CollectionTransaction).Include(item => item.Deductions).SingleOrDefaultAsync(item => item.Id == jobPaymentId, ct);
+        if (job is null || job.Status is not (JobPaymentStatus.Scheduled or JobPaymentStatus.Paid)) return Result.Failure<int>("Payment summary is available only for Scheduled or Paid job payments.");
+        var prefix = $"approved-payment-summary:{jobPaymentId}:{idempotencyKey.Trim()}";
+        if (await _db.EmailOutboxItems.AnyAsync(item => item.IdempotencyKey.StartsWith(prefix), ct)) return Result.Success(0);
+        var recipients = job.PayeeUser is not null ? new[] { job.PayeeUser.Email } : await _db.CollectionClientUsers.Where(item => item.CollectionClientId == job.CollectionClientId && item.User.IsActive).Select(item => item.User.Email).ToArrayAsync(ct);
+        foreach (var recipient in recipients.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase))
+            _db.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient, Subject = $"Payout summary #{job.SequenceNo}", HtmlBody = ComposePayoutHtml(job), RelatedEntityType = "JobPayment", RelatedEntityId = job.Id.ToString(), IdempotencyKey = $"{prefix}:{recipient.ToUpperInvariant()}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
+        await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_SUMMARY_QUEUE_REQUESTED", job, actorUserId, ct);
+        _logger.LogInformation("Approved payment summary queue requested for {JobPaymentId} by {ActorId}", jobPaymentId, actorUserId);
+        return Result.Success(recipients.Length);
+    }
+
     public async Task<Result> UpdateMetadataAsync(UpdateJobPaymentMetadataCommand c, CancellationToken ct = default)
     {
         var jobResult = await ProcessingJobAsync(c.ActorUserId, c.JobPaymentId, ct);

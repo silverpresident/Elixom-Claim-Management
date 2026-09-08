@@ -7,6 +7,7 @@ public interface IJobPaymentService
 {
     Task<Result<IReadOnlyList<JobPaymentReadModel>>> ListForActorAsync(Guid actorUserId, JobPaymentStatus? status, int take, CancellationToken cancellationToken = default);
     Task<Result<JobPaymentReadModel>> GetForActorAsync(Guid actorUserId, Guid jobPaymentId, CancellationToken cancellationToken = default);
+    Task<Result<int>> QueuePaymentSummaryAsync(Guid jobPaymentId, Guid actorUserId, string idempotencyKey, CancellationToken cancellationToken = default);
     Task<Result<JobPayment>> CreateAsync(CreateJobPaymentCommand command, CancellationToken cancellationToken = default);
     Task<Result> UpdateMetadataAsync(UpdateJobPaymentMetadataCommand command, CancellationToken cancellationToken = default);
     Task<Result> AttachClaimAsync(AttachJobPaymentClaimCommand command, CancellationToken cancellationToken = default);

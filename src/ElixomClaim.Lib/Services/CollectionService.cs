@@ -204,6 +204,25 @@ public class CollectionService : ICollectionService
         return record is null ? Result.Failure<CollectionReadModel>("Collection record was not found.") : Result.Success(record);
     }
 
+    public async Task<Result<int>> QueueReceiptAsync(Guid collectionId, Guid actorUserId, string idempotencyKey, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey)) return Result.Failure<int>("An idempotency key is required.");
+        var actor = await _dbContext.Users.SingleOrDefaultAsync(user => user.Id == actorUserId && user.IsActive, cancellationToken);
+        if (actor is null || !actor.Role.HasMinimumRole(UserRole.Teller)) return Result.Failure<int>("Teller access is required.");
+        var collection = await _dbContext.CollectionTransactions.Include(item => item.CollectionClient).SingleOrDefaultAsync(item => item.Id == collectionId, cancellationToken);
+        if (collection is null) return Result.Failure<int>("Collection record was not found.");
+        var prefix = $"approved-collection-receipt:{collectionId}:{idempotencyKey.Trim()}";
+        if (await _dbContext.EmailOutboxItems.AnyAsync(item => item.IdempotencyKey.StartsWith(prefix), cancellationToken)) return Result.Success(0);
+        var clientRecipients = await _dbContext.CollectionClientUsers.Where(item => item.CollectionClientId == collection.CollectionClientId && item.User.IsActive).Select(item => item.User.Email).ToListAsync(cancellationToken);
+        var recipients = new[] { collection.PayorEmail, _notificationOptions.SystemCopyAddress }.Concat(clientRecipients).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        foreach (var recipient in recipients)
+            _dbContext.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient!, Subject = $"Collection receipt #{collection.SequenceNo}", HtmlBody = ComposeReceiptHtml(collection, collection.CollectionClient), RelatedEntityType = "CollectionTransaction", RelatedEntityId = collection.Id.ToString(), IdempotencyKey = $"{prefix}:{recipient!.ToUpperInvariant()}", Status = IsValidEmail(recipient!) ? EmailOutboxStatus.Pending : EmailOutboxStatus.SkippedInvalidRecipient, FailureReason = IsValidEmail(recipient!) ? null : "Invalid recipient address.", AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _auditService.LogAsync("COLLECTION_RECEIPT_QUEUE_REQUESTED", $"CollectionTransaction:{collectionId}", actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
+        _logger.LogInformation("Approved collection receipt queue requested for {CollectionId} by {ActorId}", collectionId, actorUserId);
+        return Result.Success(recipients.Count);
+    }
+
     private static bool IsValidEmail(string value)
     {
         try { return new MailAddress(value).Address.Equals(value, StringComparison.OrdinalIgnoreCase); }

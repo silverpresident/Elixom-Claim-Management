@@ -37,6 +37,8 @@ public sealed class EmailTools
     private readonly NotificationOptions _notificationOptions;
     private readonly McpToolActorAccessor _actorAccessor;
     private readonly ILogger<EmailTools> _logger;
+    private readonly ICollectionService? _collections;
+    private readonly IJobPaymentService? _jobPayments;
 
     public EmailTools(
         ApplicationDbContext dbContext,
@@ -44,7 +46,9 @@ public sealed class EmailTools
         ISystemClock clock,
         IOptions<NotificationOptions> notificationOptions,
         McpToolActorAccessor actorAccessor,
-        ILogger<EmailTools> logger)
+        ILogger<EmailTools> logger,
+        ICollectionService collections,
+        IJobPaymentService jobPayments)
     {
         _dbContext = dbContext;
         _audit = audit;
@@ -52,6 +56,8 @@ public sealed class EmailTools
         _notificationOptions = notificationOptions.Value;
         _actorAccessor = actorAccessor;
         _logger = logger;
+        _collections = collections;
+        _jobPayments = jobPayments;
     }
 
     // Retained for direct domain-adapter unit tests. MCP discovery uses the constructor above.
@@ -60,7 +66,7 @@ public sealed class EmailTools
         IAuditService audit,
         ISystemClock clock,
         IOptions<NotificationOptions> notificationOptions)
-        : this(dbContext, audit, clock, notificationOptions, null!, NullLogger<EmailTools>.Instance)
+        : this(dbContext, audit, clock, notificationOptions, null!, NullLogger<EmailTools>.Instance, null!, null!)
     {
     }
 
@@ -120,10 +126,20 @@ public sealed class EmailTools
 
         if (string.Equals(templateType, "CollectionReceipt", StringComparison.OrdinalIgnoreCase))
         {
+            if (_collections is not null)
+            {
+                var result = await _collections.QueueReceiptAsync(request.EntityId, actor.Id, request.IdempotencyKey.Trim(), ct);
+                return new EmailQueueSendResponse(result.IsSuccess, result.IsSuccess ? null : result.Error, result.IsSuccess ? result.Value! : 0);
+            }
             return await QueueCollectionReceiptSendAsync(actor, request.EntityId, request.IdempotencyKey.Trim(), ct);
         }
         else if (string.Equals(templateType, "PaymentSummary", StringComparison.OrdinalIgnoreCase))
         {
+            if (_jobPayments is not null)
+            {
+                var result = await _jobPayments.QueuePaymentSummaryAsync(request.EntityId, actor.Id, request.IdempotencyKey.Trim(), ct);
+                return new EmailQueueSendResponse(result.IsSuccess, result.IsSuccess ? null : result.Error, result.IsSuccess ? result.Value! : 0);
+            }
             return await QueuePaymentSummarySendAsync(actor, request.EntityId, request.IdempotencyKey.Trim(), ct);
         }
         else
