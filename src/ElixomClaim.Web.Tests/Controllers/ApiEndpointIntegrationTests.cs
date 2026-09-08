@@ -6,7 +6,10 @@ using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using ElixomClaim.Web.Controllers.Api;
+using ElixomClaim.Web.Mcp.Tools;
 using ElixomClaim.Web.Services;
+using ModelContextProtocol.AspNetCore;
+using ModelContextProtocol.Client;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -303,6 +306,26 @@ public class ApiEndpointIntegrationTests
     }
 
     [Fact]
+    public async Task McpTransport_AuthenticatesAndDiscoversRegisteredTools()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var userId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = userId, Email = "mcp-client@example.test", NormalizedEmail = "MCP-CLIENT@EXAMPLE.TEST", FullName = "MCP Client", Role = UserRole.User, IsActive = true });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", userId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "mcp:access");
+        await using var transport = new HttpClientTransport(new HttpClientTransportOptions { Endpoint = new Uri("http://localhost/mcp") }, client);
+        await using var mcp = await McpClient.CreateAsync(transport);
+        var tools = await mcp.ListToolsAsync();
+        Assert.Contains(tools, tool => tool.Name == "claims_list");
+        Assert.Contains(tools, tool => tool.Name == "operations_status");
+    }
+
+    [Fact]
     public async Task PayrollApi_RunPersistsOnePayrollAndReplaysDurably()
     {
         using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
@@ -333,11 +356,12 @@ public class ApiEndpointIntegrationTests
     {
         services.AddLogging(); services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase(databaseName));
         services.Configure<ElixomClaim.Lib.Configuration.NotificationOptions>(options => options.SystemCopyAddress = "ops@example.test");
-        services.AddSingleton<ElixomClaim.Lib.Services.ISystemClock, ElixomClaim.Lib.Services.SystemClock>(); services.AddSingleton<ISalaryRecurrencePlanner, SalaryRecurrencePlanner>(); services.AddScoped<IAuditService, AuditService>(); services.AddScoped<IClaimService, ClaimService>(); services.AddScoped<ICollectionService, CollectionService>(); services.AddScoped<IJobPaymentService, JobPaymentService>(); services.AddScoped<ISalaryPayrollService, SalaryPayrollService>(); services.AddScoped<IApprovedEmailPreviewService, ApprovedEmailPreviewService>(); services.AddScoped<IOperationRecordService, OperationRecordService>(); services.AddScoped<IApprovedOperationService, ApprovedOperationService>(); services.AddScoped<IActorResolver, ActorResolver>(); services.AddHttpContextAccessor();
+        services.AddSingleton<ElixomClaim.Lib.Services.ISystemClock, ElixomClaim.Lib.Services.SystemClock>(); services.AddSingleton<ISalaryRecurrencePlanner, SalaryRecurrencePlanner>(); services.AddScoped<IAuditService, AuditService>(); services.AddScoped<IClaimService, ClaimService>(); services.AddScoped<ICollectionService, CollectionService>(); services.AddScoped<IJobPaymentService, JobPaymentService>(); services.AddScoped<ISalaryPayrollService, SalaryPayrollService>(); services.AddScoped<IApprovedEmailPreviewService, ApprovedEmailPreviewService>(); services.AddScoped<IOperationRecordService, OperationRecordService>(); services.AddScoped<IApprovedOperationService, ApprovedOperationService>(); services.AddScoped<IActorResolver, ActorResolver>(); services.AddScoped<McpToolActorAccessor>(); services.AddHttpContextAccessor();
         services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", _ => { });
-        services.AddAuthorization(options => options.AddPolicy("ApiAccess", policy => { policy.AddAuthenticationSchemes("Test"); policy.RequireAuthenticatedUser(); policy.RequireAssertion(context => context.User.HasClaim("scope", "api:access")); }));
+        services.AddAuthorization(options => { options.AddPolicy("ApiAccess", policy => { policy.AddAuthenticationSchemes("Test"); policy.RequireAuthenticatedUser(); policy.RequireAssertion(context => context.User.HasClaim("scope", "api:access")); }); options.AddPolicy("McpAccess", policy => { policy.AddAuthenticationSchemes("Test"); policy.RequireAuthenticatedUser(); policy.RequireAssertion(context => context.User.HasClaim("scope", "mcp:access")); }); });
+        services.AddMcpServer().WithHttpTransport().WithTools<ClaimTools>().WithTools<CollectionTools>().WithTools<JobPaymentTools>().WithTools<PayrollTools>().WithTools<EmailTools>().WithTools<OperationsTools>();
         services.AddControllers().AddApplicationPart(typeof(ClaimsApiController).Assembly);
-    }).Configure(app => { app.UseRouting(); app.UseAuthentication(); app.UseAuthorization(); app.UseEndpoints(endpoints => endpoints.MapControllers()); })).StartAsync();
+    }).Configure(app => { app.UseRouting(); app.UseAuthentication(); app.UseAuthorization(); app.UseEndpoints(endpoints => { endpoints.MapControllers(); endpoints.MapMcp("/mcp").RequireAuthorization("McpAccess"); }); })).StartAsync();
 
     private sealed class TestAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
