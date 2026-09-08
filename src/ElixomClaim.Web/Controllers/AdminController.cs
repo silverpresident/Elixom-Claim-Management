@@ -17,11 +17,23 @@ public class AdminController : Controller
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IAuditService _auditService;
+    private readonly ILogger<AdminController> _logger;
 
-    public AdminController(ApplicationDbContext dbContext, IAuditService auditService)
+    public AdminController(ApplicationDbContext dbContext, IAuditService auditService, ILogger<AdminController> logger)
     {
         _dbContext = dbContext;
         _auditService = auditService;
+        _logger = logger;
+    }
+
+    [HttpGet("")]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
+    public async Task<IActionResult> Index()
+    {
+        ViewBag.UserCount = await _dbContext.Users.CountAsync();
+        ViewBag.RecentAuditCount = await _dbContext.AuditRecords.CountAsync(record => record.TimestampUtc >= DateTime.UtcNow.AddDays(-7));
+        ViewBag.PendingEmailCount = await _dbContext.EmailOutboxItems.CountAsync(item => item.Status == EmailOutboxStatus.Pending || item.Status == EmailOutboxStatus.Processing);
+        return View();
     }
 
     [HttpGet("users")]
@@ -72,6 +84,8 @@ public class AdminController : Controller
             actorUserId: User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
             actorEmail: User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value);
 
+        _logger.LogInformation("Administrator updated user {UserId} role/status", user.Id);
+
         return RedirectToAction(nameof(Users));
     }
 
@@ -103,5 +117,24 @@ public class AdminController : Controller
 
         ViewBag.IsAdministrator = isAdministrator;
         return View(viewModels);
+    }
+
+    [HttpGet("emails")]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
+    public async Task<IActionResult> EmailLogs()
+    {
+        var records = await _dbContext.EmailLogs.AsNoTracking()
+            .OrderByDescending(log => log.CreatedAtUtc)
+            .Take(200)
+            .ToListAsync();
+        return View(records);
+    }
+
+    [HttpGet("emails/{id:guid}")]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
+    public async Task<IActionResult> EmailLog(Guid id)
+    {
+        var record = await _dbContext.EmailLogs.AsNoTracking().SingleOrDefaultAsync(log => log.Id == id);
+        return record is null ? NotFound() : View(record);
     }
 }
