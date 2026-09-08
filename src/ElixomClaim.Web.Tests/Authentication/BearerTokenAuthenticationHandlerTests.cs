@@ -33,7 +33,9 @@ public class BearerTokenAuthenticationHandlerTests
         public Task<OAuthClientRegistrationResult> RegisterClientAsync(string clientName, IEnumerable<string> redirectUris, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<OAuthClient?> GetClientAsync(string clientId, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<bool> ValidateClientSecretAsync(string clientId, string clientSecret, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<bool> ValidateClientAuthenticationAsync(string clientId, string? clientSecret, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<bool> ValidateRedirectUriAsync(string clientId, string redirectUri, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<bool> ValidateRequestedScopesAsync(string clientId, string requestedScope, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task RecordConsentAsync(string userId, string clientId, string scope, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<bool> HasConsentAsync(string userId, string clientId, string requestedScope, CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task<string> CreateAuthorizationCodeAsync(string clientId, string userId, string redirectUri, string scope, string codeChallenge, string codeChallengeMethod = "S256", CancellationToken cancellationToken = default) => throw new NotImplementedException();

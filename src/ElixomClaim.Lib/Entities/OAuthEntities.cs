@@ -1,13 +1,20 @@
 namespace ElixomClaim.Lib.Entities;
 
+public enum OAuthClientType
+{
+    Public = 0,
+    Confidential = 1
+}
+
 public class OAuthClient
 {
     public string ClientId { get; set; } = string.Empty;
     public string ClientName { get; set; } = string.Empty;
-    public string ClientSecretHash { get; set; } = string.Empty;
+    public string? ClientSecretHash { get; set; }
+    public OAuthClientType ClientType { get; set; } = OAuthClientType.Public;
     public string RedirectUrisJson { get; set; } = "[]";
     public string AllowedGrantTypes { get; set; } = "authorization_code,refresh_token";
-    public string AllowedScopes { get; set; } = "openid profile email mcp:access api:access";
+    public string AllowedScopes { get; set; } = "openid profile email mcp:access";
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }

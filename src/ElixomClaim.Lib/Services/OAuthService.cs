@@ -84,18 +84,19 @@ public class OAuthService : IOAuthService
             }
         }
 
+        // Dynamic registration is intentionally public-client-only. A dynamically
+        // registered MCP client cannot safely keep a secret; PKCE S256 is mandatory.
+        // Confidential clients are an administrative/trusted-provisioning concern.
         var clientId = "client_" + RandomNumberGenerator.GetHexString(16);
-        var clientSecret = "secret_" + RandomNumberGenerator.GetHexString(32);
-        var clientSecretHash = HashString(clientSecret);
 
         var client = new OAuthClient
         {
             ClientId = clientId,
             ClientName = clientName.Trim(),
-            ClientSecretHash = clientSecretHash,
+            ClientType = OAuthClientType.Public,
             RedirectUrisJson = JsonSerializer.Serialize(urisList),
             AllowedGrantTypes = "authorization_code,refresh_token",
-            AllowedScopes = "openid profile email mcp:access api:access",
+            AllowedScopes = "openid profile email mcp:access",
             IsActive = true,
             CreatedAtUtc = DateTime.UtcNow
         };
@@ -109,7 +110,8 @@ public class OAuthService : IOAuthService
             afterState: new { clientId, clientName = client.ClientName, redirectUris = urisList },
             cancellationToken: cancellationToken);
 
-        return new OAuthClientRegistrationResult(clientId, clientSecret, client.ClientName, urisList);
+        _logger.LogInformation("Registered public OAuth client {ClientId} with {RedirectUriCount} redirect URIs", clientId, urisList.Count);
+        return new OAuthClientRegistrationResult(clientId, null, client.ClientName, urisList, client.ClientType, client.AllowedScopes);
     }
 
     public async Task<OAuthClient?> GetClientAsync(string clientId, CancellationToken cancellationToken = default)
@@ -130,10 +132,28 @@ public class OAuthService : IOAuthService
             return false;
         }
 
+        if (client.ClientType != OAuthClientType.Confidential || string.IsNullOrWhiteSpace(client.ClientSecretHash) || string.IsNullOrWhiteSpace(clientSecret))
+        {
+            return false;
+        }
+
         var secretHash = HashString(clientSecret);
         return CryptographicOperations.FixedTimeEquals(
             Encoding.UTF8.GetBytes(client.ClientSecretHash),
             Encoding.UTF8.GetBytes(secretHash));
+    }
+
+    public async Task<bool> ValidateClientAuthenticationAsync(string clientId, string? clientSecret, CancellationToken cancellationToken = default)
+    {
+        var client = await GetClientAsync(clientId, cancellationToken);
+        if (client == null)
+        {
+            return false;
+        }
+
+        return client.ClientType == OAuthClientType.Public
+            ? string.IsNullOrWhiteSpace(clientSecret)
+            : await ValidateClientSecretAsync(clientId, clientSecret ?? string.Empty, cancellationToken);
     }
 
     public async Task<bool> ValidateRedirectUriAsync(string clientId, string redirectUri, CancellationToken cancellationToken = default)
@@ -153,8 +173,26 @@ public class OAuthService : IOAuthService
         return uris.Contains(redirectUri, StringComparer.OrdinalIgnoreCase);
     }
 
+    public async Task<bool> ValidateRequestedScopesAsync(string clientId, string requestedScope, CancellationToken cancellationToken = default)
+    {
+        var client = await GetClientAsync(clientId, cancellationToken);
+        if (client == null)
+        {
+            return false;
+        }
+
+        var requested = ParseScopes(requestedScope);
+        var allowed = ParseScopes(client.AllowedScopes);
+        return requested.Count > 0 && requested.All(allowed.Contains);
+    }
+
     public async Task RecordConsentAsync(string userId, string clientId, string scope, CancellationToken cancellationToken = default)
     {
+        if (!await ValidateRequestedScopesAsync(clientId, scope, cancellationToken))
+        {
+            throw new ArgumentException("Requested scope is not allowed for this client.", nameof(scope));
+        }
+
         var consent = await _dbContext.OAuthConsents
             .FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == clientId, cancellationToken);
 
@@ -188,6 +226,11 @@ public class OAuthService : IOAuthService
 
     public async Task<bool> HasConsentAsync(string userId, string clientId, string requestedScope, CancellationToken cancellationToken = default)
     {
+        if (!await ValidateRequestedScopesAsync(clientId, requestedScope, cancellationToken))
+        {
+            return false;
+        }
+
         var consent = await _dbContext.OAuthConsents
             .FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == clientId, cancellationToken);
 
@@ -211,6 +254,11 @@ public class OAuthService : IOAuthService
         string codeChallengeMethod = "S256",
         CancellationToken cancellationToken = default)
     {
+        if (!await ValidateRequestedScopesAsync(clientId, scope, cancellationToken))
+        {
+            throw new ArgumentException("Requested scope is not allowed for this client.", nameof(scope));
+        }
+
         var code = "code_" + RandomNumberGenerator.GetHexString(32);
         var codeHash = HashString(code);
 
@@ -263,13 +311,9 @@ public class OAuthService : IOAuthService
             return null;
         }
 
-        if (!string.IsNullOrEmpty(clientSecret))
+        if (!await ValidateClientAuthenticationAsync(clientId, clientSecret, cancellationToken))
         {
-            var isValidSecret = await ValidateClientSecretAsync(clientId, clientSecret, cancellationToken);
-            if (!isValidSecret)
-            {
-                return null;
-            }
+            return null;
         }
 
         // Verify PKCE S256
@@ -356,13 +400,9 @@ public class OAuthService : IOAuthService
             return null;
         }
 
-        if (!string.IsNullOrEmpty(clientSecret))
+        if (!await ValidateClientAuthenticationAsync(clientId, clientSecret, cancellationToken))
         {
-            var isValidSecret = await ValidateClientSecretAsync(clientId, clientSecret, cancellationToken);
-            if (!isValidSecret)
-            {
-                return null;
-            }
+            return null;
         }
 
         // Revoke current refresh token (rotation)
@@ -501,6 +541,10 @@ public class OAuthService : IOAuthService
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
+
+    private static HashSet<string> ParseScopes(string scope) => scope
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .ToHashSet(StringComparer.Ordinal);
 
     private static bool VerifyPkce(string codeVerifier, string codeChallenge, string method)
     {

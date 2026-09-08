@@ -27,6 +27,8 @@ public class OAuthServiceTests
         return Convert.ToBase64String(hash).Replace("+", "-").Replace("/", "_").TrimEnd('=');
     }
 
+    private static string HashSecret(string secret) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(secret))).ToLowerInvariant();
+
     [Fact]
     public async Task RegisterClientAsync_CreatesActiveClientAndAudits()
     {
@@ -37,9 +39,11 @@ public class OAuthServiceTests
         var result = await oauth.RegisterClientAsync("MCP Client", new[] { "https://mcp.local/callback" });
 
         Assert.NotNull(result.ClientId);
-        Assert.NotNull(result.ClientSecret);
+        Assert.Null(result.ClientSecret);
         Assert.Equal("MCP Client", result.ClientName);
         Assert.Single(result.RedirectUris);
+        Assert.Equal(OAuthClientType.Public, result.ClientType);
+        Assert.Equal("openid profile email mcp:access", result.AllowedScopes);
 
         var clientInDb = await oauth.GetClientAsync(result.ClientId);
         Assert.NotNull(clientInDb);
@@ -129,6 +133,49 @@ public class OAuthServiceTests
 
         var consentInDb = await db.OAuthConsents.FirstOrDefaultAsync(c => c.UserId == userId && c.ClientId == client.ClientId);
         Assert.NotNull(consentInDb);
+    }
+
+    [Fact]
+    public async Task RequestedScopes_MustBeAllowedByTheRegisteredClient()
+    {
+        var db = CreateInMemoryDbContext();
+        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
+        var oauth = new OAuthService(db, audit, NullLogger<OAuthService>.Instance);
+        var client = await oauth.RegisterClientAsync("MCP Client", new[] { "https://app.com/cb" });
+        var verifier = "scope_verifier_1234567890_abcdef";
+
+        Assert.True(await oauth.ValidateRequestedScopesAsync(client.ClientId, "openid mcp:access"));
+        Assert.False(await oauth.ValidateRequestedScopesAsync(client.ClientId, "api:access"));
+        await Assert.ThrowsAsync<ArgumentException>(() => oauth.CreateAuthorizationCodeAsync(
+            client.ClientId, Guid.NewGuid().ToString(), "https://app.com/cb", "api:access", CalculateS256Challenge(verifier)));
+    }
+
+    [Fact]
+    public async Task ClientAuthentication_EnforcesPublicAndConfidentialPolicy()
+    {
+        var db = CreateInMemoryDbContext();
+        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
+        var oauth = new OAuthService(db, audit, NullLogger<OAuthService>.Instance);
+        var publicClient = await oauth.RegisterClientAsync("Public MCP", new[] { "https://app.com/public-cb" });
+        const string secret = "trusted-client-secret";
+        var confidentialClient = new OAuthClient
+        {
+            ClientId = "trusted-client",
+            ClientName = "Trusted server integration",
+            ClientType = OAuthClientType.Confidential,
+            ClientSecretHash = HashSecret(secret),
+            RedirectUrisJson = "[\"https://app.com/confidential-cb\"]",
+            AllowedScopes = "mcp:access",
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        db.OAuthClients.Add(confidentialClient);
+        await db.SaveChangesAsync();
+
+        Assert.True(await oauth.ValidateClientAuthenticationAsync(publicClient.ClientId, null));
+        Assert.False(await oauth.ValidateClientAuthenticationAsync(publicClient.ClientId, secret));
+        Assert.False(await oauth.ValidateClientAuthenticationAsync(confidentialClient.ClientId, null));
+        Assert.False(await oauth.ValidateClientAuthenticationAsync(confidentialClient.ClientId, "wrong-secret"));
+        Assert.True(await oauth.ValidateClientAuthenticationAsync(confidentialClient.ClientId, secret));
     }
 
     [Fact]

@@ -24,6 +24,8 @@ Access to both `/mcp` and `/api/v1` requires a Bearer access token issued by the
 
 Tokens carrying only `mcp:access` will be rejected with `403 Forbidden` if presented to `/api/v1/*`. Conversely, tokens carrying only `api:access` will be rejected with `403 Forbidden` if presented to `/mcp`.
 
+Dynamic registration at `/oauth/register` creates a **public** MCP client: it returns no client secret, requires PKCE S256, and is limited to `openid profile email mcp:access`. Its requested scopes are rejected unless every scope is present in that client's persisted allow-list. Confidential clients are trusted, administratively provisioned integrations; they must retain a hashed client secret and authenticate at token exchange and refresh. Existing pre-policy clients migrate as confidential clients.
+
 ---
 
 ## Headers & Global Conventions

@@ -118,7 +118,7 @@ public static class DevelopmentDataSeeder
         db.AddRange(
             new EmailOutboxItem { Id = outboxId, Recipient = "recipient@example.test", Subject = "Development receipt", HtmlBody = "<p>Development receipt</p>", RelatedEntityType = "CollectionTransaction", RelatedEntityId = collection.Id.ToString(), IdempotencyKey = "development-receipt-101", CreatedAtUtc = now, AvailableAtUtc = now },
             new EmailLog { Id = Guid.Parse("31000000-0000-0000-0000-000000000001"), OutboxItemId = outboxId, Recipient = "recipient@example.test", Subject = "Development receipt", HtmlBody = "<p>Development receipt</p>", Provider = "Development", RelatedEntityType = "CollectionTransaction", RelatedEntityId = collection.Id.ToString(), AttemptNumber = 1, Status = EmailOutboxStatus.Pending, CreatedAtUtc = now },
-            new OAuthClient { ClientId = "development-client", ClientName = "Development sample client", ClientSecretHash = "development-only-not-a-secret", RedirectUrisJson = "[\"https://example.test/callback\"]", CreatedAtUtc = now },
+            new OAuthClient { ClientId = "development-client", ClientName = "Development sample client", ClientType = OAuthClientType.Public, RedirectUrisJson = "[\"https://example.test/callback\"]", CreatedAtUtc = now },
             new AuditRecord { Id = Guid.Parse("11000000-0000-0000-0000-000000000001"), ActorUserId = UserIds[UserRole.Administrator].ToString(), ActorEmail = "dev-administrator@example.test", Action = "DevelopmentDataSeeded", Target = "DevelopmentData", IsMcpOperation = false, TimestampUtc = now });
 
         await db.SaveChangesAsync(cancellationToken);

@@ -171,7 +171,8 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(c => c.ClientId);
             entity.Property(c => c.ClientId).HasMaxLength(100);
             entity.Property(c => c.ClientName).IsRequired().HasMaxLength(200);
-            entity.Property(c => c.ClientSecretHash).IsRequired().HasMaxLength(256);
+            entity.Property(c => c.ClientSecretHash).HasMaxLength(256);
+            entity.Property(c => c.ClientType).IsRequired().HasConversion<string>().HasMaxLength(20).HasDefaultValue(OAuthClientType.Confidential);
             entity.Property(c => c.RedirectUrisJson).IsRequired().HasMaxLength(2000);
             entity.Property(c => c.AllowedGrantTypes).IsRequired().HasMaxLength(200);
             entity.Property(c => c.AllowedScopes).IsRequired().HasMaxLength(500);

@@ -38,12 +38,12 @@ public class OAuthController : Controller
             return Created("", new
             {
                 client_id = result.ClientId,
-                client_secret = result.ClientSecret,
                 client_name = result.ClientName,
                 redirect_uris = result.RedirectUris,
                 grant_types = new[] { "authorization_code", "refresh_token" },
                 response_types = new[] { "code" },
-                token_endpoint_auth_method = "client_secret_post"
+                token_endpoint_auth_method = "none",
+                scope = result.AllowedScopes
             });
         }
         catch (ArgumentException ex)
@@ -85,7 +85,12 @@ public class OAuthController : Controller
             return BadRequest(new { error = "invalid_request", error_description = "PKCE S256 code_challenge is required" });
         }
 
-        var reqScope = scope ?? "openid profile email mcp:access api:access";
+        var reqScope = string.IsNullOrWhiteSpace(scope) ? client.AllowedScopes : scope;
+        if (!await _oauthService.ValidateRequestedScopesAsync(clientId, reqScope))
+        {
+            _logger.LogWarning("Rejected unauthorized OAuth scope request for client {ClientId}", clientId);
+            return BadRequest(new { error = "invalid_scope" });
+        }
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (!string.IsNullOrEmpty(userId) && await _oauthService.HasConsentAsync(userId, clientId, reqScope))
@@ -153,7 +158,13 @@ public class OAuthController : Controller
             return Unauthorized();
         }
 
-        var reqScope = scope ?? "openid profile email mcp:access api:access";
+        var reqScope = string.IsNullOrWhiteSpace(scope) ? client.AllowedScopes : scope;
+        if (!await _oauthService.ValidateRequestedScopesAsync(clientId, reqScope))
+        {
+            _logger.LogWarning("Rejected unauthorized OAuth consent scope for client {ClientId}", clientId);
+            return BadRequest(new { error = "invalid_scope" });
+        }
+
         await _oauthService.RecordConsentAsync(userId, clientId, reqScope);
 
         var code = await _oauthService.CreateAuthorizationCodeAsync(

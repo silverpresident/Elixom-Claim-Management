@@ -71,6 +71,22 @@ public class McpOAuthSecurityTests
     }
 
     [Fact]
+    public async Task AuthorizeEndpoint_RejectsScopesOutsideTheClientAllowList()
+    {
+        var db = CreateInMemoryDbContext();
+        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
+        var oauth = new OAuthService(db, audit, NullLogger<OAuthService>.Instance);
+        var controller = new OAuthController(oauth, NullLogger<OAuthController>.Instance);
+        var reg = await oauth.RegisterClientAsync("MCP Client", new[] { "https://app.com/callback" });
+
+        var result = await controller.Authorize(
+            "code", reg.ClientId, "https://app.com/callback", "api:access", "state", "challenge", "S256");
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("invalid_scope", badRequest.Value?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AuthorizeConsent_RevalidatesParameters_AndPersistsConsent()
     {
         var db = CreateInMemoryDbContext();
