@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Net.Http.Json;
 using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
@@ -44,6 +45,29 @@ public class ApiEndpointIntegrationTests
         var response = await client.GetAsync("/api/v1/claims?page=1&pageSize=25");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("Owned", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task ClaimsApi_Create_RequiresAndPersistsIdempotencyKey()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var userId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = userId, Email = "create-api@example.test", NormalizedEmail = "CREATE-API@EXAMPLE.TEST", FullName = "Create API", Role = UserRole.User, IsActive = true });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", userId.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+        var body = JsonContent.Create(new { title = "Idempotent", description = "Created once", amount = 10m, dateOfJob = (DateTime?)null });
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync("/api/v1/claims", body)).StatusCode);
+        client.DefaultRequestHeaders.Add("Idempotency-Key", "claim-create-1");
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsync("/api/v1/claims", JsonContent.Create(new { title = "Idempotent", description = "Created once", amount = 10m, dateOfJob = (DateTime?)null }))).StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsync("/api/v1/claims", JsonContent.Create(new { title = "Idempotent", description = "Created once", amount = 10m, dateOfJob = (DateTime?)null }))).StatusCode);
+        using var verifyScope = host.Services.CreateScope();
+        Assert.Single(await verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Claims.ToListAsync());
     }
 
     private static async Task<IHost> CreateHostAsync(string databaseName) => await new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services =>
