@@ -3,13 +3,13 @@
 **Reviewed:** 2026-09-08
 
 **Source:** [`context/gemini-specs.md`](../context/gemini-specs.md)
-**Method:** Static review of the solution, migrations, runtime composition, MVC/MCP routes, domain and security services, tests, and the current Sprint 12 ledger. This is an implementation assessment, not a production security certification.
+**Method:** Requirement-by-requirement review of the source specification against solution structure, entities/model constraints, migrations, runtime composition, authorization, MVC/Razor flows, MCP/API adapters, email/audit services, the current Sprint 12 ledger, and the complete automated suite. This is an implementation assessment, not a production security certification.
 
 ## Executive conclusion
 
 The core claims, collections, job-payment, payroll, identity, audit, notification, browser UI, OAuth, and MCP workflows are substantially implemented. The solution has the required .NET 10 Lib/Web/test-project split, EF Core `dbclaim` model, Google allow-list sign-in, hierarchical roles, durable email outbox, HTML print views, a clean Guid-based migration baseline, and a standard authenticated MCP server.
 
-The Gemini functional specification is now **substantially complete**. Remaining work is release/readiness oriented: the independent OAuth/security review remains open, and the repository's additional Sprint 12 REST API/MCP transport contract and interoperability work is not yet finished.
+The Gemini functional specification is now **complete by implementation evidence**. All four domain workflows, role boundaries, HTML-only receipt/email pipeline, OAuth/MCP identity boundary, audit trail, and frontend requirements have a corresponding implementation path. Remaining work is release/readiness oriented: the independent OAuth/security review remains open, and the repository's additional Sprint 12 REST API/MCP transport contract and interoperability work is not yet finished.
 
 ## Requirement coverage
 
@@ -43,6 +43,7 @@ The Gemini functional specification is now **substantially complete**. Remaining
 1. **Independent security review remains.** The OAuth/MCP threat model requires a formally independent review before production release.
 2. **Additional repository API scope remains unfinished.** `/api/v1` includes claims, collection/job-payment reads, payroll preview/run, actor-owned operations, approved email preview/queue, durable command replay, and real HTTP boundary coverage under `api:access`. Complete endpoint-contract and conforming-client MCP transport coverage remain Sprint 12 work; these are additions beyond Gemini itself.
 3. **Production migration topology remains an operational condition.** The clean migration baseline and relational audit test now pass, and production SQL Server migration execution holds a session-scoped `sp_getapplock`; deployment should still use a dedicated migration runner where operationally practical.
+4. **One consolidated engineering-standard exception remains.** `HomeController` has no `ILogger<HomeController>` dependency. This is not a Gemini functional gap, but it does not meet the repository-wide logging rule.
 
 ## Intentional/beneficial variations
 
@@ -60,7 +61,7 @@ The Gemini functional specification is now **substantially complete**. Remaining
 dotnet test ElixomClaim.slnx --no-restore
 ```
 
-- The complete solution suite passed: **126 Lib tests and 92 Web tests; 218 passed, 0 failed**. This includes the SQL Server/Testcontainers relational audit-migration test.
+- The complete solution suite passed: **126 Lib tests and 98 Web tests; 224 passed, 0 failed**. This includes the SQL Server/Testcontainers relational audit-migration test and current API/MCP integration coverage.
 - No package or build warnings were observed after restore.
 
 ## Overall assessment
