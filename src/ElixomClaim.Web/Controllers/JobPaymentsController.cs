@@ -18,9 +18,10 @@ public class JobPaymentsController : Controller
     [HttpGet("")] public async Task<IActionResult> Index(JobPaymentStatus? status) => View(await _db.JobPayments.AsNoTracking().Include(j => j.PayeeUser).Include(j => j.CollectionClient).Where(j => !status.HasValue || j.Status == status).OrderByDescending(j => j.CreatedAtUtc).ToListAsync());
     [HttpGet("accountant-queue")][Authorize(Policy = PolicyNames.RequireAccountant)] public async Task<IActionResult> AccountantQueue() => View(await _db.JobPayments.AsNoTracking().Include(j => j.PayeeUser).Include(j => j.CollectionClient).Where(j => j.Status == JobPaymentStatus.Submitted || j.Status == JobPaymentStatus.Scheduled).OrderBy(j => j.ScheduledAtUtc).ThenBy(j => j.CreatedAtUtc).ToListAsync());
     [HttpGet("create")]
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create([FromQuery] Guid? collectionClientId)
     {
         await PopulatePayeesAsync();
+        ViewBag.SelectedCollectionClientId = collectionClientId;
         return View();
     }
 
@@ -33,6 +34,7 @@ public class JobPaymentsController : Controller
         {
             ModelState.AddModelError(string.Empty, result.Error);
             await PopulatePayeesAsync();
+            ViewBag.SelectedCollectionClientId = collectionClientId;
             return View();
         }
         TempData["SuccessMessage"] = "Job payment created successfully.";

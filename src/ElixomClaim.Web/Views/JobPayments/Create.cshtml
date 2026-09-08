@@ -3,6 +3,7 @@
     ViewData["Title"] = "Create Job Payment";
     var users = (IEnumerable<User>)(ViewBag.Users ?? Enumerable.Empty<User>());
     var clients = (IEnumerable<CollectionClient>)(ViewBag.Clients ?? Enumerable.Empty<CollectionClient>());
+    var selectedCollectionClientId = ViewBag.SelectedCollectionClientId as Guid?;
 }
 
 <div class="container my-4">
@@ -41,7 +42,7 @@
                                 <option value="">-- None (Choose Payee User above) --</option>
                                 @foreach (var client in clients)
                                 {
-                                    <option value="@client.Id">@client.Name</option>
+                                    <option value="@client.Id" selected="@(selectedCollectionClientId == client.Id)">@client.Name</option>
                                 }
                             </select>
                         </div>

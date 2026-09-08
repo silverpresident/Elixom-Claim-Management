@@ -295,12 +295,17 @@ public class ClaimService : IClaimService
     public async Task<List<Claim>> GetQueueClaimsAsync(ClaimStatus? filterStatus = null, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.Claims
+            .Where(c => !c.IsDeleted)
             .Include(c => c.ClaimantUser)
             .AsQueryable();
 
         if (filterStatus.HasValue)
         {
             query = query.Where(c => c.Status == filterStatus.Value);
+            if (filterStatus == ClaimStatus.Submitted)
+            {
+                query = query.Where(c => c.PaymentStatus == ClaimPaymentStatus.Unpaid);
+            }
         }
 
         return await query.OrderByDescending(c => c.CreatedAtUtc).ToListAsync(cancellationToken);

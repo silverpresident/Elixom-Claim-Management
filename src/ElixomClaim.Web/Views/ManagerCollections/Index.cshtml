@@ -1,0 +1,99 @@
+@using ElixomClaim.Lib.Entities
+@model IEnumerable<CollectionTransaction>
+@{
+    ViewData["Title"] = "Manager Collection Review";
+    var clients = (IEnumerable<CollectionClient>)(ViewBag.Clients ?? Enumerable.Empty<CollectionClient>());
+    var selectedClientId = ViewBag.SelectedCollectionClientId as Guid?;
+    var processingJobs = (IEnumerable<JobPayment>)(ViewBag.ProcessingJobs ?? Enumerable.Empty<JobPayment>());
+}
+
+<div class="container my-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h2 mb-1">Collection review</h1>
+            <p class="text-muted mb-0">Review collections by client and add collected transactions to a compatible job payment.</p>
+        </div>
+        @if (selectedClientId.HasValue)
+        {
+            <a asp-controller="JobPayments" asp-action="Create" asp-route-collectionClientId="@selectedClientId" class="btn btn-primary">Create job payment for client</a>
+        }
+    </div>
+
+    <form method="get" class="card card-body shadow-sm border-0 mb-4">
+        <label for="collectionClientId" class="form-label fw-semibold">Collection client</label>
+        <div class="d-flex flex-wrap gap-2">
+            <select id="collectionClientId" name="collectionClientId" class="form-select" style="max-width: 30rem">
+                <option value="">All active clients</option>
+                @foreach (var client in clients)
+                {
+                    <option value="@client.Id" selected="@(selectedClientId == client.Id)">@client.Name</option>
+                }
+            </select>
+            <button class="btn btn-outline-primary" type="submit">Apply filter</button>
+        </div>
+    </form>
+
+    @if (selectedClientId.HasValue && processingJobs.Any())
+    {
+        <div class="alert alert-info">
+            <strong>Compatible processing jobs:</strong>
+            @string.Join(", ", processingJobs.Select(job => $"#{job.SequenceNo}"))
+            <span class="ms-1">Only transactions still marked <strong>Collected</strong> can be added.</span>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">No collections match this client filter.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr><th>Receipt</th><th>Client</th><th>Purpose</th><th>Amount</th><th>Status</th><th>Payment date</th><th>Job payment</th></tr>
+                </thead>
+                <tbody>
+                @foreach (var collection in Model)
+                {
+                    <tr>
+                        <td>#@collection.SequenceNo</td>
+                        <td>@collection.CollectionClient.Name</td>
+                        <td>@collection.Purpose</td>
+                        <td>@collection.Amount.ToString("N2") JMD</td>
+                        <td><span class="badge @(collection.Status == CollectionStatus.Collected ? "text-bg-success" : "text-bg-secondary")">@collection.Status</span></td>
+                        <td>@collection.PaymentDateUtc.ToString("yyyy-MM-dd HH:mm") UTC</td>
+                        <td>
+                            @if (collection.Status == CollectionStatus.Collected && selectedClientId.HasValue && processingJobs.Any())
+                            {
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Add to job</button>
+                                    <ul class="dropdown-menu">
+                                    @foreach (var job in processingJobs)
+                                    {
+                                        <li>
+                                            <form asp-controller="JobPayments" asp-action="AttachCollection" asp-route-id="@job.Id" asp-route-collectionId="@collection.Id" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="dropdown-item">Job #@job.SequenceNo</button>
+                                            </form>
+                                        </li>
+                                    }
+                                    </ul>
+                                </div>
+                            }
+                            else if (collection.Status == CollectionStatus.Collected)
+                            {
+                                <span class="text-muted">Choose this client to attach</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not eligible</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
