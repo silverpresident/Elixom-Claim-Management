@@ -2,6 +2,8 @@ using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ElixomClaim.Web.Mcp.Tools;
 
@@ -30,11 +32,13 @@ public sealed class JobPaymentTools
 {
     private readonly IJobPaymentService _jobs;
     private readonly McpToolActorAccessor _actorAccessor;
+    private readonly ILogger<JobPaymentTools> _logger;
 
-    public JobPaymentTools(IJobPaymentService jobs, McpToolActorAccessor actorAccessor)
+    public JobPaymentTools(IJobPaymentService jobs, McpToolActorAccessor actorAccessor, ILogger<JobPaymentTools>? logger = null)
     {
         _jobs = jobs;
         _actorAccessor = actorAccessor;
+        _logger = logger ?? NullLogger<JobPaymentTools>.Instance;
     }
 
     [McpServerTool(Name = "job_payments_list"), Description("List job payments visible to the authenticated user.")]
@@ -43,6 +47,7 @@ public sealed class JobPaymentTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await ListJobPaymentsAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP job payment list completed for actor {ActorId} with success {Success}", actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_JOB_PAYMENTS_LIST", "JobPayments", cancellationToken);
         return response;
     }
@@ -53,6 +58,7 @@ public sealed class JobPaymentTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await GetJobPaymentAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP job payment {JobPaymentId} read by {ActorId} with success {Success}", request.JobPaymentId, actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_JOB_PAYMENTS_GET", $"JobPayment:{request.JobPaymentId}", cancellationToken);
         return response;
     }

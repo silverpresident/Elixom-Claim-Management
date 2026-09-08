@@ -2,6 +2,8 @@ using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ElixomClaim.Web.Mcp.Tools;
 
@@ -29,17 +31,19 @@ public sealed class ClaimTools
     private readonly IClaimService _claimService;
     private readonly IAuditService _audit;
     private readonly McpToolActorAccessor _actorAccessor;
+    private readonly ILogger<ClaimTools> _logger;
 
-    public ClaimTools(IClaimService claimService, IAuditService audit, McpToolActorAccessor actorAccessor)
+    public ClaimTools(IClaimService claimService, IAuditService audit, McpToolActorAccessor actorAccessor, ILogger<ClaimTools>? logger = null)
     {
         _claimService = claimService;
         _audit = audit;
         _actorAccessor = actorAccessor;
+        _logger = logger ?? NullLogger<ClaimTools>.Instance;
     }
 
     // Retained for direct domain-adapter unit tests. MCP discovery uses the constructor above.
     public ClaimTools(IClaimService claimService, IAuditService audit)
-        : this(claimService, audit, null!)
+        : this(claimService, audit, null!, NullLogger<ClaimTools>.Instance)
     {
     }
 
@@ -49,6 +53,7 @@ public sealed class ClaimTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new ClaimListResponse(false, "MCP authorization failed.", null);
         var response = await ListClaimsAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP claim list completed for actor {ActorId} with success {Success}", actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_LIST", "Claims", cancellationToken);
         return response;
     }
@@ -59,6 +64,7 @@ public sealed class ClaimTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new ClaimDetailResponse(false, "MCP authorization failed.", null);
         var response = await GetClaimAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP claim {ClaimId} read by {ActorId} with success {Success}", request.ClaimId, actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_GET", $"Claim:{request.ClaimId}", cancellationToken);
         return response;
     }
@@ -69,6 +75,7 @@ public sealed class ClaimTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new ClaimOperationResponse(false, "MCP authorization failed.");
         var response = await SubmitClaimAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP claim {ClaimId} submit requested by {ActorId} with success {Success}", request.ClaimId, actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_SUBMIT", $"Claim:{request.ClaimId}", cancellationToken);
         return response;
     }

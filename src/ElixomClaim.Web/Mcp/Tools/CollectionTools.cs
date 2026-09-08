@@ -2,6 +2,8 @@ using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ElixomClaim.Web.Mcp.Tools;
 
@@ -27,11 +29,13 @@ public sealed class CollectionTools
 {
     private readonly ICollectionService _collections;
     private readonly McpToolActorAccessor _actorAccessor;
+    private readonly ILogger<CollectionTools> _logger;
 
-    public CollectionTools(ICollectionService collections, McpToolActorAccessor actorAccessor)
+    public CollectionTools(ICollectionService collections, McpToolActorAccessor actorAccessor, ILogger<CollectionTools>? logger = null)
     {
         _collections = collections;
         _actorAccessor = actorAccessor;
+        _logger = logger ?? NullLogger<CollectionTools>.Instance;
     }
 
     [McpServerTool(Name = "collections_list"), Description("List collections available to the authenticated teller or manager.")]
@@ -40,6 +44,7 @@ public sealed class CollectionTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await ListCollectionsAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP collections list completed for actor {ActorId} with success {Success}", actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_COLLECTIONS_LIST", "Collections", cancellationToken);
         return response;
     }
@@ -50,6 +55,7 @@ public sealed class CollectionTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await GetCollectionAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP collection {CollectionId} read by {ActorId} with success {Success}", request.CollectionId, actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_COLLECTIONS_GET", $"Collection:{request.CollectionId}", cancellationToken);
         return response;
     }

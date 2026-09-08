@@ -2,6 +2,8 @@ using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 namespace ElixomClaim.Web.Mcp.Tools;
 public sealed record PayrollPreviewRequest(Guid SalaryDefinitionId, DateOnly AsOfDate);
 public sealed record PayrollRunRequest(Guid SalaryDefinitionId, DateOnly AsOfDate);
@@ -12,7 +14,8 @@ public sealed class PayrollTools
     private readonly ISalaryPayrollService _service;
     private readonly IAuditService _audit;
     private readonly McpToolActorAccessor _actorAccessor;
-    public PayrollTools(ISalaryPayrollService service, IAuditService audit, McpToolActorAccessor actorAccessor) { _service = service; _audit = audit; _actorAccessor = actorAccessor; }
+    private readonly ILogger<PayrollTools> _logger;
+    public PayrollTools(ISalaryPayrollService service, IAuditService audit, McpToolActorAccessor actorAccessor, ILogger<PayrollTools>? logger = null) { _service = service; _audit = audit; _actorAccessor = actorAccessor; _logger = logger ?? NullLogger<PayrollTools>.Instance; }
 
     [McpServerTool(Name = "payroll_preview"), Description("Preview authorized salary payroll generation.")]
     public async Task<PayrollToolResponse> Preview(PayrollPreviewRequest request, CancellationToken cancellationToken)
@@ -20,6 +23,7 @@ public sealed class PayrollTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null, null, null, null);
         var response = await PreviewAsync(request, actor.Value!.User.Id, cancellationToken);
+        _logger.LogInformation("MCP payroll preview completed for salary definition {SalaryDefinitionId} and actor {ActorId} with success {Success}", request.SalaryDefinitionId, actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_PAYROLL_PREVIEW", $"SalaryDefinition:{request.SalaryDefinitionId}", cancellationToken);
         return response;
     }
@@ -30,6 +34,7 @@ public sealed class PayrollTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null, null, null, null);
         var response = await RunAsync(request, actor.Value!.User.Id, cancellationToken);
+        _logger.LogInformation("MCP payroll run completed for salary definition {SalaryDefinitionId} and actor {ActorId} with success {Success}", request.SalaryDefinitionId, actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_PAYROLL_RUN", $"SalaryDefinition:{request.SalaryDefinitionId}", cancellationToken);
         return response;
     }
