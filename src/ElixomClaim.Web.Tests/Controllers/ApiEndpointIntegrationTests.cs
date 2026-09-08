@@ -385,6 +385,33 @@ public class ApiEndpointIntegrationTests
     }
 
     [Fact]
+    public async Task McpTransport_DeniesClaimsOwnedByAnotherActor()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var actorId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var claimId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.AddRange(
+                new User { Id = actorId, Email = "mcp-actor@example.test", NormalizedEmail = "MCP-ACTOR@EXAMPLE.TEST", FullName = "MCP Actor", Role = UserRole.User, IsActive = true },
+                new User { Id = ownerId, Email = "mcp-owner@example.test", NormalizedEmail = "MCP-OWNER@EXAMPLE.TEST", FullName = "MCP Owner", Role = UserRole.User, IsActive = true });
+            db.Claims.Add(new ElixomClaim.Lib.Entities.Claim { Id = claimId, ClaimantUserId = ownerId, Title = "Other actor secret", Description = "Not permitted", Amount = 10m, Status = ClaimStatus.Draft, PaymentStatus = ClaimPaymentStatus.Unpaid, CreatedAtUtc = DateTime.UtcNow, UpdatedAtUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", actorId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "mcp:access");
+        await using var transport = new HttpClientTransport(new HttpClientTransportOptions { Endpoint = new Uri("http://localhost/mcp") }, client);
+        await using var mcp = await McpClient.CreateAsync(transport);
+        var result = await mcp.CallToolAsync("claims_get", new Dictionary<string, object?> { ["request"] = new Dictionary<string, object?> { ["ClaimId"] = claimId } });
+        Assert.True(result.IsError is not true, string.Join("; ", result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(block => block.Text)));
+        var text = result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(block => block.Text).Single();
+        Assert.DoesNotContain("Other actor secret", text, StringComparison.Ordinal);
+        Assert.Contains("false", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task PayrollApi_RunPersistsOnePayrollAndReplaysDurably()
     {
         using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
