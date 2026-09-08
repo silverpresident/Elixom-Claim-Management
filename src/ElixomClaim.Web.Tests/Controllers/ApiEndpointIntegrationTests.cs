@@ -251,6 +251,33 @@ public class ApiEndpointIntegrationTests
         Assert.Empty(await verifyDb.EmailOutboxItems.ToListAsync());
     }
 
+    [Fact]
+    public async Task PayrollApi_RunPersistsOnePayrollAndReplaysDurably()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var accountantId = Guid.NewGuid();
+        var definitionId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = accountantId, Email = "payroll-accountant@example.test", NormalizedEmail = "PAYROLL-ACCOUNTANT@EXAMPLE.TEST", FullName = "Payroll Accountant", Role = UserRole.Accountant, IsActive = true });
+            db.SalaryDefinitions.Add(new SalaryDefinition
+            {
+                Id = definitionId, UserId = accountantId, Description = "Monthly salary", BaseAmount = 100m,
+                FirstSalaryDate = new DateOnly(2026, 8, 1), LastSalaryDate = new DateOnly(2026, 8, 1), StartDate = new DateOnly(2026, 8, 1),
+                RecurrenceMonths = 1, NearestWeekday = DayOfWeek.Monday
+            });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", accountantId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access"); client.DefaultRequestHeaders.Add("Idempotency-Key", "payroll-run-1");
+        var request = new { salaryDefinitionId = definitionId, asOfDate = new DateOnly(2026, 9, 8) };
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/v1/payroll/run", JsonContent.Create(request))).StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsync("/api/v1/payroll/run", JsonContent.Create(request))).StatusCode);
+        using var verifyScope = host.Services.CreateScope();
+        Assert.Single(await verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Payrolls.ToListAsync());
+    }
+
     private static async Task<IHost> CreateHostAsync(string databaseName) => await new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services =>
     {
         services.AddLogging(); services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase(databaseName));
