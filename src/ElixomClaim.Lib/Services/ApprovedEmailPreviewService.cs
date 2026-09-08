@@ -19,8 +19,15 @@ public sealed class ApprovedEmailPreviewService(ApplicationDbContext db, IOption
         if (string.Equals(templateType, "CollectionReceipt", StringComparison.OrdinalIgnoreCase))
         {
             if (!role.Value.HasMinimumRole(UserRole.Teller)) return Result.Failure<ApprovedEmailPreview>("Teller access is required.");
-            var collection = await db.CollectionTransactions.Include(item => item.CollectionClient).SingleOrDefaultAsync(item => item.Id == entityId, ct);
-            if (collection is null) return Result.Failure<ApprovedEmailPreview>("Collection record was not found.");
+            var collectionQuery = db.CollectionTransactions
+                .Include(item => item.CollectionClient)
+                .Where(item => item.Id == entityId);
+            // Tellers may re-preview only receipts they recorded. Management roles retain
+            // their operational-review access, consistent with the collection workspace.
+            if (!role.Value.HasMinimumRole(UserRole.Manager))
+                collectionQuery = collectionQuery.Where(item => item.TellerUserId == actorUserId);
+            var collection = await collectionQuery.SingleOrDefaultAsync(ct);
+            if (collection is null) return Result.Failure<ApprovedEmailPreview>("Collection record was not found or is not available.");
             var recipients = new[] { collection.PayorEmail, notifications.Value.SystemCopyAddress }.Where(value => !string.IsNullOrWhiteSpace(value)).Select(RedactEmail).ToList();
             var clientUsers = await db.CollectionClientUsers.Where(item => item.CollectionClientId == collection.CollectionClientId && item.User.IsActive).Select(item => item.User.Email).ToListAsync(ct);
             recipients.AddRange(clientUsers.Where(value => !string.IsNullOrWhiteSpace(value)).Select(RedactEmail));
@@ -30,8 +37,13 @@ public sealed class ApprovedEmailPreviewService(ApplicationDbContext db, IOption
         if (string.Equals(templateType, "PaymentSummary", StringComparison.OrdinalIgnoreCase))
         {
             if (!role.Value.HasMinimumRole(UserRole.Manager)) return Result.Failure<ApprovedEmailPreview>("Manager access is required.");
-            var job = await db.JobPayments.Include(item => item.PayeeUser).SingleOrDefaultAsync(item => item.Id == entityId, ct);
-            if (job is null) return Result.Failure<ApprovedEmailPreview>("Job payment record was not found.");
+            var jobQuery = db.JobPayments.Include(item => item.PayeeUser).Where(item => item.Id == entityId);
+            // This is presently redundant with the Manager role gate above, but keeps the
+            // record boundary explicit if approved preview roles are broadened later.
+            if (!role.Value.HasMinimumRole(UserRole.Manager))
+                jobQuery = jobQuery.Where(item => item.PayeeUserId == actorUserId);
+            var job = await jobQuery.SingleOrDefaultAsync(ct);
+            if (job is null) return Result.Failure<ApprovedEmailPreview>("Job payment record was not found or is not available.");
             var recipients = job.PayeeUser is null ? [] : new[] { RedactEmail(job.PayeeUser.Email) };
             await audit.LogAsync("EMAIL_TEMPLATE_PREVIEW", $"PaymentSummary:{entityId}", actorUserId: actorUserId.ToString(), cancellationToken: ct);
             return Result.Success(new ApprovedEmailPreview($"Payout summary #{job.SequenceNo}", $"<article><h1>Payout summary</h1><p>Payment #{job.SequenceNo}</p><p>Total paid: {job.TotalPaid:N2} JMD</p></article>", recipients));

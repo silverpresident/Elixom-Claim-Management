@@ -74,6 +74,25 @@ public class McpToolBoundaryTests
     }
 
     [Fact]
+    public async Task EmailTools_Preview_DeniesTellerAccessToAnotherTellersReceipt()
+    {
+        var db = CreateInMemoryDbContext();
+        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
+        var emailTools = new EmailTools(db, audit, new SystemClock(), Options.Create(new NotificationOptions()));
+        var owner = new User { Id = Guid.NewGuid(), Email = "owner@example.test", FullName = "Owner", Role = UserRole.Teller, IsActive = true };
+        var otherTeller = new User { Id = Guid.NewGuid(), Email = "other@example.test", FullName = "Other", Role = UserRole.Teller, IsActive = true };
+        var collectionClient = new CollectionClient { Id = Guid.NewGuid(), Name = "Client", IsActive = true };
+        var collection = new CollectionTransaction { Id = Guid.NewGuid(), CollectionClientId = collectionClient.Id, TellerUserId = owner.Id, PayorName = "Payor", Purpose = "Collection", Amount = 20m, PaymentDateUtc = DateTime.UtcNow };
+        db.AddRange(owner, otherTeller, collectionClient, collection);
+        await db.SaveChangesAsync();
+
+        var response = await emailTools.PreviewAsync(otherTeller, new EmailPreviewRequest("CollectionReceipt", collection.Id), CancellationToken.None);
+
+        Assert.False(response.Success);
+        Assert.Contains("not available", response.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task EmailTools_QueueSend_UsesDurableOutboxWithIdempotencyDeduplication()
     {
         var db = CreateInMemoryDbContext();

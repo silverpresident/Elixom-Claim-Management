@@ -229,6 +229,34 @@ public class ApiEndpointIntegrationTests
     }
 
     [Fact]
+    public async Task EmailTemplatesApi_DeniesTellerPreviewOfAnotherTellersCollection()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var ownerId = Guid.NewGuid();
+        var otherTellerId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var collectionClient = new CollectionClient { Id = Guid.NewGuid(), Name = "Ownership Client" };
+            db.AddRange(
+                new User { Id = ownerId, Email = "receipt-owner@example.test", NormalizedEmail = "RECEIPT-OWNER@EXAMPLE.TEST", FullName = "Owner", Role = UserRole.Teller, IsActive = true },
+                new User { Id = otherTellerId, Email = "receipt-other@example.test", NormalizedEmail = "RECEIPT-OTHER@EXAMPLE.TEST", FullName = "Other", Role = UserRole.Teller, IsActive = true },
+                collectionClient,
+                new CollectionTransaction { Id = collectionId, CollectionClientId = collectionClient.Id, TellerUserId = ownerId, PayorName = "Payor", Purpose = "Collection", Amount = 20m, PaymentDateUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", otherTellerId.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+
+        var response = await client.PostAsync("/api/v1/email-templates/preview", JsonContent.Create(new { templateType = "CollectionReceipt", entityId = collectionId }));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.DoesNotContain("Payor", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task EmailTemplatesApi_QueuesOnlyApprovedRecipientsIdempotently()
     {
         using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
