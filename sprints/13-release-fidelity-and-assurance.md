@@ -1,0 +1,56 @@
+# Sprint 13 — Release Fidelity and Assurance
+
+## Purpose
+
+After Sprint 12 completes, close the remaining specification-fidelity and production-assurance gaps identified in the 2026-09-08 Claude assessment. This sprint does not change established business workflows or authorization boundaries.
+
+The product decision is literal source-model fidelity: audit records use `EntityType`, `EntityId`, and `OccurredAtUtc`; message/outbox records use `To`, `From`, `Cc`, and `Bcc`. The configured system-copy address is always `Bcc`, never `Cc`. Durable outbox delivery, individual attempt history, redaction, and nine-year retention remain required.
+
+## Prerequisites
+
+- Sprint 12 is Complete, including its transport/API contract and end-to-end security evidence.
+- A production-like Azure SQL staging environment, email-provider test account, and production deployment owner are available.
+- An independent OAuth/MCP reviewer is selected, or release remains explicitly held pending selection.
+
+## Definition of ready
+
+- Inventory every entity, migration, sender, composition service, projection, and test that consumes `EmailOutboxItem`, `EmailLog`, or `AuditRecord`.
+- Define a data-preserving migration/rehearsal and rollback procedure; no audit, financial, outbox, or email history may be deleted or silently rewritten.
+- The approved Manager audit policy is metadata-only access for claims, collections, and job payments; all other domains and before/after state are Administrator-only.
+- Follow the independent-review runbook for assessor independence, staging access, safe test identities, and evidence handling.
+
+## Ordered backlog
+
+1. **Design the literal audit/email migration.** Record the mapping, compatibility and rollback strategy, indexing/constraint changes, historical-data treatment, and authorized-projection impact in an ADR and release runbook. Define one logical message with `To`, configured `From`, optional `Cc`, and `Bcc`; the configured system copy is Bcc-only. Replace audit `Target`/`TimestampUtc` usage with non-null `EntityType`, `EntityId`, and `OccurredAtUtc`. Rehearse against a production-shaped restored database copy.
+2. **Implement structured, append-only audit records.** Update entities, EF mapping, service contracts/callers, the Azure SQL append-only trigger, query projections, and tests. Preserve the meaning of historical targets, prohibit mutation after migration, and verify redaction, OAuth/MCP/API attribution, and Administrator/Manager projections.
+3. **Implement header-aware emails and BCC system copies.** Update outbox/log records, composition/queue services, SMTP/ACS adapters, retries, idempotency, migrations, and authorized MVC/API/MCP projections. Bcc addresses must never appear in rendered messages, previews, unauthorized queries, logs, audit payloads, or errors. Retain per-recipient delivery evidence and valid-recipient behavior without allowing arbitrary recipients, free-form email, direct provider calls, or worker invocation.
+4. **Complete payout print/notification fidelity.** Render accessible, responsive HTML tables for claims, collections, payrolls and ordered entries, deductions, category subtotals, totals, recipient details, and authorized bank details. Use the same approved data in notifications; exclude internal notes and unauthorized/full bank data. Add regression coverage for calculations, redaction, HTML-only output, and role-specific visibility.
+5. **Enforce Manager audit visibility.** Constrain shared audit queries and MVC/API/MCP projections so Managers can list metadata only for claims, collections, and job payments. Payroll, salary, user-administration, OAuth/security, email-delivery, and all other audit domains remain Administrator-only; before/after state remains Administrator-only. Add authorization, domain-filter, pagination, and redaction tests.
+6. **Close logging and protocol coverage.** Add safe structured outcome/security logs where concrete adapters/services make meaningful decisions, and formally exempt only pure deterministic utilities. Add real transport evidence for expired/revoked tokens and supported MCP cancellation. Complete API endpoint/error/OpenAPI coverage for authentication, scope, ownership, validation/Problem Details, redaction, pagination, and idempotency.
+7. **Execute release controls and independent review.** Designate and rehearse a single production migration runner. Complete independent OAuth/MCP threat-model and interoperability review, remediate/retest findings, and obtain sign-off. Run staging smoke tests for provisioned Google sign-in; OAuth PKCE/refresh/revocation; MCP/API scope isolation; notification delivery; audit immutability; retry/recovery; backup/restore; and retention. Publish a release evidence pack and go/no-go record.
+
+## Non-goals
+
+- No new business workflow, role, payment method, local credential flow, PDF feature, bulk export, arbitrary-recipient email, direct provider endpoint, or direct worker execution.
+- No deletion of existing audit, financial, email, or outbox history to simplify migration.
+- No production release before independent OAuth/MCP review completes and all Critical/High findings are remediated or formally accepted by the accountable release authority.
+
+## Done when
+
+- Literal audit/email persistence is deployed through a data-preserving migration, system copies are Bcc-only, and relational/integration evidence proves authorization, redaction, immutability, and delivery invariants.
+- Payout print/email detail is itemized and subtotalled while internal notes and unauthorized data stay excluded.
+- Manager audit scope is recorded and enforced; logging exceptions are resolved or formally exempted.
+- Token-lifecycle, cancellation, API-contract, scope-isolation, and sensitive-data evidence is complete.
+- Dedicated migration-runner rehearsal, independent review, staging smoke tests, backup/restore verification, and a final evidence/go-no-go record have no unaccepted release blockers.
+
+## Progress
+
+| Item | Status | Updated | Scope, evidence, or blocker |
+| --- | --- | --- | --- |
+| 1 | Not started | — | — |
+| 2 | Not started | — | — |
+| 3 | Not started | — | — |
+| 4 | Not started | — | — |
+| 5 | Not started | 2026-09-08 | Policy decided: Manager metadata-only access is limited to claims, collections, and job payments; implementation remains unstarted. |
+| 6 | Not started | — | — |
+| 7 | Not started | — | — |

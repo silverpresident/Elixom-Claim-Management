@@ -17,6 +17,7 @@ Execute these sprints in order. A later sprint may refine presentation, but it m
 | 10 | [Web workflow completion](10-web-workflow-completion.md) | Complete user, job-payment, payroll, and navigational MVC workflows. |
 | 11 | [Deployment and release verification](11-deployment-and-release-verification.md) | Guarded migration delivery and final end-to-end/release evidence. |
 | 12 | [Standard MCP server and versioned operations API](12-standard-mcp-and-api.md) | Standard .NET MCP transport plus a useful, separately scoped REST API replacing ambiguous MCP-labelled controllers. |
+| 13 | [Release fidelity and assurance](13-release-fidelity-and-assurance.md) | Literal audit/email records, payout fidelity, final protocol coverage, and independently reviewed production-release controls. |
 
 ## Global acceptance bar
 
