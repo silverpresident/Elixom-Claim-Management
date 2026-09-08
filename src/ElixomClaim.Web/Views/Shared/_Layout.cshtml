@@ -47,6 +47,7 @@
                             }
                             @if (User.IsInRole("Accountant") || User.IsInRole("Administrator"))
                             {
+                                <li class="nav-item"><a class="nav-link" asp-controller="Salaries" asp-action="Index">Salaries</a></li>
                                 <li class="nav-item"><a class="nav-link" asp-controller="Payroll" asp-action="Index">Payroll</a></li>
                                 <li class="nav-item"><a class="nav-link" asp-controller="CollectionClientsAdmin" asp-action="Index">Collection Clients</a></li>
                             }

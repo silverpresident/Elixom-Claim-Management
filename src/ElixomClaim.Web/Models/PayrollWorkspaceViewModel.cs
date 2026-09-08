@@ -3,8 +3,7 @@ using ElixomClaim.Lib.Services;
 namespace ElixomClaim.Web.Models;
 public sealed class PayrollWorkspaceViewModel
 {
-    public IReadOnlyList<SalaryDefinition> SalaryDefinitions { get; init; } = [];
     public IReadOnlyList<Payroll> Payrolls { get; init; } = [];
     public IReadOnlyList<AuditRecord> AuditRecords { get; init; } = [];
-    public IReadOnlyDictionary<Guid, SalaryPayrollPreview> Previews { get; init; } = new Dictionary<Guid, SalaryPayrollPreview>();
+    public bool IsHistory { get; init; }
 }

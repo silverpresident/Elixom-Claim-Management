@@ -51,7 +51,7 @@ public class PayrollAdjustmentsWorkflowTests
         var defResult = await payrollService.CreateDefinitionAsync(createDefCmd);
         var def = defResult.Value!;
 
-        var controller = new PayrollController(payrollService, db, NullLogger<PayrollController>.Instance)
+        var controller = new SalariesController(payrollService, db, NullLogger<SalariesController>.Instance)
         {
             TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider())
         };
@@ -80,12 +80,45 @@ public class PayrollAdjustmentsWorkflowTests
         Assert.Equal(95000m, payroll.PayrollTotal);
 
         // 4. Add Custom Payroll Entry
-        var customResult = await controller.AddCustomEntry(payroll.Id, "Bonus Payment", 5000m);
+        var payrollController = new PayrollController(payrollService, db, NullLogger<PayrollController>.Instance)
+        {
+            TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider()),
+            ControllerContext = controller.ControllerContext
+        };
+        var customResult = await payrollController.AddCustomEntry(payroll.Id, "Bonus Payment", 5000m);
         Assert.IsType<RedirectToActionResult>(customResult);
 
         var updatedPayroll = await db.Payrolls.Include(p => p.Entries).FirstOrDefaultAsync(p => p.Id == payroll.Id);
         Assert.NotNull(updatedPayroll);
         Assert.Equal(100000m, updatedPayroll.PayrollTotal);
         Assert.Contains(updatedPayroll.Entries, e => e.Description == "Bonus Payment" && e.Amount == 5000m);
+    }
+
+    [Fact]
+    public async Task Workspace_SeparatesOutstandingPayrollsFromPaidHistory()
+    {
+        var db = CreateInMemoryDbContext();
+        var employee = new User { Id = Guid.NewGuid(), Email = "emp@elixom.com", FullName = "Employee", Role = UserRole.User, IsActive = true };
+        db.Users.Add(employee);
+        db.Payrolls.AddRange(
+            new Payroll { Id = Guid.NewGuid(), UserId = employee.Id, User = employee, PeriodEndingDate = new DateOnly(2026, 8, 31), Status = PayrollStatus.Generated },
+            new Payroll { Id = Guid.NewGuid(), UserId = employee.Id, User = employee, PeriodEndingDate = new DateOnly(2026, 7, 31), Status = PayrollStatus.Submitted },
+            new Payroll { Id = Guid.NewGuid(), UserId = employee.Id, User = employee, PeriodEndingDate = new DateOnly(2026, 6, 30), Status = PayrollStatus.Paid });
+        await db.SaveChangesAsync();
+
+        var service = new SalaryPayrollService(db, new SalaryRecurrencePlanner(), new AuditService(db, NullLogger<AuditService>.Instance), new SystemClock(), NullLogger<SalaryPayrollService>.Instance);
+        var controller = new PayrollController(service, db, NullLogger<PayrollController>.Instance);
+
+        var current = Assert.IsType<ViewResult>(await controller.Index());
+        var currentModel = Assert.IsType<ElixomClaim.Web.Models.PayrollWorkspaceViewModel>(current.Model);
+        Assert.False(currentModel.IsHistory);
+        Assert.Equal(2, currentModel.Payrolls.Count);
+        Assert.DoesNotContain(currentModel.Payrolls, payroll => payroll.Status == PayrollStatus.Paid);
+
+        var history = Assert.IsType<ViewResult>(await controller.History());
+        var historyModel = Assert.IsType<ElixomClaim.Web.Models.PayrollWorkspaceViewModel>(history.Model);
+        Assert.True(historyModel.IsHistory);
+        Assert.Single(historyModel.Payrolls);
+        Assert.Equal(PayrollStatus.Paid, historyModel.Payrolls[0].Status);
     }
 }

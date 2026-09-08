@@ -15,31 +15,26 @@ public sealed class PayrollController : Controller
     private readonly ISalaryPayrollService _service; private readonly ApplicationDbContext _db; private readonly ILogger<PayrollController> _logger;
     public PayrollController(ISalaryPayrollService service, ApplicationDbContext db, ILogger<PayrollController> logger) { _service = service; _db = db; _logger = logger; }
     [HttpGet("")]
-    public async Task<IActionResult> Index()
-    {
-        var definitions = await _db.SalaryDefinitions.AsNoTracking().Include(definition => definition.User).Include(definition => definition.Adjustments).OrderBy(definition => definition.User.FullName).ToListAsync();
-        var previews = new Dictionary<Guid, SalaryPayrollPreview>();
-        foreach (var definition in definitions) { var preview = await _service.PreviewAsync(definition.Id, ActorId(), DateOnly.FromDateTime(DateTime.UtcNow)); if (preview.IsSuccess) previews[definition.Id] = preview.Value!; }
-        return View(new PayrollWorkspaceViewModel { SalaryDefinitions = definitions, Previews = previews, Payrolls = await _db.Payrolls.AsNoTracking().Include(payroll => payroll.User).Include(payroll => payroll.Entries).OrderByDescending(payroll => payroll.GeneratedAtUtc).Take(50).ToListAsync(), AuditRecords = await _db.AuditRecords.AsNoTracking().Where(record => record.Target.StartsWith("Payroll:") || record.Target.StartsWith("SalaryDefinition:")).OrderByDescending(record => record.TimestampUtc).Take(20).ToListAsync() });
-    }
-    [HttpGet("salary-definitions/create")] public async Task<IActionResult> Create() { ViewBag.Users = await _db.Users.AsNoTracking().Where(user => user.IsActive).OrderBy(user => user.FullName).ToListAsync(); return View(); }
-    [HttpPost("salary-definitions/create")][ValidateAntiForgeryToken] public async Task<IActionResult> Create(CreateSalaryDefinitionInput input) { var result = await _service.CreateDefinitionAsync(new(ActorId(), input.UserId, input.Description, input.BaseAmount, input.FirstSalaryDate, input.StartDate, input.EndDate, input.RecurrenceDays, input.RecurrenceMonths, input.NearestWeekday)); if (result.IsSuccess) return RedirectToAction(nameof(Index)); ModelState.AddModelError(string.Empty, result.Error); ViewBag.Users = await _db.Users.AsNoTracking().Where(user => user.IsActive).OrderBy(user => user.FullName).ToListAsync(); return View(input); }
-    [HttpPost("salary-definitions/{id:guid}/adjustments")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddAdjustment(Guid id, [FromForm] string title, [FromForm] decimal percentageRate, [FromForm] decimal fixedValue, [FromForm] SalaryAdjustmentType type)
-    {
-        var result = await _service.AddAdjustmentAsync(new AddSalaryAdjustmentCommand(ActorId(), id, title, percentageRate, fixedValue, type));
-        TempData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.IsSuccess ? "Salary adjustment added." : result.Error;
-        return RedirectToAction(nameof(Index));
-    }
+    public Task<IActionResult> Index() => WorkspaceAsync(isHistory: false);
 
-    [HttpPost("salary-definitions/{id:guid}/generate")][ValidateAntiForgeryToken]
-    public async Task<IActionResult> GenerateNow(Guid id)
+    [HttpGet("history")]
+    public Task<IActionResult> History() => WorkspaceAsync(isHistory: true);
+
+    private async Task<IActionResult> WorkspaceAsync(bool isHistory)
     {
-        var actor = ActorId();
-        var result = await _service.GenerateForDefinitionAsync(id, actor, DateOnly.FromDateTime(DateTime.UtcNow));
-        TempData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.IsSuccess ? "Payroll generated." : result.Error;
-        return RedirectToAction(nameof(Index));
+        IQueryable<Payroll> payrolls = _db.Payrolls.AsNoTracking().Include(payroll => payroll.User).Include(payroll => payroll.Entries);
+        payrolls = isHistory
+            ? payrolls.Where(payroll => payroll.Status == PayrollStatus.Paid)
+            : payrolls.Where(payroll => payroll.Status == PayrollStatus.Generated || payroll.Status == PayrollStatus.Submitted);
+
+        return View("Index", new PayrollWorkspaceViewModel
+        {
+            IsHistory = isHistory,
+            Payrolls = await payrolls.OrderByDescending(payroll => payroll.GeneratedAtUtc).Take(50).ToListAsync(),
+            AuditRecords = isHistory
+                ? await _db.AuditRecords.AsNoTracking().Where(record => record.Target.StartsWith("Payroll:")).OrderByDescending(record => record.TimestampUtc).Take(20).ToListAsync()
+                : []
+        });
     }
     [HttpPost("{id:guid}/custom-entries")]
     [ValidateAntiForgeryToken]

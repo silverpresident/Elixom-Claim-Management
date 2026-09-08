@@ -1,0 +1,24 @@
+@model ElixomClaim.Web.Models.SalaryDefinitionsViewModel
+@using ElixomClaim.Lib.Entities
+@{ ViewData["Title"] = "Salary Definitions"; }
+
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h2 class="mb-1">Salary Definitions</h2><p class="text-muted mb-0">Manage recurring salary rules separately from daily payroll processing.</p></div>
+        <a asp-action="Create" class="btn btn-primary">Create salary definition</a>
+    </div>
+    @if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+    @if (TempData["ErrorMessage"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+    <section class="card shadow-sm border-0"><div class="card-header bg-primary text-white"><h5 class="mb-0">Active Salary Definitions</h5></div><div class="card-body p-0">
+    @if (!Model.SalaryDefinitions.Any()) { <div class="p-4 text-center text-muted">No salary definitions are configured.</div> }
+    else { <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Salary no. / Employee</th><th>Description</th><th>Base amount</th><th>Adjustments</th><th>Next due preview</th><th>Actions</th></tr></thead><tbody>
+    @foreach (var definition in Model.SalaryDefinitions) {
+        <tr><td><strong>Salary #@definition.SequenceNo — @definition.User.FullName</strong><div class="small text-muted">@definition.User.Email</div></td><td>@definition.Description</td><td class="fw-bold">$@definition.BaseAmount.ToString("N2") JMD</td>
+        <td>@if (definition.Adjustments.Any()) { <ul class="list-unstyled mb-0 small">@foreach (var adjustment in definition.Adjustments) { <li><span class="badge @(adjustment.Type == SalaryAdjustmentType.Benefit ? "bg-success" : "bg-danger")">@adjustment.Type</span> @adjustment.Title (@(adjustment.PercentageRate > 0 ? $"{adjustment.PercentageRate * 100:N0}%" : $"${adjustment.FixedValue:N2} JMD"))</li> }</ul> } else { <span class="text-muted small">None</span> }</td>
+        <td>@if (Model.Previews.TryGetValue(definition.Id, out var preview)) { <strong>@preview.DueDate.ToString("yyyy-MM-dd")</strong><small class="d-block text-muted">@preview.Eligibility; $@preview.ProjectedTotal.ToString("N2") JMD</small> }</td>
+        <td><div class="d-flex flex-column gap-1"><form method="post" asp-action="GenerateNow" asp-route-id="@definition.Id">@Html.AntiForgeryToken()<button class="btn btn-sm btn-primary w-100">Generate now</button></form><button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#adjForm-@definition.Id">Add adjustment</button></div></td></tr>
+        <tr class="collapse bg-light" id="adjForm-@definition.Id"><td colspan="6" class="p-3"><form method="post" asp-action="AddAdjustment" asp-route-id="@definition.Id" class="row g-2 align-items-center">@Html.AntiForgeryToken()<div class="col-md-3"><input type="text" name="title" class="form-control form-control-sm" placeholder="Adjustment title" required /></div><div class="col-md-2"><select name="type" class="form-select form-control-sm"><option value="Benefit">Benefit (+)</option><option value="Deduction">Deduction (-)</option></select></div><div class="col-md-2"><input type="number" name="percentageRate" step="0.01" min="0" max="1" class="form-control form-control-sm" placeholder="Rate" /></div><div class="col-md-2"><input type="number" name="fixedValue" step="0.01" min="0" class="form-control form-control-sm" placeholder="Fixed JMD" /></div><div class="col-md-3"><button type="submit" class="btn btn-sm btn-success w-100">Save adjustment</button></div></form></td></tr>
+    }
+    </tbody></table></div> }
+    </div></section>
+</div>
