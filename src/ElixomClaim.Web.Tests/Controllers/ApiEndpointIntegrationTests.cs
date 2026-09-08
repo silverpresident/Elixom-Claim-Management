@@ -149,6 +149,37 @@ public class ApiEndpointIntegrationTests
     }
 
     [Fact]
+    public async Task EmailTemplatesApi_PreviewsOnlyApprovedRedactedCollectionData()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var tellerId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var collectionClient = new CollectionClient { Id = Guid.NewGuid(), Name = "Preview Client" };
+            db.Users.Add(new User { Id = tellerId, Email = "teller@example.test", NormalizedEmail = "TELLER@EXAMPLE.TEST", FullName = "Teller", Role = UserRole.Teller, IsActive = true });
+            db.CollectionClients.Add(collectionClient);
+            db.CollectionTransactions.Add(new CollectionTransaction
+            {
+                Id = collectionId, CollectionClientId = collectionClient.Id, TellerUserId = tellerId,
+                PayorName = "Private Payor", PayorEmail = "private.payor@example.test", PayorTelephone = "876-555-0100",
+                Purpose = "Collection", Amount = 20m, PaymentDateUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", tellerId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+        var response = await client.PostAsync("/api/v1/email-templates/preview", JsonContent.Create(new { templateType = "CollectionReceipt", entityId = collectionId }));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.Contains("p***********r@example.test", json);
+        Assert.DoesNotContain("private.payor@example.test", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("876-555-0100", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("Private Payor", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task LegacyMcpControllerRoute_IsNotMappedAsAnApiFallback()
     {
         using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
