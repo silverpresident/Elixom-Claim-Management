@@ -15,8 +15,9 @@ public class OutboxDispatchHostedService : BackgroundService
             try
             {
                 using var scope = _scopeFactory.CreateScope();
+                var wakeUps = await scope.ServiceProvider.GetRequiredService<IOutboxWakeUpProcessor>().ProcessPendingAsync(stoppingToken);
                 var count = await scope.ServiceProvider.GetRequiredService<IOutboxService>().DispatchDueAsync(cancellationToken: stoppingToken);
-                if (count > 0) _logger.LogInformation("Processed {Count} due outbox emails.", count);
+                if (count > 0 || wakeUps > 0) _logger.LogInformation("Processed {Count} due outbox emails and {WakeUpCount} wake-up request(s).", count, wakeUps);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception exception) { _logger.LogError(exception, "Outbox dispatch iteration failed."); }

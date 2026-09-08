@@ -160,11 +160,13 @@ public sealed class OperationsTools
             return new OperationResponse(true, "Operation already accepted (idempotent).", MapToDto(reservation.Record));
         }
 
+        var requestedBatchSize = Math.Clamp(request.BatchSize ?? 25, 1, 100);
+        var record = await _operationRecordService.UpdateStatusAsync(reservation.Record.Id, "Accepted", $"BatchSize:{requestedBatchSize}", ct);
         // The hosted dispatcher owns provider dispatch. This adapter only persists an
         // auditable wake-up request; the dispatcher will pick up due outbox work on
         // its normal polling cycle rather than MCP invoking worker internals.
-        await _audit.LogAsync("MCP_OPERATIONS_OUTBOX_WAKEUP", $"BatchSize:{Math.Clamp(request.BatchSize ?? 25, 1, 100)}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
-        return new OperationResponse(true, "Outbox wake-up request accepted.", MapToDto(reservation.Record));
+        await _audit.LogAsync("MCP_OPERATIONS_OUTBOX_WAKEUP", $"BatchSize:{requestedBatchSize}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+        return new OperationResponse(true, "Outbox wake-up request accepted.", MapToDto(record));
     }
 
     public async Task<OperationResponse> GetOperationStatusAsync(User actor, OperationStatusRequest request, CancellationToken ct)

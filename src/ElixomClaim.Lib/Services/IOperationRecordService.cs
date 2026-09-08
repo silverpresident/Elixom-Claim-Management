@@ -8,6 +8,8 @@ public interface IOperationRecordService
     Task<OperationRecord?> GetForActorAsync(string idempotencyKey, string actorUserId, CancellationToken ct = default);
     Task<OperationReservation> ReserveAsync(string idempotencyKey, string operationType, string actorUserId, CancellationToken ct = default);
     Task<OperationRecord> UpdateStatusAsync(Guid operationId, string status, string? details, CancellationToken ct = default);
+    Task<IReadOnlyList<OperationRecord>> GetPendingOutboxWakeUpsAsync(CancellationToken ct = default);
+    Task<bool> TryClaimOutboxWakeUpAsync(Guid operationId, CancellationToken ct = default);
     Task<OperationRecord> RecordOperationAsync(string idempotencyKey, string operationType, string status, string? details, string actorUserId, CancellationToken ct = default);
 }
 

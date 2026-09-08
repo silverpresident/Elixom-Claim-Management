@@ -38,7 +38,12 @@ public sealed class ApprovedOperationService(ApplicationDbContext db, IOperation
         if (await RoleAsync(actorUserId, ct) is not UserRole.Administrator) return Result.Failure<OperationRecord>("Administrator access is required.");
         var key = $"outbox-wakeup:{actorUserId:N}:{idempotencyKey.Trim()}";
         var reservation = await records.ReserveAsync(key, "OutboxWakeUp", actorUserId.ToString(), ct);
-        if (reservation.IsNew) await audit.LogAsync("OPERATION_OUTBOX_WAKEUP_REQUESTED", $"BatchSize:{Math.Clamp(batchSize ?? 25, 1, 100)}", actorUserId: actorUserId.ToString(), cancellationToken: ct);
+        if (reservation.IsNew)
+        {
+            var requestedBatchSize = Math.Clamp(batchSize ?? 25, 1, 100);
+            await records.UpdateStatusAsync(reservation.Record.Id, "Accepted", $"BatchSize:{requestedBatchSize}", ct);
+            await audit.LogAsync("OPERATION_OUTBOX_WAKEUP_REQUESTED", $"BatchSize:{requestedBatchSize}", actorUserId: actorUserId.ToString(), cancellationToken: ct);
+        }
         logger.LogInformation("Approved outbox wake-up operation {OperationId} accepted for actor {ActorId}", reservation.Record.Id, actorUserId);
         return Result.Success(reservation.Record);
     }

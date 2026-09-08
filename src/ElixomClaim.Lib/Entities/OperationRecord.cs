@@ -9,4 +9,6 @@ public sealed class OperationRecord
     public string? Details { get; set; }
     public string ActorUserId { get; set; } = string.Empty;
     public DateTime ExecutedAtUtc { get; set; }
+    /// <summary>UTC lease start for hosted processing; stale leases are recoverable after restart.</summary>
+    public DateTime? ProcessingStartedAtUtc { get; set; }
 }

@@ -72,4 +72,45 @@ public class OperationRecordServiceTests
         var count = await db.OperationRecords.CountAsync(o => o.IdempotencyKey == "key-200");
         Assert.Equal(1, count);
     }
+
+    [Fact]
+    public async Task OutboxWakeUpProcessor_RecoversStalePersistedRequestAfterRestart()
+    {
+        var options = CreateInMemoryOptions();
+        var clock = new SystemClock();
+        Guid operationId;
+        using (var db1 = new ApplicationDbContext(options))
+        {
+            var records = new OperationRecordService(db1, clock, NullLogger<OperationRecordService>.Instance);
+            var reservation = await records.ReserveAsync("wake-up-100", "OutboxWakeUp", "admin-1");
+            operationId = reservation.Record.Id;
+            await records.UpdateStatusAsync(operationId, "Processing", "BatchSize:7");
+            var interrupted = await db1.OperationRecords.SingleAsync(record => record.Id == operationId);
+            interrupted.ProcessingStartedAtUtc = DateTime.UtcNow.AddMinutes(-6);
+            await db1.SaveChangesAsync();
+        }
+
+        using (var db2 = new ApplicationDbContext(options))
+        {
+            var records = new OperationRecordService(db2, clock, NullLogger<OperationRecordService>.Instance);
+            var outbox = new StubOutboxService();
+            var processor = new OutboxWakeUpProcessor(records, outbox, NullLogger<OutboxWakeUpProcessor>.Instance);
+
+            Assert.Equal(1, await processor.ProcessPendingAsync());
+            var record = await records.GetByIdempotencyKeyAsync("wake-up-100");
+            Assert.Equal("Completed", record!.Status);
+            Assert.Contains("3 due outbox", record.Details);
+            Assert.Equal(7, outbox.BatchSize);
+        }
+    }
+
+    private sealed class StubOutboxService : IOutboxService
+    {
+        public int BatchSize { get; private set; }
+        public Task<int> DispatchDueAsync(int batchSize = 25, CancellationToken cancellationToken = default)
+        {
+            BatchSize = batchSize;
+            return Task.FromResult(3);
+        }
+    }
 }

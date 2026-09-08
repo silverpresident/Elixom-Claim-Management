@@ -548,7 +548,9 @@ public class ApplicationDbContext : DbContext
             entity.Property(o => o.Details).HasMaxLength(2000);
             entity.Property(o => o.ActorUserId).IsRequired().HasMaxLength(450);
             entity.Property(o => o.ExecutedAtUtc).IsRequired();
+            entity.Property(o => o.ProcessingStartedAtUtc);
             entity.HasIndex(o => o.IdempotencyKey).IsUnique();
+            entity.HasIndex(o => new { o.OperationType, o.Status, o.ProcessingStartedAtUtc });
         });
     }
 

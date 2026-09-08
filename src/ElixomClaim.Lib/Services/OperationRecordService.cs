@@ -75,6 +75,41 @@ public sealed class OperationRecordService : IOperationRecordService
         return record;
     }
 
+    public async Task<IReadOnlyList<OperationRecord>> GetPendingOutboxWakeUpsAsync(CancellationToken ct = default)
+    {
+        var staleBefore = _clock.UtcNow.AddMinutes(-5);
+        return await _db.OperationRecords.AsNoTracking()
+            .Where(record => record.OperationType == "OutboxWakeUp" &&
+                (record.Status == "Accepted" || (record.Status == "Processing" && record.ProcessingStartedAtUtc < staleBefore)))
+            .OrderBy(record => record.ExecutedAtUtc)
+            .ToListAsync(ct);
+    }
+
+    public async Task<bool> TryClaimOutboxWakeUpAsync(Guid operationId, CancellationToken ct = default)
+    {
+        var now = _clock.UtcNow;
+        var staleBefore = now.AddMinutes(-5);
+        var claimable = _db.OperationRecords.Where(record => record.Id == operationId && record.OperationType == "OutboxWakeUp" &&
+            (record.Status == "Accepted" || (record.Status == "Processing" && record.ProcessingStartedAtUtc < staleBefore)));
+        if (_db.Database.IsRelational())
+        {
+            var claimed = await claimable.ExecuteUpdateAsync(setters => setters
+                .SetProperty(record => record.Status, "Processing")
+                .SetProperty(record => record.ProcessingStartedAtUtc, now), ct);
+            return claimed == 1;
+        }
+
+        // The EF InMemory provider does not support ExecuteUpdate. This retains the
+        // lifecycle behavior for non-relational development/test hosts; production
+        // SQL uses the conditional set-based claim above.
+        var record = await claimable.SingleOrDefaultAsync(ct);
+        if (record is null) return false;
+        record.Status = "Processing";
+        record.ProcessingStartedAtUtc = now;
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
     public async Task<OperationRecord> RecordOperationAsync(
         string idempotencyKey,
         string operationType,
