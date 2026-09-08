@@ -6,6 +6,8 @@ using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 
@@ -34,19 +36,22 @@ public sealed class EmailTools
     private readonly ISystemClock _clock;
     private readonly NotificationOptions _notificationOptions;
     private readonly McpToolActorAccessor _actorAccessor;
+    private readonly ILogger<EmailTools> _logger;
 
     public EmailTools(
         ApplicationDbContext dbContext,
         IAuditService audit,
         ISystemClock clock,
         IOptions<NotificationOptions> notificationOptions,
-        McpToolActorAccessor actorAccessor)
+        McpToolActorAccessor actorAccessor,
+        ILogger<EmailTools> logger)
     {
         _dbContext = dbContext;
         _audit = audit;
         _clock = clock;
         _notificationOptions = notificationOptions.Value;
         _actorAccessor = actorAccessor;
+        _logger = logger;
     }
 
     // Retained for direct domain-adapter unit tests. MCP discovery uses the constructor above.
@@ -55,7 +60,7 @@ public sealed class EmailTools
         IAuditService audit,
         ISystemClock clock,
         IOptions<NotificationOptions> notificationOptions)
-        : this(dbContext, audit, clock, notificationOptions, null!)
+        : this(dbContext, audit, clock, notificationOptions, null!, NullLogger<EmailTools>.Instance)
     {
     }
 
@@ -65,6 +70,7 @@ public sealed class EmailTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null, null, null);
         var response = await PreviewAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP email preview {TemplateType} completed for actor {ActorId} with success {Success}", request.TemplateType, actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_EMAIL_PREVIEW", $"Template:{request.TemplateType}", cancellationToken);
         return response;
     }
@@ -75,6 +81,7 @@ public sealed class EmailTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", 0);
         var response = await QueueSendAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP email queue request {TemplateType} completed for actor {ActorId} with success {Success} and queued count {QueuedCount}", request.TemplateType, actor.Value.User.Id, response.Success, response.QueuedCount);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_EMAIL_QUEUE", $"Template:{request.TemplateType}", cancellationToken);
         return response;
     }
