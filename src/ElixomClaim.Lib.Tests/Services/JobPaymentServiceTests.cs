@@ -31,6 +31,41 @@ public class JobPaymentServiceTests
     }
 
     [Fact]
+    public async Task AttachCollectionsAsync_AttachesAllSelectedCollectionsAndRejectsMixedSelectionAtomically()
+    {
+        await using var db = CreateDb();
+        var manager = User(UserRole.Manager, "manager@anonymized.example.com");
+        var client = new CollectionClient { Name = "Acme", PerJobProcessingFee = 10m };
+        var otherClient = new CollectionClient { Name = "Other" };
+        db.AddRange(manager, client, otherClient);
+        await db.SaveChangesAsync();
+        var job = new JobPayment { CollectionClientId = client.Id };
+        var first = Collection(client.Id, manager.Id, 100m, 5m);
+        var second = Collection(client.Id, manager.Id, 200m, 7m);
+        var invalid = Collection(otherClient.Id, manager.Id, 300m, 0m);
+        db.AddRange(job, first, second, invalid);
+        await db.SaveChangesAsync();
+        var service = Service(db);
+
+        var rejected = await service.AttachCollectionsAsync(new(manager.Id, job.Id, new[] { first.Id, invalid.Id }));
+        Assert.True(rejected.IsFailure);
+        Assert.Equal(CollectionStatus.Collected, first.Status);
+        Assert.Equal(CollectionStatus.Collected, invalid.Status);
+
+        var attached = await service.AttachCollectionsAsync(new(manager.Id, job.Id, new[] { first.Id, second.Id }));
+        Assert.True(attached.IsSuccess);
+        Assert.Equal(CollectionStatus.Processing, first.Status);
+        Assert.Equal(CollectionStatus.Processing, second.Status);
+        Assert.Equal(CollectionStatus.Collected, invalid.Status);
+        Assert.Equal(2, await db.JobPaymentCollections.CountAsync());
+        Assert.Equal(300m, job.JobTotal);
+        Assert.Equal(10m, job.ClientProcessingFee);
+        Assert.Equal(12m, job.TotalTxnProcessingFee);
+        Assert.Equal(278m, job.TotalPaid);
+        Assert.Contains(db.AuditRecords, x => x.Action == "JOB_PAYMENT_COLLECTIONS_ATTACHED");
+    }
+
+    [Fact]
     public async Task AttachClaimAsync_RequiresAcceptedClaimForPayeeAndRestoresStateOnRemoval()
     {
         await using var db = CreateDb();
@@ -44,6 +79,37 @@ public class JobPaymentServiceTests
         Assert.Equal(ClaimPaymentStatus.Processing, claim.PaymentStatus); Assert.Equal(200m, job.TotalPaid);
         Assert.True((await service.RemoveClaimAsync(new(manager.Id, job.Id, claim.Id))).IsSuccess);
         Assert.Equal(ClaimPaymentStatus.Unpaid, claim.PaymentStatus); Assert.Equal(0m, job.TotalPaid);
+    }
+
+    [Fact]
+    public async Task AttachClaimsAsync_AttachesAllSelectedClaimsAndRejectsMixedSelectionAtomically()
+    {
+        await using var db = CreateDb();
+        var manager = User(UserRole.Manager, "manager@anonymized.example.com");
+        var payee = User(UserRole.User, "payee@anonymized.example.com");
+        var otherPayee = User(UserRole.User, "other@anonymized.example.com");
+        var job = new JobPayment { PayeeUserId = payee.Id };
+        var first = new Claim { ClaimantUserId = payee.Id, Title = "Taxi", Description = "Travel", Amount = 100m, Status = ClaimStatus.Accepted };
+        var second = new Claim { ClaimantUserId = payee.Id, Title = "Meals", Description = "Travel", Amount = 200m, Status = ClaimStatus.Accepted };
+        var invalid = new Claim { ClaimantUserId = otherPayee.Id, Title = "Other", Description = "Travel", Amount = 300m, Status = ClaimStatus.Accepted };
+        db.AddRange(manager, payee, otherPayee, job, first, second, invalid);
+        await db.SaveChangesAsync();
+        var service = Service(db);
+
+        var rejected = await service.AttachClaimsAsync(new(manager.Id, job.Id, new[] { first.Id, invalid.Id }));
+        Assert.True(rejected.IsFailure);
+        Assert.Equal(ClaimPaymentStatus.Unpaid, first.PaymentStatus);
+        Assert.Equal(ClaimPaymentStatus.Unpaid, invalid.PaymentStatus);
+
+        var attached = await service.AttachClaimsAsync(new(manager.Id, job.Id, new[] { first.Id, second.Id }));
+        Assert.True(attached.IsSuccess);
+        Assert.Equal(ClaimPaymentStatus.Processing, first.PaymentStatus);
+        Assert.Equal(ClaimPaymentStatus.Processing, second.PaymentStatus);
+        Assert.Equal(ClaimPaymentStatus.Unpaid, invalid.PaymentStatus);
+        Assert.Equal(2, await db.JobPaymentClaims.CountAsync());
+        Assert.Equal(300m, job.JobTotal);
+        Assert.Equal(300m, job.TotalPaid);
+        Assert.Contains(db.AuditRecords, x => x.Action == "JOB_PAYMENT_CLAIMS_ATTACHED");
     }
 
     [Fact]
@@ -104,5 +170,6 @@ public class JobPaymentServiceTests
 
     private static ApplicationDbContext CreateDb() => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     private static User User(UserRole role, string email) => new() { Email = email, NormalizedEmail = email.ToUpperInvariant(), FullName = "User", Role = role };
+    private static CollectionTransaction Collection(Guid clientId, Guid tellerId, decimal amount, decimal fee) => new() { CollectionClientId = clientId, TellerUserId = tellerId, PurposeOptionId = Guid.NewGuid(), AmountOptionId = Guid.NewGuid(), PayorName = "Payor", Amount = amount, ProcessingFee = fee, PaymentDateUtc = DateTime.UtcNow };
     private static JobPaymentService Service(ApplicationDbContext db) => new(db, new AuditService(db, NullLogger<AuditService>.Instance), new SystemClock(), NullLogger<JobPaymentService>.Instance);
 }

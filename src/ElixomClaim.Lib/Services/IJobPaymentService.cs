@@ -8,7 +8,9 @@ public interface IJobPaymentService
     Task<Result<JobPayment>> CreateAsync(CreateJobPaymentCommand command, CancellationToken cancellationToken = default);
     Task<Result> UpdateMetadataAsync(UpdateJobPaymentMetadataCommand command, CancellationToken cancellationToken = default);
     Task<Result> AttachClaimAsync(AttachJobPaymentClaimCommand command, CancellationToken cancellationToken = default);
+    Task<Result> AttachClaimsAsync(AttachJobPaymentClaimsCommand command, CancellationToken cancellationToken = default);
     Task<Result> AttachCollectionAsync(AttachJobPaymentCollectionCommand command, CancellationToken cancellationToken = default);
+    Task<Result> AttachCollectionsAsync(AttachJobPaymentCollectionsCommand command, CancellationToken cancellationToken = default);
     Task<Result> RemoveClaimAsync(RemoveJobPaymentClaimCommand command, CancellationToken cancellationToken = default);
     Task<Result> RemoveCollectionAsync(RemoveJobPaymentCollectionCommand command, CancellationToken cancellationToken = default);
     Task<Result> AddDeductionAsync(AddJobPaymentDeductionCommand command, CancellationToken cancellationToken = default);
@@ -23,7 +25,9 @@ public interface IJobPaymentService
 public record CreateJobPaymentCommand(Guid ActorUserId, Guid? PayeeUserId, Guid? CollectionClientId, string? PublicNote, string? InternalNote, string? Title = null);
 public record UpdateJobPaymentMetadataCommand(Guid ActorUserId, Guid JobPaymentId, string? Title, string? PublicNote, string? InternalNote);
 public record AttachJobPaymentClaimCommand(Guid ActorUserId, Guid JobPaymentId, Guid ClaimId);
+public record AttachJobPaymentClaimsCommand(Guid ActorUserId, Guid JobPaymentId, IReadOnlyCollection<Guid> ClaimIds);
 public record AttachJobPaymentCollectionCommand(Guid ActorUserId, Guid JobPaymentId, Guid CollectionTransactionId);
+public record AttachJobPaymentCollectionsCommand(Guid ActorUserId, Guid JobPaymentId, IReadOnlyCollection<Guid> CollectionTransactionIds);
 public record RemoveJobPaymentClaimCommand(Guid ActorUserId, Guid JobPaymentId, Guid ClaimId);
 public record RemoveJobPaymentCollectionCommand(Guid ActorUserId, Guid JobPaymentId, Guid CollectionTransactionId);
 public record AddJobPaymentDeductionCommand(Guid ActorUserId, Guid JobPaymentId, string Description, decimal Amount);

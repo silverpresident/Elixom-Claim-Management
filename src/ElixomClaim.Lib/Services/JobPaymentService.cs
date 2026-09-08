@@ -84,6 +84,54 @@ public class JobPaymentService : IJobPaymentService
         _db.JobPaymentClaims.Add(new() { JobPaymentId = job.Id, ClaimId = claim.Id }); claim.PaymentStatus = ClaimPaymentStatus.Processing; await _db.SaveChangesAsync(ct); await RecalculateAsync(job, ct); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_CLAIM_ATTACHED", job, c.ActorUserId, ct); return Result.Success();
     }
 
+    public async Task<Result> AttachClaimsAsync(AttachJobPaymentClaimsCommand c, CancellationToken ct = default)
+    {
+        var claimIds = c.ClaimIds.Distinct().ToArray();
+        if (claimIds.Length == 0)
+            return Result.Failure("Select at least one claim to attach.");
+
+        var jobResult = await ProcessingJobAsync(c.ActorUserId, c.JobPaymentId, ct);
+        if (jobResult.IsFailure)
+            return Result.Failure(jobResult.Error);
+
+        var job = jobResult.Value!;
+        var claims = await _db.Claims.Where(x => claimIds.Contains(x.Id)).ToListAsync(ct);
+        if (claims.Count != claimIds.Length || claims.Any(x => x.Status != ClaimStatus.Accepted || x.PaymentStatus != ClaimPaymentStatus.Unpaid || x.ClaimantUserId != job.PayeeUserId || x.IsDeleted))
+            return Result.Failure("Only accepted unpaid claims for the job's user payee can be attached.");
+
+        if (await _db.JobPaymentClaims.AnyAsync(x => claimIds.Contains(x.ClaimId), ct))
+            return Result.Failure("One or more claims are already attached to a job.");
+
+        await using var transaction = _db.Database.IsRelational() ? await _db.Database.BeginTransactionAsync(ct) : null;
+        try
+        {
+            foreach (var claim in claims)
+            {
+                _db.JobPaymentClaims.Add(new JobPaymentClaim { JobPaymentId = job.Id, ClaimId = claim.Id });
+                claim.PaymentStatus = ClaimPaymentStatus.Processing;
+            }
+
+            await _db.SaveChangesAsync(ct);
+            await RecalculateAsync(job, ct);
+            await _db.SaveChangesAsync(ct);
+            await _audit.LogAsync(
+                "JOB_PAYMENT_CLAIMS_ATTACHED",
+                $"JobPayment:{job.Id}",
+                afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid, ClaimIds = claimIds },
+                actorUserId: c.ActorUserId.ToString(),
+                cancellationToken: ct);
+            if (transaction is not null)
+                await transaction.CommitAsync(ct);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (transaction is not null)
+                await transaction.RollbackAsync(ct);
+            return Result.Failure("A selected claim was changed by another operation; refresh and retry.");
+        }
+    }
+
     public async Task<Result> AttachCollectionAsync(AttachJobPaymentCollectionCommand c, CancellationToken ct = default)
     {
         var jobResult = await ProcessingJobAsync(c.ActorUserId, c.JobPaymentId, ct); if (jobResult.IsFailure) return Result.Failure(jobResult.Error); var job = jobResult.Value!;
@@ -91,6 +139,56 @@ public class JobPaymentService : IJobPaymentService
         if (collection is null || collection.Status != CollectionStatus.Collected || collection.CollectionClientId != job.CollectionClientId) return Result.Failure("Only a Collected transaction for the job's client can be attached.");
         if (await _db.JobPaymentCollections.AnyAsync(x => x.CollectionTransactionId == c.CollectionTransactionId, ct)) return Result.Failure("Collection is already attached to a job.");
         _db.JobPaymentCollections.Add(new() { JobPaymentId = job.Id, CollectionTransactionId = collection.Id }); collection.Status = CollectionStatus.Processing; await _db.SaveChangesAsync(ct); await RecalculateAsync(job, ct); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_COLLECTION_ATTACHED", job, c.ActorUserId, ct); return Result.Success();
+    }
+
+    public async Task<Result> AttachCollectionsAsync(AttachJobPaymentCollectionsCommand c, CancellationToken ct = default)
+    {
+        var collectionIds = c.CollectionTransactionIds.Distinct().ToArray();
+        if (collectionIds.Length == 0)
+            return Result.Failure("Select at least one collection transaction to attach.");
+
+        var jobResult = await ProcessingJobAsync(c.ActorUserId, c.JobPaymentId, ct);
+        if (jobResult.IsFailure)
+            return Result.Failure(jobResult.Error);
+
+        var job = jobResult.Value!;
+        var collections = await _db.CollectionTransactions
+            .Where(x => collectionIds.Contains(x.Id))
+            .ToListAsync(ct);
+        if (collections.Count != collectionIds.Length || collections.Any(x => x.Status != CollectionStatus.Collected || x.CollectionClientId != job.CollectionClientId))
+            return Result.Failure("Only Collected transactions for the job's client can be attached.");
+
+        if (await _db.JobPaymentCollections.AnyAsync(x => collectionIds.Contains(x.CollectionTransactionId), ct))
+            return Result.Failure("One or more collections are already attached to a job.");
+
+        await using var transaction = _db.Database.IsRelational() ? await _db.Database.BeginTransactionAsync(ct) : null;
+        try
+        {
+            foreach (var collection in collections)
+            {
+                _db.JobPaymentCollections.Add(new JobPaymentCollection { JobPaymentId = job.Id, CollectionTransactionId = collection.Id });
+                collection.Status = CollectionStatus.Processing;
+            }
+
+            await _db.SaveChangesAsync(ct);
+            await RecalculateAsync(job, ct);
+            await _db.SaveChangesAsync(ct);
+            await _audit.LogAsync(
+                "JOB_PAYMENT_COLLECTIONS_ATTACHED",
+                $"JobPayment:{job.Id}",
+                afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid, CollectionTransactionIds = collectionIds },
+                actorUserId: c.ActorUserId.ToString(),
+                cancellationToken: ct);
+            if (transaction is not null)
+                await transaction.CommitAsync(ct);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (transaction is not null)
+                await transaction.RollbackAsync(ct);
+            return Result.Failure("A selected collection was changed by another operation; refresh and retry.");
+        }
     }
 
     public async Task<Result> RemoveClaimAsync(RemoveJobPaymentClaimCommand c, CancellationToken ct = default)

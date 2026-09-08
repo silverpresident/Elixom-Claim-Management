@@ -1,3 +1,62 @@
 @model IEnumerable<ElixomClaim.Lib.Entities.CollectionTransaction>
-@{ var job = (ElixomClaim.Lib.Entities.JobPayment)ViewBag.Job; ViewData["Title"] = "Compatible collections"; }
-<h1>Collected transactions for @job.CollectionClient?.Name</h1><table class="table"><tbody>@foreach(var collection in Model){<tr><td>#@collection.SequenceNo</td><td>@collection.Purpose</td><td>@collection.Amount.ToString("N2") JMD</td><td><form method="post" asp-action="AttachCollection" asp-route-id="@job.Id" asp-route-collectionId="@collection.Id">@Html.AntiForgeryToken()<button class="btn btn-primary">Attach</button></form></td></tr>}</tbody></table>
+@{ var job = (ElixomClaim.Lib.Entities.JobPayment)ViewBag.Job; ViewData["Title"] = "Attach Collections"; }
+
+<h1>Collected transactions for @job.CollectionClient?.Name</h1>
+
+@if (!Model.Any())
+{
+    <p class="text-muted">There are no collected transactions available to attach.</p>
+}
+else
+{
+    <form method="post" asp-action="AttachCollections" asp-route-id="@job.Id">
+        @Html.AntiForgeryToken()
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="select-all-collections" />
+                <label class="form-check-label" for="select-all-collections">Select all</label>
+            </div>
+            <button class="btn btn-primary" type="submit">Attach selected</button>
+        </div>
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th scope="col"><span class="visually-hidden">Select</span></th>
+                    <th scope="col">Transaction</th>
+                    <th scope="col">Purpose</th>
+                    <th scope="col">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var collection in Model)
+            {
+                <tr>
+                    <td><input class="form-check-input collection-selector" type="checkbox" name="collectionIds" value="@collection.Id" id="collection-@collection.Id" /></td>
+                    <td><label for="collection-@collection.Id">#@collection.SequenceNo</label></td>
+                    <td>@collection.Purpose</td>
+                    <td>@collection.Amount.ToString("N2") JMD</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </form>
+}
+
+@section Scripts {
+<script>
+    (() => {
+        const selectAll = document.getElementById('select-all-collections');
+        const selectors = Array.from(document.querySelectorAll('.collection-selector'));
+        if (!selectAll || selectors.length === 0) return;
+
+        const updateSelectAll = () => {
+            const selected = selectors.filter(selector => selector.checked).length;
+            selectAll.checked = selected === selectors.length;
+            selectAll.indeterminate = selected > 0 && selected < selectors.length;
+        };
+
+        selectAll.addEventListener('change', () => selectors.forEach(selector => selector.checked = selectAll.checked));
+        selectors.forEach(selector => selector.addEventListener('change', updateSelectAll));
+    })();
+</script>
+}

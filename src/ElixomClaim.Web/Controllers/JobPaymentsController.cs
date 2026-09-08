@@ -135,9 +135,17 @@ public class JobPaymentsController : Controller
     }
 
     [HttpPost("{id:guid}/claims/{claimId:guid}")][ValidateAntiForgeryToken] public async Task<IActionResult> AttachClaim(Guid id, Guid claimId) => RedirectResult(await _service.AttachClaimAsync(new(CurrentUserId(), id, claimId)), id);
+    [HttpPost("{id:guid}/claims")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AttachClaims(Guid id, [FromForm] Guid[] claimIds) =>
+        RedirectResult(await _service.AttachClaimsAsync(new(CurrentUserId(), id, claimIds)), id);
     [HttpPost("{id:guid}/claims/{claimId:guid}/remove")][ValidateAntiForgeryToken] public async Task<IActionResult> RemoveClaim(Guid id, Guid claimId) => RedirectResult(await _service.RemoveClaimAsync(new(CurrentUserId(), id, claimId)), id);
 
     [HttpPost("{id:guid}/collections/{collectionId:guid}")][ValidateAntiForgeryToken] public async Task<IActionResult> AttachCollection(Guid id, Guid collectionId) => RedirectResult(await _service.AttachCollectionAsync(new(CurrentUserId(), id, collectionId)), id);
+    [HttpPost("{id:guid}/collections")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AttachCollections(Guid id, [FromForm] Guid[] collectionIds) =>
+        RedirectResult(await _service.AttachCollectionsAsync(new(CurrentUserId(), id, collectionIds)), id);
     [HttpPost("{id:guid}/collections/{collectionId:guid}/remove")][ValidateAntiForgeryToken] public async Task<IActionResult> RemoveCollection(Guid id, Guid collectionId) => RedirectResult(await _service.RemoveCollectionAsync(new(CurrentUserId(), id, collectionId)), id);
 
     [HttpPost("{id:guid}/deductions")]
