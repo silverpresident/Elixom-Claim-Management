@@ -2,6 +2,7 @@ using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace ElixomClaim.Lib.Tests.Services;
@@ -24,7 +25,7 @@ public class OperationRecordServiceTests
         // Phase 1: Record operation in first DbContext instance
         using (var db1 = new ApplicationDbContext(options))
         {
-            var service1 = new OperationRecordService(db1, clock);
+            var service1 = new OperationRecordService(db1, clock, NullLogger<OperationRecordService>.Instance);
             var record1 = await service1.RecordOperationAsync(
                 "key-100",
                 "OutboxWakeUp",
@@ -40,7 +41,7 @@ public class OperationRecordServiceTests
         // Phase 2: Query operation status from brand new DbContext instance (simulating restart)
         using (var db2 = new ApplicationDbContext(options))
         {
-            var service2 = new OperationRecordService(db2, clock);
+            var service2 = new OperationRecordService(db2, clock, NullLogger<OperationRecordService>.Instance);
             var retrieved = await service2.GetByIdempotencyKeyAsync("key-100");
 
             Assert.NotNull(retrieved);
@@ -59,7 +60,7 @@ public class OperationRecordServiceTests
         var clock = new SystemClock();
 
         using var db = new ApplicationDbContext(options);
-        var service = new OperationRecordService(db, clock);
+        var service = new OperationRecordService(db, clock, NullLogger<OperationRecordService>.Instance);
 
         var first = await service.RecordOperationAsync("key-200", "SalaryGen", "Completed", "Payroll 1", "accountant-1");
         var second = await service.RecordOperationAsync("key-200", "SalaryGen", "Failed", "Different details", "accountant-1");

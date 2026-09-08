@@ -25,20 +25,17 @@ public sealed record OperationResponse(
 public sealed class OperationsTools
 {
     private readonly ISalaryPayrollService _salaryPayrollService;
-    private readonly IOutboxService _outboxService;
     private readonly IOperationRecordService _operationRecordService;
     private readonly IAuditService _audit;
     private readonly McpToolActorAccessor _actorAccessor;
 
     public OperationsTools(
         ISalaryPayrollService salaryPayrollService,
-        IOutboxService outboxService,
         IOperationRecordService operationRecordService,
         IAuditService audit,
         McpToolActorAccessor actorAccessor)
     {
         _salaryPayrollService = salaryPayrollService;
-        _outboxService = outboxService;
         _operationRecordService = operationRecordService;
         _audit = audit;
         _actorAccessor = actorAccessor;
@@ -47,10 +44,9 @@ public sealed class OperationsTools
     // Retained for direct domain-adapter unit tests. MCP discovery uses the constructor above.
     public OperationsTools(
         ISalaryPayrollService salaryPayrollService,
-        IOutboxService outboxService,
         IOperationRecordService operationRecordService,
         IAuditService audit)
-        : this(salaryPayrollService, outboxService, operationRecordService, audit, null!)
+        : this(salaryPayrollService, operationRecordService, audit, null!)
     {
     }
 
@@ -106,12 +102,11 @@ public sealed class OperationsTools
             return new OperationResponse(false, "IdempotencyKey is required.", null);
         }
 
-        var key = $"salary-gen:{request.SalaryDefinitionId}:{request.IdempotencyKey.Trim()}";
-
-        var existing = await _operationRecordService.GetByIdempotencyKeyAsync(key, ct);
-        if (existing != null)
+        var key = CreateOperationKey("salary-gen", actor.Id, request.SalaryDefinitionId.ToString("N"), request.IdempotencyKey);
+        var reservation = await _operationRecordService.ReserveAsync(key, "SalaryGeneration", actor.Id.ToString(), ct);
+        if (!reservation.IsNew)
         {
-            return new OperationResponse(true, "Operation already processed (idempotent).", MapToDto(existing));
+            return new OperationResponse(true, "Operation already accepted (idempotent).", MapToDto(reservation.Record));
         }
 
         try
@@ -120,13 +115,7 @@ public sealed class OperationsTools
             var status = result.IsSuccess ? "Completed" : "Failed";
             var details = result.IsSuccess ? $"Payroll generated with ID {result.Value?.Id}, total {result.Value?.PayrollTotal} JMD." : result.Error;
 
-            var record = await _operationRecordService.RecordOperationAsync(
-                key,
-                "SalaryGeneration",
-                status,
-                details,
-                actor.Id.ToString(),
-                ct);
+            var record = await _operationRecordService.UpdateStatusAsync(reservation.Record.Id, status, details, ct);
 
             await _audit.LogAsync("MCP_OPERATIONS_SALARY_GEN", $"SalaryDefinition:{request.SalaryDefinitionId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new OperationResponse(result.IsSuccess, result.Error, MapToDto(record));
@@ -137,13 +126,8 @@ public sealed class OperationsTools
         }
         catch (Exception)
         {
-            var record = await _operationRecordService.RecordOperationAsync(
-                key,
-                "SalaryGeneration",
-                "Failed",
-                "Operation could not be completed.",
-                actor.Id.ToString(),
-                ct);
+            var record = await _operationRecordService.UpdateStatusAsync(
+                reservation.Record.Id, "Failed", "Operation could not be completed.", ct);
 
             return new OperationResponse(false, "Operation could not be completed.", MapToDto(record));
         }
@@ -161,46 +145,18 @@ public sealed class OperationsTools
             return new OperationResponse(false, "IdempotencyKey is required.", null);
         }
 
-        var key = $"outbox-wakeup:{request.IdempotencyKey.Trim()}";
-
-        var existing = await _operationRecordService.GetByIdempotencyKeyAsync(key, ct);
-        if (existing != null)
+        var key = CreateOperationKey("outbox-wakeup", actor.Id, null, request.IdempotencyKey);
+        var reservation = await _operationRecordService.ReserveAsync(key, "OutboxWakeUp", actor.Id.ToString(), ct);
+        if (!reservation.IsNew)
         {
-            return new OperationResponse(true, "Operation already processed (idempotent).", MapToDto(existing));
+            return new OperationResponse(true, "Operation already accepted (idempotent).", MapToDto(reservation.Record));
         }
 
-        try
-        {
-            int batchSize = Math.Clamp(request.BatchSize ?? 25, 1, 100);
-            int processed = await _outboxService.DispatchDueAsync(batchSize, ct);
-
-            var record = await _operationRecordService.RecordOperationAsync(
-                key,
-                "OutboxWakeUp",
-                "Completed",
-                $"Outbox dispatch executed for batch size {batchSize}; processed {processed} item(s).",
-                actor.Id.ToString(),
-                ct);
-
-            await _audit.LogAsync("MCP_OPERATIONS_OUTBOX_WAKEUP", $"BatchSize:{batchSize}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
-            return new OperationResponse(true, null, MapToDto(record));
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception)
-        {
-            var record = await _operationRecordService.RecordOperationAsync(
-                key,
-                "OutboxWakeUp",
-                "Failed",
-                "Operation could not be completed.",
-                actor.Id.ToString(),
-                ct);
-
-            return new OperationResponse(false, "Operation could not be completed.", MapToDto(record));
-        }
+        // The hosted dispatcher owns provider dispatch. This adapter only persists an
+        // auditable wake-up request; the dispatcher will pick up due outbox work on
+        // its normal polling cycle rather than MCP invoking worker internals.
+        await _audit.LogAsync("MCP_OPERATIONS_OUTBOX_WAKEUP", $"BatchSize:{Math.Clamp(request.BatchSize ?? 25, 1, 100)}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+        return new OperationResponse(true, "Outbox wake-up request accepted.", MapToDto(reservation.Record));
     }
 
     public async Task<OperationResponse> GetOperationStatusAsync(User actor, OperationStatusRequest request, CancellationToken ct)
@@ -210,7 +166,7 @@ public sealed class OperationsTools
             return new OperationResponse(false, "IdempotencyKey is required.", null);
         }
 
-        var record = await _operationRecordService.GetByIdempotencyKeyAsync(request.IdempotencyKey.Trim(), ct);
+        var record = await _operationRecordService.GetForActorAsync(request.IdempotencyKey.Trim(), actor.Id.ToString(), ct);
 
         if (record == null)
         {
@@ -218,5 +174,11 @@ public sealed class OperationsTools
         }
 
         return new OperationResponse(true, null, MapToDto(record));
+    }
+
+    private static string CreateOperationKey(string operationType, Guid actorUserId, string? target, string idempotencyKey)
+    {
+        var targetPart = string.IsNullOrEmpty(target) ? string.Empty : $":{target}";
+        return $"{operationType}:{actorUserId:N}{targetPart}:{idempotencyKey.Trim()}";
     }
 }

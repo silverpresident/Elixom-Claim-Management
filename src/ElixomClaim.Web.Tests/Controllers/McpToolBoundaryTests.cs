@@ -122,10 +122,9 @@ public class McpToolBoundaryTests
         var db = CreateInMemoryDbContext();
         var clock = new SystemClock();
         var audit = new AuditService(db, NullLogger<AuditService>.Instance);
-        var outbox = new OutboxService(db, new FakeEmailSender(), clock, NullLogger<OutboxService>.Instance);
         var salary = new SalaryPayrollService(db, new SalaryRecurrencePlanner(), audit, clock, NullLogger<SalaryPayrollService>.Instance);
-        var opsRecordService = new OperationRecordService(db, clock);
-        var opsTools = new OperationsTools(salary, outbox, opsRecordService, audit);
+        var opsRecordService = new OperationRecordService(db, clock, NullLogger<OperationRecordService>.Instance);
+        var opsTools = new OperationsTools(salary, opsRecordService, audit);
 
         var user = new User { Id = Guid.NewGuid(), Email = "user@elixom.com", FullName = "User", Role = UserRole.User, IsActive = true };
         var admin = new User { Id = Guid.NewGuid(), Email = "admin@elixom.com", FullName = "Admin", Role = UserRole.Administrator, IsActive = true };
@@ -141,11 +140,20 @@ public class McpToolBoundaryTests
         var adminRes = await opsTools.RequestOutboxWakeUpAsync(admin, new OutboxWakeUpRequest(25, "IDEM-1"), CancellationToken.None);
         Assert.True(adminRes.Success);
         Assert.NotNull(adminRes.Record);
-        Assert.Equal("Completed", adminRes.Record.Status);
+        Assert.Equal("Accepted", adminRes.Record.Status);
 
         // Status polling
-        var statusRes = await opsTools.GetOperationStatusAsync(admin, new OperationStatusRequest("IDEM-1"), CancellationToken.None);
+        var statusRes = await opsTools.GetOperationStatusAsync(admin, new OperationStatusRequest(adminRes.Record!.IdempotencyKey), CancellationToken.None);
         Assert.True(statusRes.Success);
-        Assert.Equal("Completed", statusRes.Record?.Status);
+        Assert.Equal("Accepted", statusRes.Record?.Status);
+
+        var otherAdmin = new User { Id = Guid.NewGuid(), Email = "other-admin@elixom.com", FullName = "Other Admin", Role = UserRole.Administrator, IsActive = true };
+        db.Users.Add(otherAdmin);
+        await db.SaveChangesAsync();
+
+        var unauthorizedStatus = await opsTools.GetOperationStatusAsync(otherAdmin, new OperationStatusRequest(adminRes.Record.IdempotencyKey), CancellationToken.None);
+        Assert.False(unauthorizedStatus.Success);
+        Assert.Null(unauthorizedStatus.Record);
     }
+
 }
