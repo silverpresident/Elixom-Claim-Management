@@ -10,6 +10,32 @@ namespace ElixomClaim.Lib.Tests.Services;
 public class JobPaymentServiceTests
 {
     [Fact]
+    public async Task ManagerCanReviewAllJobPaymentsWhileUsersSeeOnlyTheirOwn()
+    {
+        await using var db = CreateDb();
+        var manager = User(UserRole.Manager, "manager@anonymized.example.com");
+        var firstPayee = User(UserRole.User, "first@anonymized.example.com");
+        var secondPayee = User(UserRole.User, "second@anonymized.example.com");
+        var firstJob = new JobPayment { PayeeUserId = firstPayee.Id, CreatedAtUtc = DateTime.UtcNow };
+        var secondJob = new JobPayment { PayeeUserId = secondPayee.Id, CreatedAtUtc = DateTime.UtcNow.AddMinutes(-1) };
+        db.AddRange(manager, firstPayee, secondPayee, firstJob, secondJob);
+        await db.SaveChangesAsync();
+        var service = Service(db);
+
+        var managerJobs = await service.ListForActorAsync(manager.Id, null, 25);
+        var userJobs = await service.ListForActorAsync(firstPayee.Id, null, 25);
+        var managerRead = await service.GetForActorAsync(manager.Id, secondJob.Id);
+
+        Assert.True(managerJobs.IsSuccess);
+        Assert.Equal(2, managerJobs.Value!.Count);
+        Assert.True(userJobs.IsSuccess);
+        Assert.Single(userJobs.Value!);
+        Assert.Equal(firstJob.Id, userJobs.Value![0].Id);
+        Assert.True(managerRead.IsSuccess);
+        Assert.Equal(secondJob.Id, managerRead.Value!.Id);
+    }
+
+    [Fact]
     public async Task AttachCollectionAsync_RejectsDifferentClientAndRecalculatesValidJob()
     {
         await using var db = CreateDb();

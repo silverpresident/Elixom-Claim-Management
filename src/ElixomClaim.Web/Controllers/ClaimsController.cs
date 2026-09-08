@@ -40,6 +40,7 @@ public class ClaimsController : Controller
         var paymentHistory = await _dbContext.JobPayments
             .Where(j => j.PayeeUserId == userId)
             .OrderByDescending(j => j.PaymentDateUtc ?? j.CreatedAtUtc)
+            .Take(5)
             .ToListAsync();
 
         var viewModel = new Models.UserDashboardViewModel
@@ -49,6 +50,17 @@ public class ClaimsController : Controller
         };
 
         return View(viewModel);
+    }
+
+    [HttpGet("payment-history")]
+    public async Task<IActionResult> PaymentHistory()
+    {
+        var userId = GetCurrentUserId();
+        var payments = await _dbContext.JobPayments.AsNoTracking()
+            .Where(job => job.PayeeUserId == userId)
+            .OrderByDescending(job => job.PaymentDateUtc ?? job.CreatedAtUtc)
+            .ToListAsync();
+        return View(payments);
     }
 
     [HttpGet("create")]
