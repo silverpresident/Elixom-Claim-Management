@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ElixomClaim.Web.Controllers;
 
-[Authorize(Policy = PolicyNames.RequireAdministrator)]
+[Authorize(Policy = PolicyNames.RequireAccountant)]
 [Route("admin/collection-clients")]
 public class CollectionClientsAdminController : Controller
 {
@@ -61,6 +61,7 @@ public class CollectionClientsAdminController : Controller
 
     [HttpPost("{id:guid}/users")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
     public async Task<IActionResult> AssignUser(Guid id, [FromForm] Guid userId)
     {
         var result = await _service.AssignUserAsync(new(GetCurrentUserId(), id, userId));
@@ -69,6 +70,7 @@ public class CollectionClientsAdminController : Controller
 
     [HttpPost("{id:guid}/purpose-options")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
     public async Task<IActionResult> AddPurpose(Guid id, [FromForm] string name, [FromForm] int displayOrder)
     {
         var result = await _service.AddPurposeOptionAsync(new(GetCurrentUserId(), id, name, displayOrder));
@@ -77,6 +79,7 @@ public class CollectionClientsAdminController : Controller
 
     [HttpPost("{id:guid}/amount-options")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
     public async Task<IActionResult> AddAmount(Guid id, [FromForm] string name, [FromForm] decimal amount, [FromForm] int displayOrder)
     {
         var result = await _service.AddAmountOptionAsync(new(GetCurrentUserId(), id, name, amount, displayOrder));
@@ -85,6 +88,7 @@ public class CollectionClientsAdminController : Controller
 
     [HttpPost("{id:guid}/bank-details")]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
     public async Task<IActionResult> AddBankDetail(Guid id, [FromForm] string accountName, [FromForm] string bankName, [FromForm] string branchCode, [FromForm] string branchName, [FromForm] string accountType, [FromForm] string accountNumber, [FromForm] string? notes)
     {
         var result = await _service.AddBankDetailAsync(new(GetCurrentUserId(), id, accountName, bankName, branchCode, branchName, accountType, accountNumber, notes));
@@ -100,7 +104,7 @@ public class CollectionClientsAdminController : Controller
     private Guid GetCurrentUserId()
     {
         var rawId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("UserId");
-        if (!Guid.TryParse(rawId, out var id)) _logger.LogWarning("Administrator client configuration request had no valid user id claim.");
+        if (!Guid.TryParse(rawId, out var id)) _logger.LogWarning("Collection client management request had no valid user id claim.");
         return id;
     }
 }

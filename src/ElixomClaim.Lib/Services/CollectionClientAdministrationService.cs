@@ -23,7 +23,7 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
 
     public async Task<Result<CollectionClient>> CreateClientAsync(CreateCollectionClientCommand command, CancellationToken cancellationToken = default)
     {
-        var authorization = await EnsureAdministratorAsync(command.ActorUserId, cancellationToken);
+        var authorization = await EnsureAccountantAsync(command.ActorUserId, cancellationToken);
         if (authorization.IsFailure || string.IsNullOrWhiteSpace(command.Name))
             return Result.Failure<CollectionClient>(authorization.IsFailure ? authorization.Error : "Client name is required.");
 
@@ -49,7 +49,7 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
 
     public async Task<Result<CollectionClient>> UpdateClientAsync(UpdateCollectionClientCommand command, CancellationToken cancellationToken = default)
     {
-        var authorization = await EnsureAdministratorAsync(command.ActorUserId, cancellationToken);
+        var authorization = await EnsureAccountantAsync(command.ActorUserId, cancellationToken);
         if (authorization.IsFailure || string.IsNullOrWhiteSpace(command.Name))
             return Result.Failure<CollectionClient>(authorization.IsFailure ? authorization.Error : "Client name is required.");
 
@@ -174,6 +174,14 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
     {
         var role = await _dbContext.Users.Where(u => u.Id == actorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(cancellationToken);
         return role is UserRole.Administrator ? Result.Success() : Result.Failure("Administrator access is required.");
+    }
+
+    private async Task<Result> EnsureAccountantAsync(Guid actorUserId, CancellationToken cancellationToken)
+    {
+        var role = await _dbContext.Users.Where(u => u.Id == actorUserId && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(cancellationToken);
+        return role is { } activeRole && activeRole.HasMinimumRole(UserRole.Accountant)
+            ? Result.Success()
+            : Result.Failure("Accountant or Administrator access is required.");
     }
 
     private Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken) => _dbContext.CollectionClients.AnyAsync(c => c.Id == clientId, cancellationToken);

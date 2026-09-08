@@ -26,7 +26,7 @@
                         <input id="clientDescription" name="description" class="form-control" value="@Model.Description" placeholder="Optional description..." />
                     </div>
                     <div class="col-12">
-                        <label for="clientNotes" class="form-label fw-bold">Internal Notes (Admin Only)</label>
+                        <label for="clientNotes" class="form-label fw-bold">Internal Notes</label>
                         <textarea id="clientNotes" name="notes" class="form-control" rows="2" placeholder="Internal operational notes...">@Model.Notes</textarea>
                     </div>
                     <div class="col-md-6">
@@ -45,6 +45,8 @@
         </div>
     </div>
 
+    @if (User.IsInRole("Administrator"))
+    {
     <div class="row g-4">
         <section class="col-md-6">
             <div class="card shadow-sm border-0 h-100">
@@ -146,4 +148,5 @@
             </div>
         </section>
     </div>
+    }
 </div>

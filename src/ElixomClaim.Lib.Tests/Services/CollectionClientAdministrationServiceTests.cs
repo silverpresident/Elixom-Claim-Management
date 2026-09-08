@@ -10,22 +10,26 @@ namespace ElixomClaim.Lib.Tests.Services;
 public class CollectionClientAdministrationServiceTests
 {
     [Fact]
-    public async Task CreateClientAsync_RequiresAdministratorAndAuditsSuccessfulConfiguration()
+    public async Task CreateAndUpdateClientAsync_AllowsAccountantAndDeniesManager()
     {
         await using var db = CreateDb();
-        var user = new User { Email = "user@anonymized.example.com", NormalizedEmail = "USER@ANONYMIZED.EXAMPLE.COM", FullName = "User", Role = UserRole.User };
-        var admin = new User { Email = "admin@anonymized.example.com", NormalizedEmail = "ADMIN@ANONYMIZED.EXAMPLE.COM", FullName = "Admin", Role = UserRole.Administrator };
-        db.Users.AddRange(user, admin);
+        var manager = new User { Email = "manager@anonymized.example.com", NormalizedEmail = "MANAGER@ANONYMIZED.EXAMPLE.COM", FullName = "Manager", Role = UserRole.Manager };
+        var accountant = new User { Email = "accountant@anonymized.example.com", NormalizedEmail = "ACCOUNTANT@ANONYMIZED.EXAMPLE.COM", FullName = "Accountant", Role = UserRole.Accountant };
+        db.Users.AddRange(manager, accountant);
         await db.SaveChangesAsync();
         var service = CreateService(db);
 
-        var rejected = await service.CreateClientAsync(new(user.Id, "Acme"));
-        var created = await service.CreateClientAsync(new(admin.Id, "Acme"));
+        var rejected = await service.CreateClientAsync(new(manager.Id, "Acme"));
+        var created = await service.CreateClientAsync(new(accountant.Id, "Acme"));
+        var updated = await service.UpdateClientAsync(new(accountant.Id, created.Value!.Id, "Acme Utilities", "Utility collections", "Accounting note", 25m, 2.5m));
 
         Assert.True(rejected.IsFailure);
         Assert.True(created.IsSuccess);
-        Assert.Equal("Acme", created.Value!.Name);
+        Assert.True(updated.IsSuccess);
+        Assert.Equal("Acme Utilities", updated.Value!.Name);
+        Assert.Equal(25m, updated.Value.PerJobProcessingFee);
         Assert.Contains(db.AuditRecords, record => record.Action == "COLLECTION_CLIENT_CREATED");
+        Assert.Contains(db.AuditRecords, record => record.Action == "COLLECTION_CLIENT_UPDATED");
     }
 
     [Fact]
@@ -38,6 +42,21 @@ public class CollectionClientAdministrationServiceTests
         await db.SaveChangesAsync();
 
         var result = await CreateService(db).AddAmountOptionAsync(new(admin.Id, client.Id, "Invalid", 0m, 0));
+
+        Assert.True(result.IsFailure);
+        Assert.Empty(db.CollectionAmountOptions);
+    }
+
+    [Fact]
+    public async Task AddAmountOptionAsync_RemainsAdministratorOnly()
+    {
+        await using var db = CreateDb();
+        var accountant = new User { Email = "accountant@anonymized.example.com", NormalizedEmail = "ACCOUNTANT@ANONYMIZED.EXAMPLE.COM", FullName = "Accountant", Role = UserRole.Accountant };
+        var client = new CollectionClient { Name = "Acme" };
+        db.AddRange(accountant, client);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).AddAmountOptionAsync(new(accountant.Id, client.Id, "Standard", 100m, 0));
 
         Assert.True(result.IsFailure);
         Assert.Empty(db.CollectionAmountOptions);
