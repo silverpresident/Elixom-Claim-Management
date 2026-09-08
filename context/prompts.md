@@ -15,3 +15,9 @@ Look at the codebase now and reevaulate the completeness.
 I have updated the project. Update your report based on the changes.
 ---
 and update the documentations and specs where necessary.
+---
+Fix the following concerns please:
+OAuth requested scopes are not checked against each client's AllowedScopes; explicit public-versus-confidential client policy is absent; several controllers/tool adapters lack structured logging; and only the claims portion of the repository's additional /api/v1 commitment exists.
+the versioned REST API is only a claims slice, MCP adapters still bypass shared service boundaries in sensitive areas, formal MCP/OAuth interoperability evidence is absent, and several specification-fidelity/security-quality gaps remain.
+
+It might be worth considerring that i do not need the versiones rest api, rest is very unlikely to be used, i am just keeping it for keep sake.
