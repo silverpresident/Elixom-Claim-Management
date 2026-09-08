@@ -4,142 +4,132 @@
 
 **Specification:** [`context/claude-specs.md`](../context/claude-specs.md)
 
-**Method:** Reviewed current source, migration ledger, configuration, routes, Razor, tests, and Sprint 12 evidence. Findings reflect the checked-out worktree, not historic sprint claims alone.
+**Method:** Reviewed the current source, migrations, routes, service boundaries, tests, configuration, `MEMORY.md`, and Sprint 12 ledger. Findings are based on the worktree, not historical sprint assertions alone.
 
 ## Conclusion
 
-The implementation is substantially complete across the core product: the Lib/Web split, Google-only provisioned-user access, hierarchical roles, claims, clearing-house collections, job payments, payroll, outbox delivery, custom OAuth, standard MCP transport, and HTML-first UI are all present.
+The core application is substantially implemented: .NET 10 MVC/EF architecture, Google-only provisioned-user access, hierarchical roles, claims, collections, job payments, payroll, SMTP/ACS outbox delivery, custom OAuth, standard MCP, audit persistence, and the HTML-first UI are present.
 
-It is still **not release-ready or specification-complete**. The migration and core MCP-operation defects reported in the earlier review are resolved, but the versioned REST API is only a claims slice, MCP adapters still bypass shared service boundaries in sensitive areas, formal MCP/OAuth interoperability evidence is absent, and several specification-fidelity/security-quality gaps remain.
+The former clean-migration, MCP-operation durability, direct MCP email-queue mutation, and missing REST-API findings are materially resolved. The system remains **not release-ready or fully specification-complete** because it lacks endpoint-level API/MCP integration tests, MCP previews still bypass shared authorization-aware services, some API commands lack the mandated idempotency/durable-operation model, production migration coordination is process-local, and formal OAuth/MCP security review remains open.
 
-## Current verification
+## Verification
+
+The focused non-relational command completed successfully:
 
 ```bash
-dotnet test ElixomClaim.slnx --no-restore --logger "console;verbosity=minimal"
+dotnet test ElixomClaim.slnx --no-restore --filter "Category!=Integration" --logger "console;verbosity=minimal"
 ```
 
-Passed on 2026-09-08:
+Results: **125 Lib tests passed** and **78 Web tests passed** (203 total, no failures).
 
-- Lib: **123 passed**
-- Web: **73 passed**
-- Total: **196 passed, 0 failed**
-
-The run includes the relational/Testcontainers tests. Warnings remain: `SSH.NET` 2025.1.0 has high-severity advisory `GHSA-q939-rpr3-3284`; the Lib project has two `NU1510` package-reference warnings.
+An unfiltered test run was also initiated, but its relational/Testcontainers portion did not finish within the tool window. The prior full-suite evidence in the repository should be rerun and recorded after the recent API/OAuth changes. Current warnings include high-severity advisory `GHSA-q939-rpr3-3284` for `SSH.NET` 2025.1.0, two Lib `NU1510` warnings, and obsolete Testcontainers builder use in the relational audit test.
 
 ## Requirement assessment
 
-| Specification area | Status | Current evidence / variation |
+| Specification area | Status | Evidence / assessment |
 | --- | --- | --- |
-| .NET 10 MVC, Lib/Web/test split, EF Core, Azure SQL `dbclaim` | Implemented | Four projects exist with the intended ownership split. The migration ledger was reset to a clean Guid baseline because `MEMORY.md` records that no deployed database/data required preservation. |
-| Guid identifiers, JMD precision, UTC timestamps, display record numbers | Implemented | Current entities/mappings use Guid technical IDs, `decimal(18,2)`, UTC fields, and durable sequence-backed display numbers. |
-| Google SSO, provisioned active users, bootstrap administrator | Implemented | Google/cookie wiring, active-user validation, and bootstrap seeding/promoting are present. |
-| Hierarchical roles and policy/ownership checks | Mostly implemented | Single-role hierarchy and policies are in place. Some MCP email paths do not carry the same ownership checks as their MVC/shared-service equivalents. |
-| Claims lifecycle, ownership, comments, soft delete | Mostly implemented | Services, MVC, and the new API slice cover the principal lifecycle. Append-only comments remain a service convention rather than database enforcement. |
-| Profile, bank details and payment history | Implemented | Optional display name, bank branch/account-type validation, masking, and payment history are present. |
-| Collection client administration and teller clearing house | Mostly implemented | Client/options/bank configuration, fee snapshots, custom-entry snapshots, capture, reissue, outbox receipt, and print HTML exist. |
-| Job-payment lifecycle and paid cascade | Mostly implemented | One-payee invariant, Processing-only mutation, totals, settlement cascade, idempotent notification, and adjustment workflow are implemented. Payout document fidelity remains partial. |
-| Salary recurrence, generated payroll, entries and submission | Implemented | Planner, service, scheduler, locked generated entries, custom-entry rule, and payroll-bound job payment exist. |
-| SMTP/ACS, durable outbox, retry, email logging | Mostly implemented | Senders, durable outbox, worker, retries, skipped-recipient handling, and logs exist. The literal email-header/audit shape differs from the source specification. |
-| In-house OAuth code flow, PKCE S256, refresh/rotation, revocation, consent | Mostly implemented | The server and protections are implemented; formal interoperability and independent security review are still release requirements. |
-| Standard MCP transport and six grouped tools | Mostly implemented | Official Streamable HTTP is mapped at `/mcp`, bearer-authenticated, scope-gated, rate-limited, and exposes six domain classes/14 tools. Shared-service-boundary and protocol-test gaps remain. |
-| Durable, actor-owned MCP operations | Mostly implemented | Operation records are reserved as `Accepted` before salary work, duplicate calls return the existing record, status lookup is actor-scoped, and MCP no longer dispatches outbox work directly. Restart recovery semantics still need end-to-end proof. |
-| Versioned REST API with `api:access` | Partial | `/api/v1/claims` has list/detail/submit, bounded paging, actor resolution, shared claim service, and isolated scope. The required collections, job payments, constrained email, payroll, and operation resources are absent. |
-| Append-only audit trail | Mostly implemented | SQL trigger migration and relational test evidence now exist. The record's single `Target` remains less structured than the specified entity-type/entity-ID fields. |
-| Privacy, CDN-only frontend, SVG favicon, HTML-only printing | Implemented | Privacy policy/footer, CDN Bootstrap/jQuery with SRI, custom SVG favicon, and HTML print routes are present; no `Class1.cs` or local frontend distribution was found. |
-| `ILogger<T>` in all controllers/services/hosted services | Partial | Hosted services and many services/adapters log, but several required concrete types still omit a logger. |
+| .NET 10 MVC, Lib/Web/tests, EF Core, Azure SQL `dbclaim` | Implemented | Four intended projects and the expected layering exist. The migration baseline is Guid-based and clean-SQL relational coverage is recorded. |
+| Guid IDs, JMD precision, UTC and display record numbers | Implemented | Current entities/mappings use Guid technical IDs, `decimal(18,2)`, persisted UTC values, and sequence-backed display numbers. |
+| Google SSO, provisioned active users, bootstrap administrator | Implemented | Google/cookie wiring, active-user validation, and bootstrap admin seed/promotion are present. |
+| Hierarchical roles, policy and ownership checks | Mostly implemented | Single-role hierarchy and shared policies are present. The MCP preview exception below prevents a complete result. |
+| Claims lifecycle, comments, soft deletion | Mostly implemented | Services/MVC/API cover the principal lifecycle. Comment append-only behaviour is a service convention, not a database invariant. |
+| Profile, bank details and payment history | Implemented | Optional display name, constrained bank metadata, masking, and user payment history are present. |
+| Clearing-house clients, capture, receipt/reissue/print | Mostly implemented | Client configuration, fee snapshots, custom purpose/amount snapshots, capture, outbox receipts, reissue and HTML print are implemented. |
+| Job payments, deductions, lifecycle and settlement cascade | Mostly implemented | One-payee invariant, Processing-only mutation, total calculation, cascade/outbox settlement, and adjustment workflow are implemented. Payout document fidelity remains partial. |
+| Salary recurrence, payroll generation/entries/submission | Implemented | Shared planner/service, hosted scheduler, locked generated entries, custom-entry validation, and payroll-bound job payment are present. |
+| SMTP/ACS, durable outbox, retry and email logging | Mostly implemented | Sender implementations, outbox worker, retries, skipped-recipient handling, and logs exist. Literal email header-schema fidelity differs. |
+| In-house OAuth code flow, PKCE S256, consent, refresh/revocation | Mostly implemented | Registration now creates public PKCE-only clients without a secret; allowed scopes are persisted/validated, and confidential clients must present stored credentials. Formal security/interoperability review remains open. |
+| Standard MCP transport and grouped tools | Mostly implemented | Official Streamable HTTP `/mcp` is bearer-authenticated, scope-gated/rate-limited, and exposes six grouped tool classes. Protocol-level integration evidence is still absent. |
+| Durable MCP operations | Mostly implemented | Actor-scoped records are reserved before salary work; retries return the reservation; status is actor-scoped; MCP does not invoke outbox dispatch. Restart recovery still lacks end-to-end evidence. |
+| Versioned REST API and `api:access` isolation | Mostly implemented | `/api/v1` now has claims, collections, job-payment, email queue, payroll, and operation-status endpoints behind `api:access`, using actor resolution and mostly shared services. Command/idempotency and API-contract gaps remain. |
+| Append-only audit trail | Mostly implemented | SQL trigger migration and relational evidence exist. The model combines type/ID as `Target`, unlike the specified separate fields. |
+| Privacy, CDN assets, SVG favicon, HTML-only printing | Implemented | Privacy/footer, CDN Bootstrap/jQuery with SRI, custom favicon, and HTML print routes exist; no scaffold `Class1.cs` or local frontend distribution was found. |
+| `ILogger<T>` in all controllers/services/hosted services | Mostly implemented | Recent changes add structured logs across controllers/tools. `HomeController`, `McpToolActorAccessor`, and pure utility services (`SalaryRecurrencePlanner`, `SystemClock`) still lack a logger. |
 
-## Resolved since the prior report
+## Resolved since the previous assessment
 
-### Clean SQL migration baseline
+### Clean migration baseline and relational evidence
 
-The broken historical migration chain has been replaced with [`20260908033036_InitialCreate.cs`](../src/ElixomClaim.Lib/Migrations/20260908033036_InitialCreate.cs), which creates `dbclaim`, display-number sequences, and Guid-based tables in dependency order. [`20260908033045_AddAuditRecordAppendOnlyTrigger.cs`](../src/ElixomClaim.Lib/Migrations/20260908033045_AddAuditRecordAppendOnlyTrigger.cs) restores SQL-side audit immutability. Full tests now pass, including relational coverage.
+[`20260908033036_InitialCreate.cs`](../src/ElixomClaim.Lib/Migrations/20260908033036_InitialCreate.cs) creates the `dbclaim` schema, display-number sequences, and Guid-based tables in dependency order. [`20260908033045_AddAuditRecordAppendOnlyTrigger.cs`](../src/ElixomClaim.Lib/Migrations/20260908033045_AddAuditRecordAppendOnlyTrigger.cs) restores the database-level audit trigger. The reset is documented as safe only because no deployed data exists.
 
-This is an appropriate correction only under the documented no-deployed-data assumption. If a database is later deployed, future schema evolution must use data-preserving migrations rather than another baseline reset.
+### MCP durable operation and queue boundary
 
-### MCP operation durability and ownership
+[`OperationRecordService.cs`](../src/ElixomClaim.Lib/Services/OperationRecordService.cs) reserves an actor-scoped `Accepted` record before salary execution and filters status by actor. [`OperationsTools.cs`](../src/ElixomClaim.Web/Mcp/Tools/OperationsTools.cs) no longer invokes outbox dispatch directly.
 
-[`OperationRecordService.cs`](../src/ElixomClaim.Lib/Services/OperationRecordService.cs) now reserves a unique actor-scoped record before execution, and [`OperationsTools.cs`](../src/ElixomClaim.Web/Mcp/Tools/OperationsTools.cs) returns that reservation on duplicate calls. Operation status reads filter by actor. The outbox tool records an approved wake-up request rather than calling `DispatchDueAsync` itself.
+Production email queue requests from [`EmailTools.cs`](../src/ElixomClaim.Web/Mcp/Tools/EmailTools.cs) now delegate to `ICollectionService.QueueReceiptAsync` and `IJobPaymentService.QueuePaymentSummaryAsync`. Those shared services own authorization, recipient selection, idempotency, outbox persistence, and audit behaviour. This resolves the prior direct adapter mutation finding for queueing.
 
-This resolves the earlier pre-side-effect persistence, cross-actor status disclosure, and direct-dispatch findings. The remaining concern is evidence: add restart/concurrent-recovery integration tests that prove an `Accepted` record reaches a determinate safe state after a process interruption.
+### API resource coverage and OAuth client admission
 
-### First isolated REST API slice
+The API now exposes the approved resource categories:
 
-[`ClaimsApiController.cs`](../src/ElixomClaim.Web/Controllers/Api/ClaimsApiController.cs) supplies `api:access`-protected claims list, detail, and draft-submission routes with actor resolution, ownership through `IClaimService`, limits of 1–100 page items, and audit for submission. This supersedes the prior finding that no REST API existed.
+- `ClaimsApiController`: list, detail, draft submission;
+- `CollectionsApiController`: permitted list/detail;
+- `JobPaymentsApiController`: permitted list/detail;
+- `EmailTemplatesApiController`: constrained approved-template queue only;
+- `PayrollApiController`: preview/run; and
+- `OperationsApiController`: actor-owned operation status.
+
+Each is gated by `api:access`. Dynamic OAuth registration/client scope admission is also materially stronger than in the prior review.
 
 ## Remaining material gaps
 
-### 1. REST API is incomplete — high priority
+### 1. API command/idempotency and integration contract coverage — high priority
 
-Sprint 12 requires a useful `/api/v1` replacement, not merely a claims endpoint. No API controllers/resources were found for:
+The new API controllers have no discovered API-specific integration/contract test class. The current test inventory contains MCP boundary/security tests but no API endpoint tests. Add tests using the in-process host for bearer authentication, `api:access` isolation, ownership/role boundaries, pagination limits, malformed input, Problem Details, sensitive projections, and each endpoint's success/failure contract.
 
-- permitted collection list/detail;
-- permitted job-payment list/detail;
-- constrained template preview/queue;
-- authorized payroll preview/run; and
-- durable operation request/status.
+The Sprint 12 contract also requires idempotency for commands. `POST /api/v1/payroll/run` executes `GenerateForDefinitionAsync` directly and accepts no idempotency key; it therefore does not offer the durable operation/idempotency semantics of MCP salary generation. The operations API offers only `GET` status, not an approved operation-request command. Either route payroll run through the durable operation service with an idempotency key, or document/prove the database uniqueness behaviour as the API's complete duplicate-request contract.
 
-The API also has no discovered integration/OpenAPI contract coverage. Complete the resource set with protocol-specific DTOs, Problem Details validation, ownership/sensitive projections, idempotency for commands, and `api:access` separation tests.
+### 2. MCP email previews still bypass shared authorization-aware services — high priority
 
-### 2. MCP email adapters bypass the shared authorization/service boundary — high priority
+`EmailTools` correctly delegates **queueing**, but `PreviewCollectionReceiptAsync` and `PreviewPaymentSummaryAsync` still directly query `ApplicationDbContext`. Collection preview checks only Teller-or-higher and does not apply the recording-teller-or-manager restriction enforced by [`CollectionService.ReissueReceiptAsync`](../src/ElixomClaim.Lib/Services/CollectionService.cs). A Teller can potentially preview another teller's record by ID.
 
-[`EmailTools.cs`](../src/ElixomClaim.Web/Mcp/Tools/EmailTools.cs) directly queries `ApplicationDbContext`, composes templates, and adds `EmailOutboxItem` records. Its collection preview/queue checks Teller-or-higher but does not apply the recording-teller-or-manager constraint enforced by [`CollectionService.ReissueReceiptAsync`](../src/ElixomClaim.Lib/Services/CollectionService.cs). A Teller can therefore request a collection by arbitrary ID through MCP more broadly than through the corresponding shared operation.
+Move previews and their redacted recipient/template projections into shared Lib services, use the same actor ownership/client access decisions as MVC, and test cross-user denial plus role-sensitive bank/message redaction.
 
-This violates the requirement that MCP invokes the same authorization-aware Lib services as MVC rather than recreating decisions in an adapter. Move approved preview/queue operations and safe projections into shared Lib services, enforce client/record ownership, and add cross-user/role/redaction tests.
+### 3. MCP protocol and operation restart recovery are not proved
 
-### 3. MCP protocol and operation-recovery verification is incomplete
+The code registers standard Streamable HTTP MCP and contract tests inspect tool metadata, but no in-process conforming MCP-client tests were found for initialize, discovery, invocation, cancellation, missing/wrong/revoked/expired bearer token, scope denial, and transport error behaviour.
 
-The tool-contract/boundary tests demonstrate attributed tool definitions and some adapter behaviour. No in-process conforming MCP client test was found for protocol initialization, discovery, invocation, cancellation, missing/wrong/revoked/expired bearer token, scope denial, and transport error handling.
+Likewise, an `Accepted` durable operation is observable, but there is no demonstrated process-interruption/restart policy that completes, fails, or safely retries it. Define and test that recovery contract.
 
-The new `Accepted` operation status also needs restart and concurrent-worker recovery tests. A record that remains indefinitely `Accepted` after an interruption is observable but not a complete retry/recovery contract.
+### 4. Migration coordination is process-local
 
-### 4. Migration execution is still only process-local
+[`DatabaseMigrationExtensions.cs`](../src/ElixomClaim.Lib/Data/DatabaseMigrationExtensions.cs) uses a static `SemaphoreSlim`; it cannot coordinate two application instances or independent deployment jobs. The specification requires one migration runner/instance. Use an explicit single-runner deployment topology or database/distributed lock.
 
-[`DatabaseMigrationExtensions.cs`](../src/ElixomClaim.Lib/Data/DatabaseMigrationExtensions.cs) uses a static `SemaphoreSlim`; this cannot serialize migrations across two application instances or deployment jobs. The specification requires a single migration runner/instance. Use a controlled deployment topology or a database/distributed lock, and require explicit production migration authority.
+### 5. Payout output and audit/email schema fidelity are partial
 
-### 5. Audit and email-log structure differs from the stated model
+The job print view includes collection payer details, claims, payroll entries, deductions, and adjustment context, but still uses lists rather than the specified itemized tables/subtotals. The email payout composition does not include linked payroll entries.
 
-- [`AuditRecord.cs`](../src/ElixomClaim.Lib/Entities/AuditRecord.cs) combines `EntityType` and `EntityId` into `Target`, reducing query/reporting structure compared with the specification.
-- [`NotificationEntities.cs`](../src/ElixomClaim.Lib/Entities/NotificationEntities.cs) records one `Recipient` rather than the specified `To`, `From`, `Cc`, and `Bcc` fields. Separate system-copy outbox records are delivery-equivalent, but not header-equivalent.
+[`AuditRecord.cs`](../src/ElixomClaim.Lib/Entities/AuditRecord.cs) stores a combined `Target`, not separate entity type/ID. [`NotificationEntities.cs`](../src/ElixomClaim.Lib/Entities/NotificationEntities.cs) stores one `Recipient`, not literal `To`/`From`/`Cc`/`Bcc` headers. Separate system-copy messages are delivery-equivalent, but not a literal schema match.
 
-These are design variations, not evidence of failed delivery. Resolve them only if literal schema fidelity or downstream reporting requires it.
+### 6. Logging and release hardening remain
 
-### 6. Payout summary content is partial
+Add/redact structured logging to `HomeController` and `McpToolActorAccessor`; decide whether the literal requirement includes pure utility services. Resolve `SSH.NET` advisory `GHSA-q939-rpr3-3284` and the Testcontainers obsolete API warning.
 
-The printable job-payment view now includes payer name/email for collections, claims, payroll entries, deductions, and adjustment context. It still uses lists rather than the requested itemized tables with category subtotals. The email composer does not include linked payrolls/entries, and both surfaces need a more explicit recipient/bank/totals/itemization presentation to fully meet the specification.
+The custom OAuth server still requires the formally stated threat-model/interoperability/independent security review before production release.
 
-### 7. Required logging coverage remains incomplete
+### 7. Documentation state conflicts
 
-Concrete types still lacking `ILogger<T>` include:
-
-- Controllers: `AdminController`, `ClaimsController`, `HomeController`, `JobPaymentsController`, and `ManagerClaimsController`.
-- Services: `SalaryRecurrencePlanner` and `SystemClock` (pure utilities, but the specification states every service).
-- MCP tool adapters and `McpToolActorAccessor`.
-
-Add structured, redacted logs without recording account numbers, message bodies, secrets, or access tokens.
-
-### 8. Release/security hardening remains open
-
-The project still needs the formally required OAuth threat-model/interoperability/independent security review. The current full test run also flags high-severity advisory `GHSA-q939-rpr3-3284` for `SSH.NET` 2025.1.0. Resolve or replace the vulnerable dependency before release.
+`README.md` still states that implementation "has not yet been scaffolded," which conflicts with the implemented system. `MEMORY.md` currently says Sprint 12 item 6 is blocked pending a decision to retain/de-scope the API, while a later current-baseline entry says product direction is to retain and complete it. Reconcile these records before the next handoff; the API code itself is present and partly complete.
 
 ## Intentional or acceptable variations
 
 | Specification wording | Current implementation | Assessment |
 | --- | --- | --- |
-| IDs may be int or Guid | Guid technical IDs plus durable display sequences | Improvement; consistently applied. |
-| Simple background email queue | Durable outbox with idempotency/retries | Reliability improvement for financial notifications. |
-| No correction workflow specified for paid records | Linked approval-based adjustment/reversal payments | Improvement that preserves immutability. |
-| Example MCP endpoint `/mcp/sse` | Official stateless Streamable HTTP `/mcp` | Valid modern equivalent. |
-| System copy as CC/BCC | Separate recipient/outbox record | Delivery-equivalent but not literal header logging. |
-| `AuditLogEntry` naming | `AuditRecord` | Neutral naming variation; structured target fields are the material difference. |
+| IDs may be int or Guid | Guid technical IDs plus durable display sequences | Improvement and consistently applied. |
+| Simple background email queue | Durable outbox with idempotency/retries | Reliability improvement. |
+| No correction path stated for paid records | Linked approval-based adjustments/reversals | Improvement preserving financial history. |
+| Example `/mcp/sse` endpoint | Official stateless Streamable HTTP `/mcp` | Valid modern equivalent. |
+| System copy as CC/BCC | Separate recipient/outbox record | Delivery-equivalent, not literal header logging. |
+| `AuditLogEntry` naming | `AuditRecord` | Neutral naming; target-field structure is the material variation. |
 
 ## Recommended completion order
 
-1. Finish Sprint 12 item 6: complete `/api/v1` resources and their scope, ownership, pagination/idempotency, Problem Details, and contract tests.
-2. Refactor MCP email operations behind shared authorization-aware Lib services; add cross-user/role/redaction integration coverage.
-3. Add real MCP protocol lifecycle/security/cancellation tests and operation restart-recovery tests.
-4. Make production migration execution safe across instances and explicit in deployment configuration.
-5. Close logging/payout/document-schema fidelity gaps as required, resolve the vulnerable dependency, and complete OAuth security/interoperability review.
+1. Add API integration/contract tests and complete command idempotency/durable-operation semantics.
+2. Move MCP previews behind shared authorization-aware Lib services; prove ownership/redaction boundaries.
+3. Add real MCP protocol lifecycle/security/cancellation tests and durable-operation restart-recovery tests.
+4. Make migrations multi-instance safe and reconcile README/MEMORY/Sprint 12 status.
+5. Finish payout presentation/schema-fidelity work as required, eliminate warnings/vulnerable dependency, and complete OAuth security review.
 
 ## Delivery-ledger note
 
-`MEMORY.md` records Sprint 12 item 6 as active. This report is an assessment artifact only; it does not claim a backlog item or alter sprint completion state.
+This document is an assessment artifact only. It does not claim or complete Sprint 12 work.
