@@ -114,6 +114,8 @@ The `/mcp` endpoint uses the official `ModelContextProtocol.AspNetCore` HTTP ser
 
 ## Versioned REST API (`/api/v1/*`) Resource Endpoints
 
+The generated OpenAPI 3 document is available at `GET /openapi/v1.json` to an authenticated `api:access` caller. It is the machine-readable contract for this REST surface; `/mcp` is intentionally absent because it is a separate MCP protocol endpoint.
+
 ### Claims (`/api/v1/claims`)
 - `GET /api/v1/claims` — List claims owned by or accessible to the user (`page`, `pageSize`, `status`).
 - `GET /api/v1/claims/{id}` — Retrieve claim details by Guid.

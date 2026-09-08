@@ -46,6 +46,7 @@ builder.Services.AddAuthentication(options =>
 
 // Add MVC controllers with views
 builder.Services.AddControllersWithViews();
+builder.Services.AddOpenApi("v1");
 
 // MCP clients authenticate only with an OAuth bearer token carrying the MCP scope.
 // The tools resolve the concrete active user through IActorResolver on every invocation.
@@ -120,6 +121,12 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
+
+// The versioned REST schema is available to authenticated API integrators and
+// intentionally excludes the MCP protocol endpoint and browser MVC routes.
+app.MapOpenApi("/openapi/{documentName}.json")
+    .RequireAuthorization("ApiAccess")
+    .RequireRateLimiting(ElixomClaim.Web.Configuration.RateLimitingConfiguration.MvcPolicy);
 
 // `/mcp` is reserved exclusively for the official Streamable HTTP MCP transport.
 app.MapMcp("/mcp")

@@ -26,6 +26,35 @@ namespace ElixomClaim.Web.Tests.Controllers;
 public class ApiEndpointIntegrationTests
 {
     [Fact]
+    public async Task OpenApiDocument_RequiresApiScope_AndListsEveryApprovedApiResource()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var actorId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = actorId, Email = "openapi@example.test", NormalizedEmail = "OPENAPI@EXAMPLE.TEST", FullName = "OpenAPI", Role = UserRole.Administrator, IsActive = true });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/openapi/v1.json")).StatusCode);
+        client.DefaultRequestHeaders.Add("X-Test-User", actorId.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+
+        var response = await client.GetAsync("/openapi/v1.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var document = await response.Content.ReadAsStringAsync();
+        Assert.Contains("/api/v1/claims", document);
+        Assert.Contains("/api/v1/collections", document);
+        Assert.Contains("/api/v1/job-payments", document);
+        Assert.Contains("/api/v1/email-templates/preview", document);
+        Assert.Contains("/api/v1/payroll/run", document);
+        Assert.Contains("/api/v1/operations", document);
+        Assert.DoesNotContain("/mcp", document);
+    }
+
+    [Fact]
     public async Task ClaimsApi_RequiresApiScope_AndReturnsOwnedClaims()
     {
         var databaseName = Guid.NewGuid().ToString("N");
@@ -474,8 +503,9 @@ public class ApiEndpointIntegrationTests
         services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", _ => { });
         services.AddAuthorization(options => { options.AddPolicy("ApiAccess", policy => { policy.AddAuthenticationSchemes("Test"); policy.RequireAuthenticatedUser(); policy.RequireAssertion(context => context.User.HasClaim("scope", "api:access")); }); options.AddPolicy("McpAccess", policy => { policy.AddAuthenticationSchemes("Test"); policy.RequireAuthenticatedUser(); policy.RequireAssertion(context => context.User.HasClaim("scope", "mcp:access")); }); });
         services.AddMcpServer().WithHttpTransport().WithTools<ClaimTools>().WithTools<CollectionTools>().WithTools<JobPaymentTools>().WithTools<PayrollTools>().WithTools<EmailTools>().WithTools<OperationsTools>();
+        services.AddOpenApi("v1");
         services.AddControllers().AddApplicationPart(typeof(ClaimsApiController).Assembly);
-    }).Configure(app => { app.UseRouting(); app.UseAuthentication(); app.UseAuthorization(); app.UseEndpoints(endpoints => { endpoints.MapControllers(); endpoints.MapMcp("/mcp").RequireAuthorization("McpAccess"); }); })).StartAsync();
+    }).Configure(app => { app.UseRouting(); app.UseAuthentication(); app.UseAuthorization(); app.UseEndpoints(endpoints => { endpoints.MapControllers(); endpoints.MapMcp("/mcp").RequireAuthorization("McpAccess"); endpoints.MapOpenApi("/openapi/{documentName}.json").RequireAuthorization("ApiAccess"); }); })).StartAsync();
 
     private sealed class TestAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
