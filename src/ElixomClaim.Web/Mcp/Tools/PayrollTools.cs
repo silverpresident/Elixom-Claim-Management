@@ -5,6 +5,7 @@ using System.ComponentModel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 namespace ElixomClaim.Web.Mcp.Tools;
+
 public sealed record PayrollPreviewRequest(Guid SalaryDefinitionId, DateOnly AsOfDate);
 public sealed record PayrollRunRequest(Guid SalaryDefinitionId, DateOnly AsOfDate);
 public sealed record PayrollToolResponse(bool Success, string? Error, DateOnly? DueDate, string? Eligibility, decimal? Total, Guid? PayrollId);

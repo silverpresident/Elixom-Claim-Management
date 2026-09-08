@@ -1,6 +1,7 @@
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 namespace ElixomClaim.Web.Models;
+
 public sealed class PayrollWorkspaceViewModel
 {
     public IReadOnlyList<Payroll> Payrolls { get; init; } = [];

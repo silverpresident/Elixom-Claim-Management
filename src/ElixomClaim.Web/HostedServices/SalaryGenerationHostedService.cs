@@ -1,5 +1,6 @@
 using ElixomClaim.Lib.Services;
 namespace ElixomClaim.Web.HostedServices;
+
 public sealed class SalaryGenerationHostedService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopes; private readonly ILogger<SalaryGenerationHostedService> _logger;

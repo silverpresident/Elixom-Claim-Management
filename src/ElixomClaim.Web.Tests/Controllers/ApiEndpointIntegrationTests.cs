@@ -240,9 +240,15 @@ public class ApiEndpointIntegrationTests
             db.CollectionClients.Add(collectionClient);
             db.CollectionTransactions.Add(new CollectionTransaction
             {
-                Id = collectionId, CollectionClientId = collectionClient.Id, TellerUserId = tellerId,
-                PayorName = "Private Payor", PayorEmail = "private.payor@example.test", PayorTelephone = "876-555-0100",
-                Purpose = "Collection", Amount = 20m, PaymentDateUtc = DateTime.UtcNow
+                Id = collectionId,
+                CollectionClientId = collectionClient.Id,
+                TellerUserId = tellerId,
+                PayorName = "Private Payor",
+                PayorEmail = "private.payor@example.test",
+                PayorTelephone = "876-555-0100",
+                Purpose = "Collection",
+                Amount = 20m,
+                PaymentDateUtc = DateTime.UtcNow
             });
             await db.SaveChangesAsync();
         }
@@ -528,9 +534,15 @@ public class ApiEndpointIntegrationTests
             db.Users.Add(new User { Id = accountantId, Email = "payroll-accountant@example.test", NormalizedEmail = "PAYROLL-ACCOUNTANT@EXAMPLE.TEST", FullName = "Payroll Accountant", Role = UserRole.Accountant, IsActive = true });
             db.SalaryDefinitions.Add(new SalaryDefinition
             {
-                Id = definitionId, UserId = accountantId, Description = "Monthly salary", BaseAmount = 100m,
-                FirstSalaryDate = new DateOnly(2026, 8, 1), LastSalaryDate = new DateOnly(2026, 8, 1), StartDate = new DateOnly(2026, 8, 1),
-                RecurrenceMonths = 1, NearestWeekday = DayOfWeek.Monday
+                Id = definitionId,
+                UserId = accountantId,
+                Description = "Monthly salary",
+                BaseAmount = 100m,
+                FirstSalaryDate = new DateOnly(2026, 8, 1),
+                LastSalaryDate = new DateOnly(2026, 8, 1),
+                StartDate = new DateOnly(2026, 8, 1),
+                RecurrenceMonths = 1,
+                NearestWeekday = DayOfWeek.Monday
             });
             await db.SaveChangesAsync();
         }

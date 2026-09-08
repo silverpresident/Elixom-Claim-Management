@@ -71,28 +71,52 @@ public static class DevelopmentDataSeeder
 
         var collection = new CollectionTransaction
         {
-            Id = Guid.Parse("60000000-0000-0000-0000-000000000101"), CollectionClientId = client.Id, PurposeOptionId = purpose.Id, Purpose = purpose.Name, AmountOptionId = amount.Id,
-            TellerUserId = UserIds[UserRole.Teller], PayorName = "Development Payor", PayorEmail = "payor@example.test", PayorTelephone = "8765550100",
-            ReferenceNumber = "DEV-COL-001", Method = CollectionMethod.Pos, Amount = amount.Amount, ProcessingFee = 25.00m,
-            PaymentDateUtc = now, CreatedAtUtc = now
+            Id = Guid.Parse("60000000-0000-0000-0000-000000000101"),
+            CollectionClientId = client.Id,
+            PurposeOptionId = purpose.Id,
+            Purpose = purpose.Name,
+            AmountOptionId = amount.Id,
+            TellerUserId = UserIds[UserRole.Teller],
+            PayorName = "Development Payor",
+            PayorEmail = "payor@example.test",
+            PayorTelephone = "8765550100",
+            ReferenceNumber = "DEV-COL-001",
+            Method = CollectionMethod.Pos,
+            Amount = amount.Amount,
+            ProcessingFee = 25.00m,
+            PaymentDateUtc = now,
+            CreatedAtUtc = now
         };
         db.Add(collection);
         await db.SaveChangesAsync(cancellationToken);
 
         var salary = new SalaryDefinition
         {
-            Id = Guid.Parse("70000000-0000-0000-0000-000000000101"), UserId = UserIds[UserRole.User], Description = "Development monthly salary", BaseAmount = 85000.00m,
-            FirstSalaryDate = DateOnly.FromDateTime(now.AddMonths(-1)), LastSalaryDate = DateOnly.FromDateTime(now.AddMonths(-1)),
-            StartDate = DateOnly.FromDateTime(now.AddMonths(-3)), RecurrenceMonths = 1, NearestWeekday = DayOfWeek.Friday,
-            CreatedAtUtc = now, UpdatedAtUtc = now
+            Id = Guid.Parse("70000000-0000-0000-0000-000000000101"),
+            UserId = UserIds[UserRole.User],
+            Description = "Development monthly salary",
+            BaseAmount = 85000.00m,
+            FirstSalaryDate = DateOnly.FromDateTime(now.AddMonths(-1)),
+            LastSalaryDate = DateOnly.FromDateTime(now.AddMonths(-1)),
+            StartDate = DateOnly.FromDateTime(now.AddMonths(-3)),
+            RecurrenceMonths = 1,
+            NearestWeekday = DayOfWeek.Friday,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
         };
         db.SalaryDefinitions.Add(salary);
         await db.SaveChangesAsync(cancellationToken);
 
         var payroll = new Payroll
         {
-            Id = Guid.Parse("80000000-0000-0000-0000-000000000101"), SalaryDefinitionId = salary.Id, UserId = UserIds[UserRole.User], PeriodEndingDate = DateOnly.FromDateTime(now),
-            Description = "Development payroll", PayrollTotal = 87000.00m, Status = PayrollStatus.Generated, GeneratedAtUtc = now
+            Id = Guid.Parse("80000000-0000-0000-0000-000000000101"),
+            SalaryDefinitionId = salary.Id,
+            UserId = UserIds[UserRole.User],
+            PeriodEndingDate = DateOnly.FromDateTime(now),
+            Description = "Development payroll",
+            PayrollTotal = 87000.00m,
+            Status = PayrollStatus.Generated,
+            GeneratedAtUtc = now
         };
         db.AddRange(new SalaryAdjustment { Id = Guid.Parse("71000000-0000-0000-0000-000000000101"), SalaryDefinitionId = salary.Id, Title = "Travel benefit", FixedValue = 2000.00m, Type = SalaryAdjustmentType.Benefit }, payroll);
         await db.SaveChangesAsync(cancellationToken);
@@ -102,13 +126,32 @@ public static class DevelopmentDataSeeder
 
         var claimJob = new JobPayment
         {
-            Id = Guid.Parse("90000000-0000-0000-0000-000000000101"), PayeeUserId = UserIds[UserRole.User], Status = JobPaymentStatus.Processing, JobTotal = acceptedClaim.Amount, TotalPaid = acceptedClaim.Amount, PublicNote = "Development claim payment", CreatedAtUtc = now,
-            PayoutBankName = "Development Bank", PayoutBankBranchCode = "DEV-001", PayoutBankAccountNumber = "DEV-ACCOUNT-001", PayoutBankAccountName = "Development User"
+            Id = Guid.Parse("90000000-0000-0000-0000-000000000101"),
+            PayeeUserId = UserIds[UserRole.User],
+            Status = JobPaymentStatus.Processing,
+            JobTotal = acceptedClaim.Amount,
+            TotalPaid = acceptedClaim.Amount,
+            PublicNote = "Development claim payment",
+            CreatedAtUtc = now,
+            PayoutBankName = "Development Bank",
+            PayoutBankBranchCode = "DEV-001",
+            PayoutBankAccountNumber = "DEV-ACCOUNT-001",
+            PayoutBankAccountName = "Development User"
         };
         var collectionJob = new JobPayment
         {
-            Id = Guid.Parse("90000000-0000-0000-0000-000000000102"), CollectionClientId = client.Id, Status = JobPaymentStatus.Processing, JobTotal = collection.Amount, ClientProcessingFee = collection.ProcessingFee, TotalPaid = collection.Amount - collection.ProcessingFee, PublicNote = "Development collection payment", CreatedAtUtc = now,
-            PayoutBankName = "Example Bank", PayoutBankBranchCode = "DEV-001", PayoutBankAccountNumber = "DEV-CLIENT-001", PayoutBankAccountName = "Development Client"
+            Id = Guid.Parse("90000000-0000-0000-0000-000000000102"),
+            CollectionClientId = client.Id,
+            Status = JobPaymentStatus.Processing,
+            JobTotal = collection.Amount,
+            ClientProcessingFee = collection.ProcessingFee,
+            TotalPaid = collection.Amount - collection.ProcessingFee,
+            PublicNote = "Development collection payment",
+            CreatedAtUtc = now,
+            PayoutBankName = "Example Bank",
+            PayoutBankBranchCode = "DEV-001",
+            PayoutBankAccountNumber = "DEV-CLIENT-001",
+            PayoutBankAccountName = "Development Client"
         };
         db.AddRange(claimJob, collectionJob,
             new JobPaymentClaim { JobPaymentId = claimJob.Id, ClaimId = acceptedClaim.Id },

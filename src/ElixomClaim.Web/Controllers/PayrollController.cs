@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 namespace ElixomClaim.Web.Controllers;
+
 [Authorize(Policy = PolicyNames.RequireAccountant)]
 [Route("payroll")]
 public sealed class PayrollController : Controller
@@ -45,7 +46,8 @@ public sealed class PayrollController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [HttpPost("{id:guid}/submit")][ValidateAntiForgeryToken]
+    [HttpPost("{id:guid}/submit")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(Guid id)
     {
         var actor = ActorId();

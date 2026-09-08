@@ -2,7 +2,7 @@
 
 ## Current baseline
 
-- **Stage:** Sprint 12 Standard MCP Server and Versioned Operations API is in progress; the product decision is to retain and complete the versioned REST API. The MVC job-payment batch-attachment, manager collection-review, collection-client role-boundary, collection-print payor-detail, and collection-client assignment usability follow-ups (items 6a–6e) are complete.
+- **Stage (2026-09-08):** Sprint 12 Standard MCP Server and Versioned Operations API is complete. `/mcp` is the authenticated, rate-limited official SDK transport, `/api/v1` is its separately scoped versioned REST API, and the six legacy MCP-labelled controllers are retired. Sprint 13 Release Fidelity and Assurance is now in progress.
 - **Runtime:** .NET 10 / C# 14, ASP.NET Core MVC, EF Core, Azure SQL.
 - **Database:** single-company Azure SQL database using schema `dbclaim`; money uses `decimal(18,2)`, JMD only, exact two-decimal storage/calculation with no additional rounding, and persisted instants are UTC.
 - **Audit Immutability:** `dbclaim.AuditRecords` append-only trigger `TR_AuditRecords_PreventMutation` enforced at Azure SQL boundary via migration `20260903090000_AddAuditRecordAppendOnlyTrigger` and ADR 0003.
@@ -107,15 +107,13 @@ Agents must use the per-sprint `Progress` table as the item-level reservation an
 | 09 Domain data completion | Complete | All 6 items complete; EF migration 20260903120000_DomainDataCompletion applied; build & 159 tests passed on 2026-09-03. See `sprints/09-domain-data-completion.md`. |
 | 10 Web workflow completion | Complete | All 7 items complete; build & 170 tests passed on 2026-09-03. See `sprints/10-web-workflow-completion.md`. |
 | 11 Deployment & release verification | Complete | Guarded production migration runner, refreshed development data, end-to-end coverage, and recorded release verification matrix (176 tests passing). See `sprints/11-deployment-and-release-verification.md`. |
-| 12 Standard MCP server & API | In progress | Items 1–3 complete: `/mcp` is now the authenticated, rate-limited official SDK Streamable HTTP endpoint and legacy `/mcp/*` controller routes are removed. Remaining work includes tool hardening, durable operations, and `/api/v1`. See `sprints/12-standard-mcp-and-api.md`. |
-| 13 Release fidelity & assurance | Planned | Begins after Sprint 12; literal audit/email persistence, payout fidelity, protocol coverage, and independent release assurance. See `sprints/13-release-fidelity-and-assurance.md`. |
+| 12 Standard MCP server & API | Complete | All ordered items complete. Formatter and build passed cleanly; full solution test suite passed 236 tests on 2026-09-08. See `sprints/12-standard-mcp-and-api.md`. |
+| 13 Release fidelity & assurance | In progress | Begins after Sprint 12; literal audit/email persistence, payout fidelity, protocol coverage, and independent release assurance. See `sprints/13-release-fidelity-and-assurance.md`. |
 
 ## Open decisions / risks
 
 1. **OAuth security review:** the in-house OAuth server requires a formal threat model, interoperability suite, and independent security review before release.
    The engagement procedure and completion record are documented in [the independent OAuth/MCP review runbook](docs/runbooks/independent-oauth-security-review.md).
-2. **Sprint 12 completion:** standard MCP transport is corrected, but the versioned REST replacement, full tool/operation hardening, and end-to-end protocol/security coverage remain before release readiness. Do not remove the Sprint 12 task-list entry until its acceptance evidence is complete.
-3. **Clean SQL migration ledger:** `20260903053340_InitialCreate` now creates `dbclaim`, but still creates `JobPayments` before missing core dependency tables. Its Guid designer and subsequent migration history are inconsistent. The relational audit integration test cannot apply migrations to a clean SQL Server. Sprint 12 prerequisite 5b requires a scoped, data-preserving ledger reconciliation before durable-operation or release evidence can be trusted.
 
 ## Decision log
 
