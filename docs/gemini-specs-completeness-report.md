@@ -43,7 +43,6 @@ The Gemini functional specification is now **complete by implementation evidence
 1. **Independent security review remains.** The OAuth/MCP threat model requires a formally independent review before production release.
 2. **Additional repository API scope remains unfinished.** `/api/v1` includes claims, collection/job-payment reads, payroll preview/run, actor-owned operations, approved email preview/queue, durable command replay, and real HTTP boundary coverage under `api:access`. Complete endpoint-contract and conforming-client MCP transport coverage remain Sprint 12 work; these are additions beyond Gemini itself.
 3. **Production migration topology remains an operational condition.** The clean migration baseline and relational audit test now pass, and production SQL Server migration execution holds a session-scoped `sp_getapplock`; deployment should still use a dedicated migration runner where operationally practical.
-4. **One consolidated engineering-standard exception remains.** `HomeController` has no `ILogger<HomeController>` dependency. This is not a Gemini functional gap, but it does not meet the repository-wide logging rule.
 
 ## Intentional/beneficial variations
 
