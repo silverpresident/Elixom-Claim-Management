@@ -13,10 +13,11 @@ public sealed class ClaimsApiController : ControllerBase
 {
     private readonly IClaimService _claims;
     private readonly IActorResolver _actors;
+    private readonly IOperationRecordService _operations;
     private readonly ILogger<ClaimsApiController> _logger;
 
-    public ClaimsApiController(IClaimService claims, IActorResolver actors, ILogger<ClaimsApiController> logger)
-        => (_claims, _actors, _logger) = (claims, actors, logger);
+    public ClaimsApiController(IClaimService claims, IActorResolver actors, IOperationRecordService operations, ILogger<ClaimsApiController> logger)
+        => (_claims, _actors, _operations, _logger) = (claims, actors, operations, logger);
 
     [HttpGet]
     public async Task<ActionResult<ApiClaimPage>> List([FromQuery] int page = 1, [FromQuery] int pageSize = 25, [FromQuery] ClaimStatus? status = null, CancellationToken ct = default)
@@ -43,7 +44,14 @@ public sealed class ClaimsApiController : ControllerBase
     public async Task<IActionResult> Submit(Guid id, CancellationToken ct)
     {
         var actor = await ResolveAsync(ct); if (actor is null) return Forbid();
-        if (!await _claims.SubmitAsync(new SubmitClaimCommand(id, actor.Id), ct)) return Problem(statusCode: StatusCodes.Status409Conflict, detail: "Only an owned draft claim can be submitted.");
+        var reservation = await ReserveAsync("claim-submit", actor.Id, ct); if (reservation is null) return Problem(statusCode: 400, detail: "An Idempotency-Key header is required.");
+        if (!reservation.IsNew) return Accepted(new { operation = reservation.Record.IdempotencyKey, status = reservation.Record.Status });
+        if (!await _claims.SubmitAsync(new SubmitClaimCommand(id, actor.Id), ct))
+        {
+            await _operations.UpdateStatusAsync(reservation.Record.Id, "Failed", "Only an owned draft claim can be submitted.", ct);
+            return Problem(statusCode: StatusCodes.Status409Conflict, detail: "Only an owned draft claim can be submitted.");
+        }
+        await _operations.UpdateStatusAsync(reservation.Record.Id, "Completed", $"Claim:{id}", ct);
         await _actors.LogAuditAsync(new ActorContext(actor, "api", "api:access", HttpContext.TraceIdentifier, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", false), "API_CLAIM_SUBMIT", $"Claim:{id}", cancellationToken: ct);
         _logger.LogInformation("API claim {ClaimId} submitted by {ActorId}.", id, actor.Id);
         return NoContent();
@@ -55,7 +63,10 @@ public sealed class ClaimsApiController : ControllerBase
         if (request is null || string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Description) || request.Amount <= 0)
             return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "title, description, and a positive amount are required.");
         var actor = await ResolveAsync(ct); if (actor is null) return Forbid();
+        var reservation = await ReserveAsync("claim-create", actor.Id, ct); if (reservation is null) return Problem(statusCode: 400, detail: "An Idempotency-Key header is required.");
+        if (!reservation.IsNew) return Accepted(new { operation = reservation.Record.IdempotencyKey, status = reservation.Record.Status });
         var claim = await _claims.CreateDraftAsync(new CreateClaimCommand(actor.Id, request.Title, request.Description, request.Amount, request.DateOfJob), ct);
+        await _operations.UpdateStatusAsync(reservation.Record.Id, "Completed", $"Claim:{claim.Id}", ct);
         _logger.LogInformation("API claim {ClaimId} created by {ActorId}.", claim.Id, actor.Id);
         return CreatedAtAction(nameof(Get), new { id = claim.Id }, ApiClaim.From(claim));
     }
@@ -64,6 +75,12 @@ public sealed class ClaimsApiController : ControllerBase
     {
         var actor = await _actors.ResolveActorAsync(HttpContext, "api:access", false, ct);
         return actor.IsSuccess ? actor.Value!.User : null;
+    }
+
+    private async Task<OperationReservation?> ReserveAsync(string type, Guid actorId, CancellationToken ct)
+    {
+        var key = Request.Headers["Idempotency-Key"].FirstOrDefault() ?? Request.Headers["X-Idempotency-Key"].FirstOrDefault();
+        return string.IsNullOrWhiteSpace(key) ? null : await _operations.ReserveAsync($"api:{type}:{actorId:N}:{key.Trim()}", type, actorId.ToString(), ct);
     }
 }
 

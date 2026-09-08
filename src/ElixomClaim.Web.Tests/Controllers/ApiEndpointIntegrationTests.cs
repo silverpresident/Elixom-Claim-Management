@@ -49,7 +49,7 @@ public class ApiEndpointIntegrationTests
     private static async Task<IHost> CreateHostAsync(string databaseName) => await new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services =>
     {
         services.AddLogging(); services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase(databaseName));
-        services.AddScoped<IAuditService, AuditService>(); services.AddScoped<IClaimService, ClaimService>(); services.AddScoped<IActorResolver, ActorResolver>(); services.AddHttpContextAccessor();
+        services.AddSingleton<ElixomClaim.Lib.Services.ISystemClock, ElixomClaim.Lib.Services.SystemClock>(); services.AddScoped<IAuditService, AuditService>(); services.AddScoped<IClaimService, ClaimService>(); services.AddScoped<IOperationRecordService, OperationRecordService>(); services.AddScoped<IActorResolver, ActorResolver>(); services.AddHttpContextAccessor();
         services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", _ => { });
         services.AddAuthorization(options => options.AddPolicy("ApiAccess", policy => { policy.AddAuthenticationSchemes("Test"); policy.RequireAuthenticatedUser(); policy.RequireAssertion(context => context.User.HasClaim("scope", "api:access")); }));
         services.AddControllers().AddApplicationPart(typeof(ClaimsApiController).Assembly);
