@@ -73,6 +73,27 @@ public class ApiEndpointIntegrationTests
         Assert.Single(await verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Claims.ToListAsync());
     }
 
+    [Fact]
+    public async Task ClaimsApi_SubmitTransitionsOwnedDraftOnceAndReplays()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var userId = Guid.NewGuid();
+        var claimId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = userId, Email = "submit-api@example.test", NormalizedEmail = "SUBMIT-API@EXAMPLE.TEST", FullName = "Submit API", Role = UserRole.User, IsActive = true });
+            db.Claims.Add(new ElixomClaim.Lib.Entities.Claim { Id = claimId, ClaimantUserId = userId, Title = "Submit once", Description = "Draft", Amount = 10m, Status = ClaimStatus.Draft, PaymentStatus = ClaimPaymentStatus.Unpaid, CreatedAtUtc = DateTime.UtcNow, UpdatedAtUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", userId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access"); client.DefaultRequestHeaders.Add("Idempotency-Key", "claim-submit-1");
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync($"/api/v1/claims/{claimId}/submit", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsync($"/api/v1/claims/{claimId}/submit", null)).StatusCode);
+        using var verifyScope = host.Services.CreateScope();
+        Assert.Equal(ClaimStatus.Submitted, (await verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Claims.SingleAsync()).Status);
+    }
+
     [Theory]
     [InlineData("/api/v1/claims?page=0&pageSize=25")]
     [InlineData("/api/v1/claims?page=1&pageSize=101")]
