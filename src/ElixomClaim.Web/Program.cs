@@ -59,6 +59,14 @@ builder.Services.AddAuthorization(options =>
             .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             .Contains("mcp:access", StringComparer.OrdinalIgnoreCase));
     });
+    options.AddPolicy("ApiAccess", policy =>
+    {
+        policy.AddAuthenticationSchemes(BearerTokenAuthenticationHandler.SchemeName);
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(context => context.User.FindAll("scope")
+            .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Contains("api:access", StringComparer.OrdinalIgnoreCase));
+    });
 });
 
 // Register shared actor resolver
