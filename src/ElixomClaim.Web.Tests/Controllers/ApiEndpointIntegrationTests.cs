@@ -104,11 +104,55 @@ public class ApiEndpointIntegrationTests
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/collections")).StatusCode);
     }
 
+    [Fact]
+    public async Task JobPaymentsApi_RestrictsUserToOwnedPayments()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var ownerId = Guid.NewGuid();
+        var otherId = Guid.NewGuid();
+        var jobId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.AddRange(
+                new User { Id = ownerId, Email = "payment-owner@example.test", NormalizedEmail = "PAYMENT-OWNER@EXAMPLE.TEST", FullName = "Payment Owner", Role = UserRole.User, IsActive = true },
+                new User { Id = otherId, Email = "other-user@example.test", NormalizedEmail = "OTHER-USER@EXAMPLE.TEST", FullName = "Other User", Role = UserRole.User, IsActive = true });
+            db.JobPayments.Add(new JobPayment { Id = jobId, PayeeUserId = ownerId, Title = "Owned payment", JobTotal = 42m, TotalPaid = 42m, CreatedAtUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", otherId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/job-payments/{jobId}")).StatusCode);
+        client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", ownerId.ToString());
+        var response = await client.GetAsync($"/api/v1/job-payments/{jobId}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("\"totalPaid\":42", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task EmailTemplatesApi_RejectsUnapprovedTemplateBeforeAnyQueueing()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var userId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = userId, Email = "template-user@example.test", NormalizedEmail = "TEMPLATE-USER@EXAMPLE.TEST", FullName = "Template User", Role = UserRole.Administrator, IsActive = true });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", userId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+        var response = await client.PostAsync("/api/v1/email-templates/queue", JsonContent.Create(new { templateType = "FreeForm", entityId = Guid.NewGuid(), idempotencyKey = "not-allowed" }));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var verifyScope = host.Services.CreateScope();
+        Assert.Empty(await verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().EmailOutboxItems.ToListAsync());
+    }
+
     private static async Task<IHost> CreateHostAsync(string databaseName) => await new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services =>
     {
         services.AddLogging(); services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase(databaseName));
         services.Configure<ElixomClaim.Lib.Configuration.NotificationOptions>(options => options.SystemCopyAddress = "ops@example.test");
-        services.AddSingleton<ElixomClaim.Lib.Services.ISystemClock, ElixomClaim.Lib.Services.SystemClock>(); services.AddScoped<IAuditService, AuditService>(); services.AddScoped<IClaimService, ClaimService>(); services.AddScoped<ICollectionService, CollectionService>(); services.AddScoped<IOperationRecordService, OperationRecordService>(); services.AddScoped<IActorResolver, ActorResolver>(); services.AddHttpContextAccessor();
+        services.AddSingleton<ElixomClaim.Lib.Services.ISystemClock, ElixomClaim.Lib.Services.SystemClock>(); services.AddScoped<IAuditService, AuditService>(); services.AddScoped<IClaimService, ClaimService>(); services.AddScoped<ICollectionService, CollectionService>(); services.AddScoped<IJobPaymentService, JobPaymentService>(); services.AddScoped<IApprovedEmailPreviewService, ApprovedEmailPreviewService>(); services.AddScoped<IOperationRecordService, OperationRecordService>(); services.AddScoped<IActorResolver, ActorResolver>(); services.AddHttpContextAccessor();
         services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", _ => { });
         services.AddAuthorization(options => options.AddPolicy("ApiAccess", policy => { policy.AddAuthenticationSchemes("Test"); policy.RequireAuthenticatedUser(); policy.RequireAssertion(context => context.User.HasClaim("scope", "api:access")); }));
         services.AddControllers().AddApplicationPart(typeof(ClaimsApiController).Assembly);
