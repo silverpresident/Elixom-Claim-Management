@@ -6,7 +6,10 @@
 <div class="container my-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>My Claims Dashboard</h2>
-        <a asp-action="Create" class="btn btn-primary">+ New Claim</a>
+        <div class="d-flex gap-2">
+            <a asp-action="History" class="btn btn-outline-primary">Claims History</a>
+            <a asp-action="Create" class="btn btn-primary">+ New Claim</a>
+        </div>
     </div>
 
     @if (!Model.Claims.Any())
@@ -14,8 +17,8 @@
         <div class="card p-5 text-center shadow-sm border-0 mb-5">
             <div class="card-body">
                 <i class="bi bg-light p-3 rounded-circle fs-1 mb-3 text-muted">📄</i>
-                <h4>No claims found</h4>
-                <p class="text-muted mb-4">You haven't submitted any expense or reimbursement claims yet.</p>
+                <h4>No unresolved claims</h4>
+                <p class="text-muted mb-4">Your current claims are resolved. Use Claims History to review earlier claims.</p>
                 <a asp-action="Create" class="btn btn-primary">Create Your First Claim</a>
             </div>
         </div>
@@ -24,7 +27,7 @@
     {
         <div class="card shadow-sm border-0 mb-5">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">My Submitted Claims</h5>
+                <h5 class="mb-0">My Unresolved Claims</h5>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">

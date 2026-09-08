@@ -18,6 +18,32 @@ public class ClaimServiceTests
     }
 
     [Fact]
+    public async Task UserClaimQueries_ReturnOnlyUnresolvedDashboardClaims_AndPageActorHistory()
+    {
+        var db = CreateInMemoryDbContext();
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        db.Claims.AddRange(
+            new Claim { ClaimantUserId = userId, Title = "Draft", Description = "", Amount = 1m, Status = ClaimStatus.Draft, CreatedAtUtc = DateTime.UtcNow },
+            new Claim { ClaimantUserId = userId, Title = "Submitted", Description = "", Amount = 1m, Status = ClaimStatus.Submitted, CreatedAtUtc = DateTime.UtcNow.AddMinutes(-1) },
+            new Claim { ClaimantUserId = userId, Title = "Processing", Description = "", Amount = 1m, Status = ClaimStatus.Accepted, PaymentStatus = ClaimPaymentStatus.Processing, CreatedAtUtc = DateTime.UtcNow.AddMinutes(-2) },
+            new Claim { ClaimantUserId = userId, Title = "Paid", Description = "", Amount = 1m, Status = ClaimStatus.Accepted, PaymentStatus = ClaimPaymentStatus.Paid, CreatedAtUtc = DateTime.UtcNow.AddMinutes(-3) },
+            new Claim { ClaimantUserId = userId, Title = "Deleted", Description = "", Amount = 1m, Status = ClaimStatus.Draft, IsDeleted = true, CreatedAtUtc = DateTime.UtcNow.AddMinutes(-4) },
+            new Claim { ClaimantUserId = otherUserId, Title = "Other", Description = "", Amount = 1m, Status = ClaimStatus.Draft, CreatedAtUtc = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+        var service = new ClaimService(db, new AuditService(db, NullLogger<AuditService>.Instance), NullLogger<ClaimService>.Instance);
+
+        var unresolved = await service.GetUserUnresolvedClaimsAsync(userId);
+        var history = await service.GetUserClaimHistoryAsync(userId, page: 2, pageSize: 2);
+
+        Assert.Equal(new[] { "Draft", "Submitted", "Processing" }, unresolved.Select(claim => claim.Title));
+        Assert.Equal(4, history.TotalCount);
+        Assert.Equal(2, history.Page);
+        Assert.Equal(2, history.Claims.Count);
+        Assert.DoesNotContain(history.Claims, claim => claim.ClaimantUserId == otherUserId || claim.IsDeleted);
+    }
+
+    [Fact]
     public async Task CreateDraftAsync_CreatesClaimInDraftStatus()
     {
         var db = CreateInMemoryDbContext();

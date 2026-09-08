@@ -287,9 +287,30 @@ public class ClaimService : IClaimService
     public async Task<List<Claim>> GetUserClaimsAsync(Guid claimantUserId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Claims
-            .Where(c => c.ClaimantUserId == claimantUserId)
+            .Where(c => c.ClaimantUserId == claimantUserId && !c.IsDeleted)
             .OrderByDescending(c => c.CreatedAtUtc)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<Claim>> GetUserUnresolvedClaimsAsync(Guid claimantUserId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Claims
+            .Where(claim => claim.ClaimantUserId == claimantUserId && !claim.IsDeleted &&
+                (claim.Status == ClaimStatus.Draft || claim.Status == ClaimStatus.Submitted || claim.PaymentStatus == ClaimPaymentStatus.Processing))
+            .OrderByDescending(claim => claim.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<ClaimHistoryPage> GetUserClaimHistoryAsync(Guid claimantUserId, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var safePage = Math.Max(1, page);
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+        var query = _dbContext.Claims.AsNoTracking()
+            .Where(claim => claim.ClaimantUserId == claimantUserId && !claim.IsDeleted)
+            .OrderByDescending(claim => claim.CreatedAtUtc);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var claims = await query.Skip((safePage - 1) * safePageSize).Take(safePageSize).ToListAsync(cancellationToken);
+        return new ClaimHistoryPage(claims, safePage, safePageSize, totalCount);
     }
 
     public async Task<List<Claim>> GetQueueClaimsAsync(ClaimStatus? filterStatus = null, CancellationToken cancellationToken = default)

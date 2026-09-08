@@ -36,7 +36,7 @@ public class ClaimsController : Controller
     public async Task<IActionResult> Index()
     {
         var userId = GetCurrentUserId();
-        var claims = await _claimService.GetUserClaimsAsync(userId);
+        var claims = await _claimService.GetUserUnresolvedClaimsAsync(userId);
         var paymentHistory = await _dbContext.JobPayments
             .Where(j => j.PayeeUserId == userId)
             .OrderByDescending(j => j.PaymentDateUtc ?? j.CreatedAtUtc)
@@ -61,6 +61,13 @@ public class ClaimsController : Controller
             .OrderByDescending(job => job.PaymentDateUtc ?? job.CreatedAtUtc)
             .ToListAsync();
         return View(payments);
+    }
+
+    [HttpGet("history")]
+    public async Task<IActionResult> History([FromQuery] int page = 1)
+    {
+        var history = await _claimService.GetUserClaimHistoryAsync(GetCurrentUserId(), page, pageSize: 25);
+        return View(new Models.ClaimHistoryViewModel(history.Claims, history.Page, history.PageSize, history.TotalCount));
     }
 
     [HttpGet("create")]

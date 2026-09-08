@@ -112,4 +112,29 @@ public class ClaimsControllerTests
         Assert.Equal(6, payments.Count());
         Assert.DoesNotContain(payments, payment => payment.PayeeUserId == otherUserId);
     }
+
+    [Fact]
+    public async Task DashboardShowsOnlyUnresolvedClaims_AndHistoryIsActorOwnedAndPaged()
+    {
+        var db = CreateInMemoryDbContext();
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        db.Claims.AddRange(
+            new ElixomClaim.Lib.Entities.Claim { ClaimantUserId = userId, Title = "Draft", Description = "", Amount = 1m, Status = ClaimStatus.Draft, CreatedAtUtc = DateTime.UtcNow },
+            new ElixomClaim.Lib.Entities.Claim { ClaimantUserId = userId, Title = "Paid", Description = "", Amount = 1m, Status = ClaimStatus.Accepted, PaymentStatus = ClaimPaymentStatus.Paid, CreatedAtUtc = DateTime.UtcNow.AddMinutes(-1) },
+            new ElixomClaim.Lib.Entities.Claim { ClaimantUserId = otherUserId, Title = "Other", Description = "", Amount = 1m, Status = ClaimStatus.Draft, CreatedAtUtc = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+        var controller = new ClaimsController(new ClaimService(db, new AuditService(db, NullLogger<AuditService>.Instance), NullLogger<ClaimService>.Instance), db)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new SecurityClaim(ClaimTypes.NameIdentifier, userId.ToString()) }, "TestAuth")) } }
+        };
+
+        var dashboard = Assert.IsType<UserDashboardViewModel>(Assert.IsType<ViewResult>(await controller.Index()).Model);
+        var history = Assert.IsType<ClaimHistoryViewModel>(Assert.IsType<ViewResult>(await controller.History()).Model);
+
+        Assert.Single(dashboard.Claims);
+        Assert.Equal("Draft", dashboard.Claims.Single().Title);
+        Assert.Equal(2, history.TotalCount);
+        Assert.DoesNotContain(history.Claims, claim => claim.ClaimantUserId == otherUserId);
+    }
 }

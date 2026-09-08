@@ -1,0 +1,41 @@
+@model ElixomClaim.Web.Models.ClaimHistoryViewModel
+@{
+    ViewData["Title"] = "Claims History";
+}
+
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Claims History</h2>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to My Claims</a>
+    </div>
+
+    @if (!Model.Claims.Any())
+    {
+        <div class="card p-4 text-center shadow-sm border-0"><p class="text-muted mb-0">No claim records found for your account.</p></div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light"><tr><th>Claim no.</th><th>Title</th><th>Amount (JMD)</th><th>Status</th><th>Payment State</th><th>Created</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var claim in Model.Claims)
+                    {
+                        <tr>
+                            <td>#@claim.SequenceNo</td><td><strong>@claim.Title</strong></td><td>$@claim.Amount.ToString("N2") JMD</td>
+                            <td>@claim.Status</td><td>@claim.PaymentStatus</td><td>@claim.CreatedAtUtc.ToString("yyyy-MM-dd")</td>
+                            <td><a asp-action="Details" asp-route-id="@claim.Id" class="btn btn-sm btn-outline-primary">View</a></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Claims history pages">
+            <a asp-action="History" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary @(Model.HasPreviousPage ? string.Empty : "disabled")" aria-disabled="@(!Model.HasPreviousPage)">Previous</a>
+            <span class="text-muted">Page @Model.Page of @Model.TotalPages (@Model.TotalCount claims)</span>
+            <a asp-action="History" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary @(Model.HasNextPage ? string.Empty : "disabled")" aria-disabled="@(!Model.HasNextPage)">Next</a>
+        </nav>
+    }
+</div>

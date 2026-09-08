@@ -9,6 +9,7 @@ public record AcceptClaimCommand(Guid ClaimId, Guid ActorUserId);
 public record RejectClaimCommand(Guid ClaimId, Guid ActorUserId, string RejectionReason);
 public record SoftDeleteClaimCommand(Guid ClaimId, Guid ActorUserId);
 public record AddClaimCommentCommand(Guid ClaimId, Guid AuthorUserId, string Content, bool IsPrivate);
+public sealed record ClaimHistoryPage(IReadOnlyList<Claim> Claims, int Page, int PageSize, int TotalCount);
 
 public interface IClaimService
 {
@@ -22,5 +23,7 @@ public interface IClaimService
 
     Task<Claim?> GetByIdAsync(Guid claimId, User actor, CancellationToken cancellationToken = default);
     Task<List<Claim>> GetUserClaimsAsync(Guid claimantUserId, CancellationToken cancellationToken = default);
+    Task<List<Claim>> GetUserUnresolvedClaimsAsync(Guid claimantUserId, CancellationToken cancellationToken = default);
+    Task<ClaimHistoryPage> GetUserClaimHistoryAsync(Guid claimantUserId, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<List<Claim>> GetQueueClaimsAsync(ClaimStatus? filterStatus = null, CancellationToken cancellationToken = default);
 }
