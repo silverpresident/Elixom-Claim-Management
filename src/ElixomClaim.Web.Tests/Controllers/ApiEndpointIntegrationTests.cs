@@ -105,6 +105,31 @@ public class ApiEndpointIntegrationTests
     }
 
     [Fact]
+    public async Task CollectionsApi_ReturnsPermittedSafeProjection()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var tellerId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var collectionClient = new CollectionClient { Id = Guid.NewGuid(), Name = "Safe Client" };
+            db.Users.Add(new User { Id = tellerId, Email = "safe-teller@example.test", NormalizedEmail = "SAFE-TELLER@EXAMPLE.TEST", FullName = "Safe Teller", Role = UserRole.Teller, IsActive = true });
+            db.CollectionClients.Add(collectionClient);
+            db.CollectionTransactions.Add(new CollectionTransaction { CollectionClientId = collectionClient.Id, TellerUserId = tellerId, PayorName = "Visible payer", PayorEmail = "hidden@example.test", PayorTelephone = "876-555-0199", Purpose = "Collection", Amount = 25m, ProcessingFee = 5m, PaymentDateUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", tellerId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+        var response = await client.GetAsync("/api/v1/collections");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Visible payer", json);
+        Assert.DoesNotContain("hidden@example.test", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("876-555-0199", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("processingFee", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task JobPaymentsApi_RestrictsUserToOwnedPayments()
     {
         using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
