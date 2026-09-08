@@ -204,11 +204,36 @@ public class ApiEndpointIntegrationTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task OperationsApi_RestrictsStatusToRequestingActor()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var ownerId = Guid.NewGuid();
+        var otherId = Guid.NewGuid();
+        const string operationKey = "outbox-wakeup:owner:status-test";
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.AddRange(
+                new User { Id = ownerId, Email = "operation-owner@example.test", NormalizedEmail = "OPERATION-OWNER@EXAMPLE.TEST", FullName = "Operation Owner", Role = UserRole.Administrator, IsActive = true },
+                new User { Id = otherId, Email = "operation-other@example.test", NormalizedEmail = "OPERATION-OTHER@EXAMPLE.TEST", FullName = "Operation Other", Role = UserRole.Administrator, IsActive = true });
+            db.OperationRecords.Add(new OperationRecord { IdempotencyKey = operationKey, OperationType = "OutboxWakeUp", ActorUserId = ownerId.ToString(), Status = "Completed", Details = "Accepted", ExecutedAtUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", otherId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/operations/{operationKey}")).StatusCode);
+        client.DefaultRequestHeaders.Remove("X-Test-User"); client.DefaultRequestHeaders.Add("X-Test-User", ownerId.ToString());
+        var response = await client.GetAsync($"/api/v1/operations/{operationKey}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("OutboxWakeUp", await response.Content.ReadAsStringAsync());
+    }
+
     private static async Task<IHost> CreateHostAsync(string databaseName) => await new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services =>
     {
         services.AddLogging(); services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase(databaseName));
         services.Configure<ElixomClaim.Lib.Configuration.NotificationOptions>(options => options.SystemCopyAddress = "ops@example.test");
-        services.AddSingleton<ElixomClaim.Lib.Services.ISystemClock, ElixomClaim.Lib.Services.SystemClock>(); services.AddSingleton<ISalaryRecurrencePlanner, SalaryRecurrencePlanner>(); services.AddScoped<IAuditService, AuditService>(); services.AddScoped<IClaimService, ClaimService>(); services.AddScoped<ICollectionService, CollectionService>(); services.AddScoped<IJobPaymentService, JobPaymentService>(); services.AddScoped<ISalaryPayrollService, SalaryPayrollService>(); services.AddScoped<IApprovedEmailPreviewService, ApprovedEmailPreviewService>(); services.AddScoped<IOperationRecordService, OperationRecordService>(); services.AddScoped<IActorResolver, ActorResolver>(); services.AddHttpContextAccessor();
+        services.AddSingleton<ElixomClaim.Lib.Services.ISystemClock, ElixomClaim.Lib.Services.SystemClock>(); services.AddSingleton<ISalaryRecurrencePlanner, SalaryRecurrencePlanner>(); services.AddScoped<IAuditService, AuditService>(); services.AddScoped<IClaimService, ClaimService>(); services.AddScoped<ICollectionService, CollectionService>(); services.AddScoped<IJobPaymentService, JobPaymentService>(); services.AddScoped<ISalaryPayrollService, SalaryPayrollService>(); services.AddScoped<IApprovedEmailPreviewService, ApprovedEmailPreviewService>(); services.AddScoped<IOperationRecordService, OperationRecordService>(); services.AddScoped<IApprovedOperationService, ApprovedOperationService>(); services.AddScoped<IActorResolver, ActorResolver>(); services.AddHttpContextAccessor();
         services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", _ => { });
         services.AddAuthorization(options => options.AddPolicy("ApiAccess", policy => { policy.AddAuthenticationSchemes("Test"); policy.RequireAuthenticatedUser(); policy.RequireAssertion(context => context.User.HasClaim("scope", "api:access")); }));
         services.AddControllers().AddApplicationPart(typeof(ClaimsApiController).Assembly);
