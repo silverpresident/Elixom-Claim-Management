@@ -286,6 +286,34 @@ public class ApiEndpointIntegrationTests
     }
 
     [Fact]
+    public async Task EmailTemplatesApi_DeniesManagerPreviewOfAnotherUsersPayout()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var managerId = Guid.NewGuid();
+        var payeeId = Guid.NewGuid();
+        var jobId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.AddRange(
+                new User { Id = managerId, Email = "preview-manager@example.test", NormalizedEmail = "PREVIEW-MANAGER@EXAMPLE.TEST", FullName = "Manager", Role = UserRole.Manager, IsActive = true },
+                new User { Id = payeeId, Email = "preview-payee@example.test", NormalizedEmail = "PREVIEW-PAYEE@EXAMPLE.TEST", FullName = "Payee", Role = UserRole.User, IsActive = true });
+            db.JobPayments.Add(new JobPayment { Id = jobId, PayeeUserId = payeeId, JobTotal = 20m, TotalPaid = 20m, CreatedAtUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", managerId.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+
+        var response = await client.PostAsync("/api/v1/email-templates/preview", JsonContent.Create(new { templateType = "PaymentSummary", entityId = jobId }));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("preview-payee@example.test", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Payout summary", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task EmailTemplatesApi_QueuesOnlyApprovedRecipientsIdempotently()
     {
         using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));

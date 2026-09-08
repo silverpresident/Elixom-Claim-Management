@@ -93,6 +93,26 @@ public class McpToolBoundaryTests
     }
 
     [Fact]
+    public async Task EmailTools_Preview_DeniesManagerAccessToAnotherUsersPayout()
+    {
+        var db = CreateInMemoryDbContext();
+        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
+        var emailTools = new EmailTools(db, audit, new SystemClock(), Options.Create(new NotificationOptions()));
+        var manager = new User { Id = Guid.NewGuid(), Email = "manager@example.test", FullName = "Manager", Role = UserRole.Manager, IsActive = true };
+        var payee = new User { Id = Guid.NewGuid(), Email = "payee@example.test", FullName = "Payee", Role = UserRole.User, IsActive = true };
+        var job = new JobPayment { Id = Guid.NewGuid(), PayeeUserId = payee.Id, JobTotal = 20m, TotalPaid = 20m };
+        db.AddRange(manager, payee, job);
+        await db.SaveChangesAsync();
+
+        var response = await emailTools.PreviewAsync(manager, new EmailPreviewRequest("PaymentSummary", job.Id), CancellationToken.None);
+
+        Assert.False(response.Success);
+        Assert.Contains("not available", response.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(response.RedactedHtmlBody);
+        Assert.Null(response.RecipientSummary);
+    }
+
+    [Fact]
     public async Task EmailTools_QueueSend_UsesDurableOutboxWithIdempotencyDeduplication()
     {
         var db = CreateInMemoryDbContext();

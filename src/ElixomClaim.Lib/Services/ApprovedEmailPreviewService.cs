@@ -38,9 +38,9 @@ public sealed class ApprovedEmailPreviewService(ApplicationDbContext db, IOption
         {
             if (!role.Value.HasMinimumRole(UserRole.Manager)) return Result.Failure<ApprovedEmailPreview>("Manager access is required.");
             var jobQuery = db.JobPayments.Include(item => item.PayeeUser).Where(item => item.Id == entityId);
-            // This is presently redundant with the Manager role gate above, but keeps the
-            // record boundary explicit if approved preview roles are broadened later.
-            if (!role.Value.HasMinimumRole(UserRole.Manager))
+            // Managers may preview their own payout only. Accountant and Administrator
+            // roles need wider access to reconcile and settle payment operations.
+            if (!role.Value.HasMinimumRole(UserRole.Accountant))
                 jobQuery = jobQuery.Where(item => item.PayeeUserId == actorUserId);
             var job = await jobQuery.SingleOrDefaultAsync(ct);
             if (job is null) return Result.Failure<ApprovedEmailPreview>("Job payment record was not found or is not available.");
