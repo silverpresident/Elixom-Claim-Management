@@ -1,9 +1,12 @@
-@model ElixomClaim.Lib.Entities.CollectionClient
-@{ ViewData["Title"] = Model.Name; }
+@model ElixomClaim.Web.Models.CollectionClientDetailsViewModel
+@{
+    ViewData["Title"] = Model.Client.Name;
+    var client = Model.Client;
+}
 
 <div class="container my-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Collection Client: @Model.Name</h2>
+        <h2>Collection Client: @client.Name</h2>
         <a asp-action="Index" class="btn btn-outline-secondary">Back to Clients</a>
     </div>
 
@@ -14,34 +17,44 @@
             <h5 class="mb-0">Client Configuration & Fee Schedule</h5>
         </div>
         <div class="card-body p-4">
-            <form method="post" asp-action="Update" asp-route-id="@Model.Id">
+            <form method="post" asp-action="Update" asp-route-id="@client.Id">
                 @Html.AntiForgeryToken()
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="clientName" class="form-label fw-bold">Client Name</label>
-                        <input id="clientName" name="name" class="form-control" value="@Model.Name" required />
+                        <input id="clientName" name="name" class="form-control" value="@client.Name" required />
                     </div>
                     <div class="col-md-6">
                         <label for="clientDescription" class="form-label fw-bold">Public Description</label>
-                        <input id="clientDescription" name="description" class="form-control" value="@Model.Description" placeholder="Optional description..." />
+                        <input id="clientDescription" name="description" class="form-control" value="@client.Description" placeholder="Optional description..." />
                     </div>
                     <div class="col-12">
                         <label for="clientNotes" class="form-label fw-bold">Internal Notes</label>
-                        <textarea id="clientNotes" name="notes" class="form-control" rows="2" placeholder="Internal operational notes...">@Model.Notes</textarea>
+                        <textarea id="clientNotes" name="notes" class="form-control" rows="2" placeholder="Internal operational notes...">@client.Notes</textarea>
                     </div>
                     <div class="col-md-6">
                         <label for="perJobProcessingFee" class="form-label fw-bold">Per-Job Processing Fee (JMD)</label>
-                        <input id="perJobProcessingFee" name="perJobProcessingFee" type="number" step="0.01" min="0" class="form-control" value="@Model.PerJobProcessingFee" required />
+                        <input id="perJobProcessingFee" name="perJobProcessingFee" type="number" step="0.01" min="0" class="form-control" value="@client.PerJobProcessingFee" required />
                     </div>
                     <div class="col-md-6">
                         <label for="perTransactionFee" class="form-label fw-bold">Per-Txn Processing Fee (JMD)</label>
-                        <input id="perTransactionFee" name="perTransactionFee" type="number" step="0.01" min="0" class="form-control" value="@Model.PerTransactionFee" required />
+                        <input id="perTransactionFee" name="perTransactionFee" type="number" step="0.01" min="0" class="form-control" value="@client.PerTransactionFee" required />
                     </div>
                 </div>
                 <div class="mt-3 text-end">
                     <button type="submit" class="btn btn-primary">Save Client Settings</button>
                 </div>
             </form>
+            <div class="d-flex justify-content-between align-items-center border-top mt-4 pt-3">
+                <span class="text-muted">Status: <strong class="@(client.IsActive ? "text-success" : "text-secondary")">@(client.IsActive ? "Active" : "Disabled")</strong></span>
+                <form method="post" asp-action="SetActive" asp-route-id="@client.Id">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="isActive" value="@(!client.IsActive)" />
+                    <button type="submit" class="btn @(client.IsActive ? "btn-outline-danger" : "btn-outline-success")">
+                        @(client.IsActive ? "Disable client" : "Re-enable client")
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -53,17 +66,33 @@
                 <div class="card-header bg-light"><h5 class="mb-0">Assigned Users</h5></div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush mb-3">
-                        @foreach(var assignment in Model.AssignedUsers)
+                        @foreach(var assignment in client.AssignedUsers)
                         {
                             <li class="list-group-item">@assignment.User.FullName (<code>@assignment.User.Email</code>)</li>
                         }
                     </ul>
-                    <form method="post" asp-action="AssignUser" asp-route-id="@Model.Id">
-                        @Html.AntiForgeryToken()
-                        <label class="form-label fw-bold" for="userId">Assign User ID (Guid)</label>
-                        <input id="userId" name="userId" class="form-control mb-2" placeholder="e.g. 00000000-0000-0000-0000-000000000000" required />
-                        <button class="btn btn-outline-primary btn-sm">Assign User</button>
-                    </form>
+                    @if (Model.AvailableUsers.Count == 0)
+                    {
+                        <p class="text-muted mb-0">All active users are already assigned to this client.</p>
+                    }
+                    else
+                    {
+                        <form method="post" asp-action="AssignUser" asp-route-id="@client.Id">
+                            @Html.AntiForgeryToken()
+                            <label class="form-label fw-bold" for="userSearch">Find an active user</label>
+                            <input id="userSearch" type="search" class="form-control mb-2" autocomplete="off" placeholder="Search by name or email" aria-describedby="userSearchHelp userSearchStatus" />
+                            <div id="userSearchHelp" class="form-text mb-2">Only active users not yet assigned to this client are shown.</div>
+                            <label class="form-label fw-bold" for="userId">User to assign</label>
+                            <select id="userId" name="userId" class="form-select mb-2" size="6" required>
+                                @foreach (var user in Model.AvailableUsers)
+                                {
+                                    <option value="@user.Id" data-search="@($"{user.Name} {user.Email}".ToLowerInvariant())">@user.Name — @user.Email</option>
+                                }
+                            </select>
+                            <div id="userSearchStatus" class="visually-hidden" role="status" aria-live="polite"></div>
+                            <button class="btn btn-outline-primary btn-sm">Assign selected user</button>
+                        </form>
+                    }
                 </div>
             </div>
         </section>
@@ -73,12 +102,12 @@
                 <div class="card-header bg-light"><h5 class="mb-0">Purpose Options</h5></div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush mb-3">
-                        @foreach(var option in Model.PurposeOptions.OrderBy(x => x.DisplayOrder))
+                        @foreach(var option in client.PurposeOptions.OrderBy(x => x.DisplayOrder))
                         {
                             <li class="list-group-item d-flex justify-content-between"><span>@option.Name</span> <span class="badge bg-secondary">Order: @option.DisplayOrder</span></li>
                         }
                     </ul>
-                    <form method="post" asp-action="AddPurpose" asp-route-id="@Model.Id">
+                    <form method="post" asp-action="AddPurpose" asp-route-id="@client.Id">
                         @Html.AntiForgeryToken()
                         <input name="name" class="form-control mb-2" placeholder="Purpose option name" required />
                         <input name="displayOrder" type="number" class="form-control mb-2" value="0" placeholder="Display Order" />
@@ -93,7 +122,7 @@
                 <div class="card-header bg-light"><h5 class="mb-0">Amount Options</h5></div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush mb-3">
-                        @foreach(var option in Model.AmountOptions.OrderBy(x => x.DisplayOrder))
+                        @foreach(var option in client.AmountOptions.OrderBy(x => x.DisplayOrder))
                         {
                             <li class="list-group-item d-flex justify-content-between">
                                 <span>@option.Name — <strong>$@option.Amount.ToString("N2") JMD</strong></span>
@@ -101,7 +130,7 @@
                             </li>
                         }
                     </ul>
-                    <form method="post" asp-action="AddAmount" asp-route-id="@Model.Id">
+                    <form method="post" asp-action="AddAmount" asp-route-id="@client.Id">
                         @Html.AntiForgeryToken()
                         <input name="name" class="form-control mb-2" placeholder="Option name" required />
                         <input name="amount" type="number" step="0.01" min="0.01" class="form-control mb-2" placeholder="Amount (JMD)" required />
@@ -117,7 +146,7 @@
                 <div class="card-header bg-light"><h5 class="mb-0">Bank Details & Internal Notes</h5></div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush mb-3">
-                        @foreach(var detail in Model.BankDetails)
+                        @foreach(var detail in client.BankDetails)
                         {
                             <li class="list-group-item">
                                 <div><strong>@detail.BankName</strong> — @detail.AccountName (<code>@detail.AccountNumber</code>)</div>
@@ -129,7 +158,7 @@
                             </li>
                         }
                     </ul>
-                    <form method="post" asp-action="AddBankDetail" asp-route-id="@Model.Id">
+                    <form method="post" asp-action="AddBankDetail" asp-route-id="@client.Id">
                         @Html.AntiForgeryToken()
                         <input name="accountName" class="form-control mb-2" placeholder="Account name" required />
                         <input name="bankName" class="form-control mb-2" placeholder="Bank name" required />
@@ -150,3 +179,33 @@
     </div>
     }
 </div>
+
+@if (User.IsInRole("Administrator"))
+{
+    <script>
+        (() => {
+            const search = document.getElementById('userSearch');
+            const select = document.getElementById('userId');
+            const status = document.getElementById('userSearchStatus');
+            if (!search || !select || !status) return;
+
+            const filterUsers = () => {
+                const query = search.value.trim().toLowerCase();
+                let visible = 0;
+                for (const option of select.options) {
+                    const matches = !query || option.dataset.search.includes(query);
+                    option.hidden = !matches;
+                    if (matches) visible++;
+                }
+
+                if (select.selectedOptions.length && select.selectedOptions[0].hidden) {
+                    select.value = '';
+                }
+                status.textContent = `${visible} user${visible === 1 ? '' : 's'} available.`;
+            };
+
+            search.addEventListener('input', filterUsers);
+            filterUsers();
+        })();
+    </script>
+}

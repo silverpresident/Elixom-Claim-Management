@@ -63,6 +63,22 @@ public class CollectionClientAdministrationServiceTests
     }
 
     [Fact]
+    public async Task SetClientActiveAsync_AllowsAccountantAndAuditsLifecycleChange()
+    {
+        await using var db = CreateDb();
+        var accountant = new User { Email = "accountant@anonymized.example.com", NormalizedEmail = "ACCOUNTANT@ANONYMIZED.EXAMPLE.COM", FullName = "Accountant", Role = UserRole.Accountant };
+        var client = new CollectionClient { Name = "Acme", IsActive = true };
+        db.AddRange(accountant, client);
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).SetClientActiveAsync(new(accountant.Id, client.Id, false));
+
+        Assert.True(result.IsSuccess);
+        Assert.False(client.IsActive);
+        Assert.Contains(db.AuditRecords, record => record.Action == "COLLECTION_CLIENT_DISABLED");
+    }
+
+    [Fact]
     public async Task AddBankDetailAsync_RequiresBranchNameAndApprovedAccountType()
     {
         await using var db = CreateDb();

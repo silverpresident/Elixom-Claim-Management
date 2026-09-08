@@ -60,7 +60,7 @@ Roles are stored as one hierarchical application role, not a collection of unrel
 | User | Own claims, profile (including an optional display name), bank details, and own payment history. |
 | Teller | User capabilities plus Payment Clearing House. |
 | Manager | Teller capabilities plus claims, collections, job-payment management, and operational audit visibility. |
-| Accountant | Manager capabilities plus salaries, payroll, scheduling, marking payments paid, and collection-client creation/editing. |
+| Accountant | Manager capabilities plus salaries, payroll, scheduling, marking payments paid, and collection-client creation/editing/enablement. |
 | Administrator | Full access, including user configuration, collection-client assignments/options/bank details, and all audit logs. |
 
 Use policies (for example, `CanCollectPayments`, `CanManageClaims`, `CanManagePayroll`, `CanExecutePayments`) instead of scattering role strings. Ownership checks remain mandatory even after an endpoint has passed a role policy.

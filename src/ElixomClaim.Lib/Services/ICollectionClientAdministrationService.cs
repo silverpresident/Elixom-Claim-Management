@@ -7,6 +7,7 @@ public interface ICollectionClientAdministrationService
 {
     Task<Result<CollectionClient>> CreateClientAsync(CreateCollectionClientCommand command, CancellationToken cancellationToken = default);
     Task<Result<CollectionClient>> UpdateClientAsync(UpdateCollectionClientCommand command, CancellationToken cancellationToken = default);
+    Task<Result> SetClientActiveAsync(SetCollectionClientActiveCommand command, CancellationToken cancellationToken = default);
     Task<Result> AssignUserAsync(AssignCollectionClientUserCommand command, CancellationToken cancellationToken = default);
     Task<Result> RemoveUserAsync(RemoveCollectionClientUserCommand command, CancellationToken cancellationToken = default);
     Task<Result<CollectionPurposeOption>> AddPurposeOptionAsync(AddCollectionPurposeOptionCommand command, CancellationToken cancellationToken = default);
@@ -16,6 +17,7 @@ public interface ICollectionClientAdministrationService
 
 public record CreateCollectionClientCommand(Guid ActorUserId, string Name, string? Description = null, string? Notes = null, decimal PerJobProcessingFee = 0, decimal PerTransactionFee = 0);
 public record UpdateCollectionClientCommand(Guid ActorUserId, Guid CollectionClientId, string Name, string? Description, string? Notes, decimal PerJobProcessingFee, decimal PerTransactionFee);
+public record SetCollectionClientActiveCommand(Guid ActorUserId, Guid CollectionClientId, bool IsActive);
 public record AssignCollectionClientUserCommand(Guid ActorUserId, Guid CollectionClientId, Guid UserId);
 public record RemoveCollectionClientUserCommand(Guid ActorUserId, Guid CollectionClientId, Guid UserId);
 public record AddCollectionPurposeOptionCommand(Guid ActorUserId, Guid CollectionClientId, string Name, int DisplayOrder);

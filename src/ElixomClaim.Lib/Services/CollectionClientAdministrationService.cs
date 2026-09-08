@@ -74,6 +74,37 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         return Result.Success(client);
     }
 
+    public async Task<Result> SetClientActiveAsync(SetCollectionClientActiveCommand command, CancellationToken cancellationToken = default)
+    {
+        var authorization = await EnsureAccountantAsync(command.ActorUserId, cancellationToken);
+        if (authorization.IsFailure)
+        {
+            return authorization;
+        }
+
+        var client = await _dbContext.CollectionClients.SingleOrDefaultAsync(c => c.Id == command.CollectionClientId, cancellationToken);
+        if (client is null)
+        {
+            return Result.Failure("Collection client not found.");
+        }
+
+        if (client.IsActive == command.IsActive)
+        {
+            return Result.Success();
+        }
+
+        client.IsActive = command.IsActive;
+        client.UpdatedAtUtc = _clock.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await AuditAsync(
+            command.IsActive ? "COLLECTION_CLIENT_ENABLED" : "COLLECTION_CLIENT_DISABLED",
+            $"CollectionClient:{client.Id}",
+            command.ActorUserId,
+            new { client.Id, client.Name, client.IsActive },
+            cancellationToken);
+        return Result.Success();
+    }
+
     public async Task<Result> AssignUserAsync(AssignCollectionClientUserCommand command, CancellationToken cancellationToken = default)
     {
         var authorization = await EnsureAdministratorAsync(command.ActorUserId, cancellationToken);

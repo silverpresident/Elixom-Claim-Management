@@ -2,6 +2,7 @@ using System.Security.Claims;
 using ElixomClaim.Lib.Authorization;
 using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Services;
+using ElixomClaim.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,14 @@ public class CollectionClientsAdminController : Controller
         return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
     }
 
+    [HttpPost("{id:guid}/active")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetActive(Guid id, [FromForm] bool isActive)
+    {
+        var result = await _service.SetClientActiveAsync(new(GetCurrentUserId(), id, isActive));
+        return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Details(Guid id)
     {
@@ -56,7 +65,23 @@ public class CollectionClientsAdminController : Controller
             .Include(c => c.PurposeOptions)
             .Include(c => c.AmountOptions)
             .SingleOrDefaultAsync(c => c.Id == id);
-        return client is null ? NotFound() : View(client);
+        if (client is null)
+        {
+            return NotFound();
+        }
+
+        var availableUsers = await _dbContext.Users.AsNoTracking()
+            .Where(user => user.IsActive && !_dbContext.CollectionClientUsers
+                .Any(assignment => assignment.CollectionClientId == client.Id && assignment.UserId == user.Id))
+            .OrderBy(user => user.DisplayName ?? user.FullName)
+            .ThenBy(user => user.Email)
+            .Select(user => new CollectionClientAssignableUser(
+                user.Id,
+                string.IsNullOrWhiteSpace(user.DisplayName) ? user.FullName : user.DisplayName,
+                user.Email))
+            .ToListAsync();
+
+        return View(new CollectionClientDetailsViewModel(client, availableUsers));
     }
 
     [HttpPost("{id:guid}/users")]
