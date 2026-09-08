@@ -60,6 +60,28 @@ public class JobPaymentService : IJobPaymentService
         _db.JobPayments.Add(job); await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_CREATED", job, c.ActorUserId, ct); return Result.Success(job);
     }
 
+    public async Task<Result<IReadOnlyList<JobPaymentReadModel>>> ListForActorAsync(Guid actorUserId, JobPaymentStatus? status, int take, CancellationToken ct = default)
+    {
+        var role = await _db.Users.Where(user => user.Id == actorUserId && user.IsActive).Select(user => (UserRole?)user.Role).SingleOrDefaultAsync(ct);
+        if (role is not { } activeRole) return Result.Failure<IReadOnlyList<JobPaymentReadModel>>("Active user access is required.");
+        var query = _db.JobPayments.AsNoTracking();
+        if (!activeRole.HasMinimumRole(UserRole.Manager)) query = query.Where(job => job.PayeeUserId == actorUserId);
+        if (status.HasValue) query = query.Where(job => job.Status == status.Value);
+        var canViewTransaction = activeRole.HasMinimumRole(UserRole.Accountant);
+        var jobs = await query.OrderByDescending(job => job.CreatedAtUtc).Take(Math.Clamp(take, 1, 100)).ToListAsync(ct);
+        return Result.Success<IReadOnlyList<JobPaymentReadModel>>(jobs.Select(job => ToReadModel(job, canViewTransaction)).ToList());
+    }
+
+    public async Task<Result<JobPaymentReadModel>> GetForActorAsync(Guid actorUserId, Guid jobPaymentId, CancellationToken ct = default)
+    {
+        var role = await _db.Users.Where(user => user.Id == actorUserId && user.IsActive).Select(user => (UserRole?)user.Role).SingleOrDefaultAsync(ct);
+        if (role is not { } activeRole) return Result.Failure<JobPaymentReadModel>("Active user access is required.");
+        var query = _db.JobPayments.AsNoTracking().Where(job => job.Id == jobPaymentId);
+        if (!activeRole.HasMinimumRole(UserRole.Manager)) query = query.Where(job => job.PayeeUserId == actorUserId);
+        var job = await query.SingleOrDefaultAsync(ct);
+        return job is null ? Result.Failure<JobPaymentReadModel>("Job payment was not found or is not accessible.") : Result.Success(ToReadModel(job, activeRole.HasMinimumRole(UserRole.Accountant)));
+    }
+
     public async Task<Result> UpdateMetadataAsync(UpdateJobPaymentMetadataCommand c, CancellationToken ct = default)
     {
         var jobResult = await ProcessingJobAsync(c.ActorUserId, c.JobPaymentId, ct);
@@ -306,6 +328,8 @@ public class JobPaymentService : IJobPaymentService
     private async Task<Result> AuthorizeAsync(Guid actor, CancellationToken ct) { var role = await _db.Users.Where(u => u.Id == actor && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct); return role is { } r && r.HasMinimumRole(UserRole.Manager) ? Result.Success() : Result.Failure("Manager access is required."); }
     private Task AuditAsync(string action, JobPayment job, Guid actor, CancellationToken ct) => _audit.LogAsync(action, $"JobPayment:{job.Id}", afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid }, actorUserId: actor.ToString(), cancellationToken: ct);
     private static string? Trim(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static JobPaymentReadModel ToReadModel(JobPayment job, bool canViewTransaction) => new(job.Id, job.SequenceNo, job.PayeeUserId, job.CollectionClientId, job.Status, job.JobTotal, job.ClientProcessingFee, job.TotalTxnProcessingFee, job.TotalDeductions, job.TotalPaid, job.PublicNote, canViewTransaction ? job.PaymentTransactionNumber : RedactTransactionNumber(job.PaymentTransactionNumber), job.CreatedAtUtc);
+    private static string? RedactTransactionNumber(string? number) => string.IsNullOrEmpty(number) ? null : number.Length <= 4 ? "****" : "****" + number[^4..];
     private static string ComposePayoutHtml(JobPayment job)
     {
         Func<string, string> encode = System.Text.Encodings.Web.HtmlEncoder.Default.Encode;

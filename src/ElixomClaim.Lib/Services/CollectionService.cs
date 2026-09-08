@@ -181,6 +181,29 @@ public class CollectionService : ICollectionService
         return Result.Success();
     }
 
+    public async Task<Result<IReadOnlyList<CollectionReadModel>>> ListForActorAsync(Guid actorUserId, Guid? collectionClientId, int take, CancellationToken cancellationToken = default)
+    {
+        var role = await _dbContext.Users.Where(user => user.Id == actorUserId && user.IsActive).Select(user => (UserRole?)user.Role).SingleOrDefaultAsync(cancellationToken);
+        if (role is not { } activeRole || !activeRole.HasMinimumRole(UserRole.Teller)) return Result.Failure<IReadOnlyList<CollectionReadModel>>("Teller access is required.");
+        var boundedTake = Math.Clamp(take, 1, 100);
+        var query = _dbContext.CollectionTransactions.AsNoTracking();
+        if (collectionClientId.HasValue) query = query.Where(collection => collection.CollectionClientId == collectionClientId.Value);
+        var records = await query.OrderByDescending(collection => collection.CreatedAtUtc).Take(boundedTake)
+            .Select(collection => new CollectionReadModel(collection.Id, collection.SequenceNo, collection.CollectionClientId, collection.PayorName, collection.Method, collection.Status, collection.Amount, collection.Currency, collection.PaymentDateUtc, collection.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+        return Result.Success<IReadOnlyList<CollectionReadModel>>(records);
+    }
+
+    public async Task<Result<CollectionReadModel>> GetForActorAsync(Guid actorUserId, Guid collectionId, CancellationToken cancellationToken = default)
+    {
+        var role = await _dbContext.Users.Where(user => user.Id == actorUserId && user.IsActive).Select(user => (UserRole?)user.Role).SingleOrDefaultAsync(cancellationToken);
+        if (role is not { } activeRole || !activeRole.HasMinimumRole(UserRole.Teller)) return Result.Failure<CollectionReadModel>("Teller access is required.");
+        var record = await _dbContext.CollectionTransactions.AsNoTracking().Where(collection => collection.Id == collectionId)
+            .Select(collection => new CollectionReadModel(collection.Id, collection.SequenceNo, collection.CollectionClientId, collection.PayorName, collection.Method, collection.Status, collection.Amount, collection.Currency, collection.PaymentDateUtc, collection.CreatedAtUtc))
+            .SingleOrDefaultAsync(cancellationToken);
+        return record is null ? Result.Failure<CollectionReadModel>("Collection record was not found.") : Result.Success(record);
+    }
+
     private static bool IsValidEmail(string value)
     {
         try { return new MailAddress(value).Address.Equals(value, StringComparison.OrdinalIgnoreCase); }

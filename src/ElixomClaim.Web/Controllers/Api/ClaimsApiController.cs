@@ -49,6 +49,17 @@ public sealed class ClaimsApiController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost]
+    public async Task<ActionResult<ApiClaim>> Create([FromBody] CreateApiClaimRequest request, CancellationToken ct)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Description) || request.Amount <= 0)
+            return Problem(statusCode: StatusCodes.Status400BadRequest, detail: "title, description, and a positive amount are required.");
+        var actor = await ResolveAsync(ct); if (actor is null) return Forbid();
+        var claim = await _claims.CreateDraftAsync(new CreateClaimCommand(actor.Id, request.Title, request.Description, request.Amount, request.DateOfJob), ct);
+        _logger.LogInformation("API claim {ClaimId} created by {ActorId}.", claim.Id, actor.Id);
+        return CreatedAtAction(nameof(Get), new { id = claim.Id }, ApiClaim.From(claim));
+    }
+
     private async Task<User?> ResolveAsync(CancellationToken ct)
     {
         var actor = await _actors.ResolveActorAsync(HttpContext, "api:access", false, ct);
@@ -62,3 +73,4 @@ public sealed record ApiClaim(Guid Id, long SequenceNo, string Title, string Des
 }
 
 public sealed record ApiClaimPage(int Page, int PageSize, int TotalCount, IReadOnlyList<ApiClaim> Items);
+public sealed record CreateApiClaimRequest(string Title, string Description, decimal Amount, DateTime? DateOfJob);

@@ -5,6 +5,8 @@ namespace ElixomClaim.Lib.Services;
 
 public interface IJobPaymentService
 {
+    Task<Result<IReadOnlyList<JobPaymentReadModel>>> ListForActorAsync(Guid actorUserId, JobPaymentStatus? status, int take, CancellationToken cancellationToken = default);
+    Task<Result<JobPaymentReadModel>> GetForActorAsync(Guid actorUserId, Guid jobPaymentId, CancellationToken cancellationToken = default);
     Task<Result<JobPayment>> CreateAsync(CreateJobPaymentCommand command, CancellationToken cancellationToken = default);
     Task<Result> UpdateMetadataAsync(UpdateJobPaymentMetadataCommand command, CancellationToken cancellationToken = default);
     Task<Result> AttachClaimAsync(AttachJobPaymentClaimCommand command, CancellationToken cancellationToken = default);
@@ -21,6 +23,8 @@ public interface IJobPaymentService
     Task<Result<JobPayment>> CreateAdjustmentAsync(CreateJobPaymentAdjustmentCommand command, CancellationToken cancellationToken = default);
     Task<Result> ApproveAdjustmentAsync(Guid jobPaymentId, Guid actorUserId, CancellationToken cancellationToken = default);
 }
+
+public sealed record JobPaymentReadModel(Guid Id, long SequenceNo, Guid? PayeeUserId, Guid? CollectionClientId, JobPaymentStatus Status, decimal JobTotal, decimal ClientProcessingFee, decimal TotalTxnProcessingFee, decimal TotalDeductions, decimal TotalPaid, string? PublicNote, string? PaymentTransactionNumber, DateTime CreatedAtUtc);
 
 public record CreateJobPaymentCommand(Guid ActorUserId, Guid? PayeeUserId, Guid? CollectionClientId, string? PublicNote, string? InternalNote, string? Title = null);
 public record UpdateJobPaymentMetadataCommand(Guid ActorUserId, Guid JobPaymentId, string? Title, string? PublicNote, string? InternalNote);

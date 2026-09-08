@@ -1,7 +1,5 @@
-using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
-using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 
@@ -27,14 +25,12 @@ public sealed record CollectionDetailResponse(bool Success, string? Error, Colle
 [McpServerToolType]
 public sealed class CollectionTools
 {
-    private readonly ApplicationDbContext _dbContext;
-    private readonly IAuditService _audit;
+    private readonly ICollectionService _collections;
     private readonly McpToolActorAccessor _actorAccessor;
 
-    public CollectionTools(ApplicationDbContext dbContext, IAuditService audit, McpToolActorAccessor actorAccessor)
+    public CollectionTools(ICollectionService collections, McpToolActorAccessor actorAccessor)
     {
-        _dbContext = dbContext;
-        _audit = audit;
+        _collections = collections;
         _actorAccessor = actorAccessor;
     }
 
@@ -65,40 +61,10 @@ public sealed class CollectionTools
             return new CollectionListResponse(false, "Access denied. Teller role or higher is required.", null);
         }
 
-        try
-        {
-            var query = _dbContext.CollectionTransactions.AsNoTracking();
-            if (request.CollectionClientId.HasValue)
-            {
-                query = query.Where(c => c.CollectionClientId == request.CollectionClientId.Value);
-            }
-
-            var collections = await query
-                .OrderByDescending(c => c.CreatedAtUtc)
-                .Take(100)
-                .Select(c => new CollectionDto(
-                    c.Id,
-                    c.CollectionClientId,
-                    c.PayorName,
-                    c.Method,
-                    c.Status,
-                    c.Amount,
-                    c.Currency,
-                    c.PaymentDateUtc,
-                    c.CreatedAtUtc))
-                .ToListAsync(ct);
-
-            await _audit.LogAsync("MCP_COLLECTIONS_LIST", $"Actor:{actor.Id}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
-            return new CollectionListResponse(true, null, collections);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception)
-        {
-            return new CollectionListResponse(false, "Collection records could not be retrieved.", null);
-        }
+        var result = await _collections.ListForActorAsync(actor.Id, request.CollectionClientId, 100, ct);
+        return result.IsSuccess
+            ? new CollectionListResponse(true, null, result.Value!.Select(ToDto).ToList())
+            : new CollectionListResponse(false, result.Error, null);
     }
 
     public async Task<CollectionDetailResponse> GetCollectionAsync(User actor, GetCollectionRequest request, CancellationToken ct)
@@ -108,38 +74,11 @@ public sealed class CollectionTools
             return new CollectionDetailResponse(false, "Access denied. Teller role or higher is required.", null);
         }
 
-        try
-        {
-            var collection = await _dbContext.CollectionTransactions
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == request.CollectionId, ct);
-
-            if (collection == null)
-            {
-                return new CollectionDetailResponse(false, "Collection not found.", null);
-            }
-
-            var dto = new CollectionDto(
-                collection.Id,
-                collection.CollectionClientId,
-                collection.PayorName,
-                collection.Method,
-                collection.Status,
-                collection.Amount,
-                collection.Currency,
-                collection.PaymentDateUtc,
-                collection.CreatedAtUtc);
-
-            await _audit.LogAsync("MCP_COLLECTION_GET", $"Collection:{request.CollectionId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
-            return new CollectionDetailResponse(true, null, dto);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception)
-        {
-            return new CollectionDetailResponse(false, "The collection record could not be retrieved.", null);
-        }
+        var result = await _collections.GetForActorAsync(actor.Id, request.CollectionId, ct);
+        return result.IsSuccess
+            ? new CollectionDetailResponse(true, null, ToDto(result.Value!))
+            : new CollectionDetailResponse(false, result.Error, null);
     }
+
+    private static CollectionDto ToDto(CollectionReadModel collection) => new(collection.Id, collection.CollectionClientId, collection.PayorName, collection.Method, collection.Status, collection.Amount, collection.Currency, collection.PaymentDateUtc, collection.CreatedAtUtc);
 }
