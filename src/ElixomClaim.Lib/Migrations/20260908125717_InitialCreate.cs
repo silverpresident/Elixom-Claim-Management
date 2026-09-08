@@ -169,7 +169,8 @@ namespace ElixomClaim.Lib.Migrations
                 {
                     ClientId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ClientName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    ClientSecretHash = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    ClientSecretHash = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    ClientType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Confidential"),
                     RedirectUrisJson = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
                     AllowedGrantTypes = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     AllowedScopes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
@@ -229,7 +230,8 @@ namespace ElixomClaim.Lib.Migrations
                     Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Details = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     ActorUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
-                    ExecutedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    ExecutedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ProcessingStartedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1002,6 +1004,12 @@ namespace ElixomClaim.Lib.Migrations
                 table: "OperationRecords",
                 column: "IdempotencyKey",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OperationRecords_OperationType_Status_ProcessingStartedAtUtc",
+                schema: "dbclaim",
+                table: "OperationRecords",
+                columns: new[] { "OperationType", "Status", "ProcessingStartedAtUtc" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_PayrollEntries_PayrollId_SortOrder",

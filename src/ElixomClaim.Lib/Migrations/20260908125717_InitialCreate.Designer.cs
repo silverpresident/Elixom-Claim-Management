@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ElixomClaim.Lib.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260908042944_AddOAuthClientTypePolicy")]
-    partial class AddOAuthClientTypePolicy
+    [Migration("20260908125717_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1083,6 +1083,9 @@ namespace ElixomClaim.Lib.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTime?>("ProcessingStartedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1092,6 +1095,8 @@ namespace ElixomClaim.Lib.Migrations
 
                     b.HasIndex("IdempotencyKey")
                         .IsUnique();
+
+                    b.HasIndex("OperationType", "Status", "ProcessingStartedAtUtc");
 
                     b.ToTable("OperationRecords", "dbclaim");
                 });

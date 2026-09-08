@@ -47,7 +47,7 @@ The product decision is literal source-model fidelity: audit records use `Entity
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | Blocked | 2026-09-08 (/root) | Completed the design record in ADR 0008 and the [literal-model migration rehearsal runbook](../docs/runbooks/literal-audit-email-migration.md): additive field mapping, historic backfill, retained compatibility source fields, indexing, trigger handling, Bcc-only system copies, authorized projections, validation, idempotence, and PITR rollback. Blocking acceptance evidence: a designated release owner must provide the production-shaped Azure SQL restore, safe email-provider test account, and execute the required rehearsal. No data-bearing migration was created before that evidence. |
+| 1 | In progress | 2026-09-08 (/root) | User confirmed there is no existing schema or data to preserve, so the EF migration ledger was reset to clean `InitialCreate` (`20260908125717`) plus append-only audit trigger (`20260908125738`) before literal-model implementation. Verified idempotent script contains `AuditRecords` and `TR_AuditRecords_PreventMutation`; focused migration/relational tests passed (6). ADR 0008/runbook retain future production-rehearsal controls. Remaining: implement the literal audit/email model and record the staging rehearsal before item completion. |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |

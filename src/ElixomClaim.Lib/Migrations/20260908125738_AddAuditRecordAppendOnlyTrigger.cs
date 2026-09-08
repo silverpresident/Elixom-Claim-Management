@@ -10,14 +10,15 @@ namespace ElixomClaim.Lib.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql("""
+            migrationBuilder.Sql(
+                """
                 CREATE TRIGGER [dbclaim].[TR_AuditRecords_PreventMutation]
                 ON [dbclaim].[AuditRecords]
                 AFTER UPDATE, DELETE
                 AS
                 BEGIN
                     SET NOCOUNT ON;
-                    THROW 51000, 'Audit records are append-only.', 1;
+                    THROW 51000, 'Audit records are append-only and cannot be modified or deleted.', 1;
                 END
                 """);
         }

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ElixomClaim.Lib.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260908074353_AddOutboxWakeUpProcessingLease")]
-    partial class AddOutboxWakeUpProcessingLease
+    [Migration("20260908125738_AddAuditRecordAppendOnlyTrigger")]
+    partial class AddAuditRecordAppendOnlyTrigger
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
