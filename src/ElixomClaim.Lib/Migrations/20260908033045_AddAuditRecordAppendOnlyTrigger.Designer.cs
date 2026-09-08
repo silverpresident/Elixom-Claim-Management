@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ElixomClaim.Lib.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260903053340_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260908033045_AddAuditRecordAppendOnlyTrigger")]
+    partial class AddAuditRecordAppendOnlyTrigger
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,6 +25,24 @@ namespace ElixomClaim.Lib.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.HasSequence("ClaimCommentSequenceNo");
+
+            modelBuilder.HasSequence("ClaimSequenceNo");
+
+            modelBuilder.HasSequence("CollectionClientSequenceNo");
+
+            modelBuilder.HasSequence("CollectionTransactionSequenceNo");
+
+            modelBuilder.HasSequence("JobPaymentSequenceNo");
+
+            modelBuilder.HasSequence("PayrollEntrySequenceNo");
+
+            modelBuilder.HasSequence("PayrollSequenceNo");
+
+            modelBuilder.HasSequence("SalaryAdjustmentSequenceNo");
+
+            modelBuilder.HasSequence("SalaryDefinitionSequenceNo");
 
             modelBuilder.Entity("ElixomClaim.Lib.Entities.AuditRecord", b =>
                 {
@@ -100,6 +118,12 @@ namespace ElixomClaim.Lib.Migrations
                         .HasColumnType("nvarchar(10)")
                         .HasDefaultValue("JMD");
 
+                    b.Property<DateTime>("DateOfJob")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(4000)
@@ -125,6 +149,11 @@ namespace ElixomClaim.Lib.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<long>("SequenceNo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[ClaimSequenceNo]");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -143,6 +172,9 @@ namespace ElixomClaim.Lib.Migrations
                     b.HasIndex("ClaimantUserId");
 
                     b.HasIndex("PaymentStatus");
+
+                    b.HasIndex("SequenceNo")
+                        .IsUnique();
 
                     b.HasIndex("Status");
 
@@ -179,11 +211,19 @@ namespace ElixomClaim.Lib.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<long>("SequenceNo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[ClaimCommentSequenceNo]");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AuthorUserId");
 
                     b.HasIndex("ClaimId");
+
+                    b.HasIndex("SequenceNo")
+                        .IsUnique();
 
                     b.ToTable("ClaimComments", "dbclaim");
                 });
@@ -200,6 +240,9 @@ namespace ElixomClaim.Lib.Migrations
 
                     b.Property<Guid>("CollectionClientId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("int");
@@ -231,6 +274,10 @@ namespace ElixomClaim.Lib.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -241,12 +288,32 @@ namespace ElixomClaim.Lib.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<decimal>("PerJobProcessingFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PerTransactionFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<long>("SequenceNo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[CollectionClientSequenceNo]");
+
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("SequenceNo")
                         .IsUnique();
 
                     b.ToTable("CollectionClients", "dbclaim");
@@ -268,6 +335,11 @@ namespace ElixomClaim.Lib.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("BankName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -277,6 +349,11 @@ namespace ElixomClaim.Lib.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("BranchName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<Guid>("CollectionClientId")
                         .HasColumnType("uniqueidentifier");
@@ -288,6 +365,10 @@ namespace ElixomClaim.Lib.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
                     b.HasKey("Id");
 
@@ -323,6 +404,9 @@ namespace ElixomClaim.Lib.Migrations
                     b.Property<Guid>("CollectionClientId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("int");
 
@@ -354,7 +438,7 @@ namespace ElixomClaim.Lib.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("AmountOptionId")
+                    b.Property<Guid?>("AmountOptionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("CollectionClientId")
@@ -387,11 +471,20 @@ namespace ElixomClaim.Lib.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("PayorTelephone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<decimal>("ProcessingFee")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("PurposeOptionId")
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("PurposeOptionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ReferenceNumber")
@@ -404,6 +497,11 @@ namespace ElixomClaim.Lib.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<long>("SequenceNo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[CollectionTransactionSequenceNo]");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -413,6 +511,9 @@ namespace ElixomClaim.Lib.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SequenceNo")
+                        .IsUnique();
 
                     b.HasIndex("AmountOptionId", "CollectionClientId");
 
@@ -467,6 +568,9 @@ namespace ElixomClaim.Lib.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("SentAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -613,6 +717,22 @@ namespace ElixomClaim.Lib.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("PayoutBankAccountName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PayoutBankAccountNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PayoutBankBranchCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PayoutBankName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("PublicNote")
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
@@ -626,6 +746,11 @@ namespace ElixomClaim.Lib.Migrations
                     b.Property<DateTime?>("ScheduledAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<long>("SequenceNo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[JobPaymentSequenceNo]");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -633,6 +758,10 @@ namespace ElixomClaim.Lib.Migrations
 
                     b.Property<DateTime?>("SubmittedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<decimal>("TotalDeductions")
                         .HasPrecision(18, 2)
@@ -653,6 +782,9 @@ namespace ElixomClaim.Lib.Migrations
                     b.HasIndex("OriginalJobPaymentId");
 
                     b.HasIndex("PayeeUserId");
+
+                    b.HasIndex("SequenceNo")
+                        .IsUnique();
 
                     b.HasIndex("Status", "ScheduledAtUtc");
 
@@ -749,11 +881,6 @@ namespace ElixomClaim.Lib.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
                     b.Property<string>("CodeChallenge")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -839,6 +966,38 @@ namespace ElixomClaim.Lib.Migrations
                     b.ToTable("OAuthClients", "dbclaim");
                 });
 
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.OAuthConsent", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("GrantedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.ToTable("OAuthConsents", "dbclaim");
+                });
+
             modelBuilder.Entity("ElixomClaim.Lib.Entities.OAuthToken", b =>
                 {
                     b.Property<string>("TokenHash")
@@ -890,6 +1049,47 @@ namespace ElixomClaim.Lib.Migrations
                     b.ToTable("OAuthTokens", "dbclaim");
                 });
 
+            modelBuilder.Entity("ElixomClaim.Lib.Entities.OperationRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("ExecutedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("OperationType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("OperationRecords", "dbclaim");
+                });
+
             modelBuilder.Entity("ElixomClaim.Lib.Entities.Payroll", b =>
                 {
                     b.Property<Guid>("Id")
@@ -925,6 +1125,11 @@ namespace ElixomClaim.Lib.Migrations
                     b.Property<Guid>("SalaryDefinitionId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<long>("SequenceNo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[PayrollSequenceNo]");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -937,6 +1142,9 @@ namespace ElixomClaim.Lib.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SequenceNo")
+                        .IsUnique();
 
                     b.HasIndex("SalaryDefinitionId", "PeriodEndingDate")
                         .IsUnique();
@@ -972,6 +1180,11 @@ namespace ElixomClaim.Lib.Migrations
                     b.Property<Guid>("PayrollId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<long>("SequenceNo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[PayrollEntrySequenceNo]");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
 
@@ -981,6 +1194,9 @@ namespace ElixomClaim.Lib.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SequenceNo")
+                        .IsUnique();
 
                     b.HasIndex("PayrollId", "SortOrder")
                         .IsUnique();
@@ -994,6 +1210,9 @@ namespace ElixomClaim.Lib.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal>("FixedValue")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -1004,6 +1223,11 @@ namespace ElixomClaim.Lib.Migrations
 
                     b.Property<Guid>("SalaryDefinitionId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("SequenceNo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[SalaryAdjustmentSequenceNo]");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -1016,6 +1240,9 @@ namespace ElixomClaim.Lib.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SequenceNo")
+                        .IsUnique();
 
                     b.HasIndex("SalaryDefinitionId", "Type");
 
@@ -1072,6 +1299,11 @@ namespace ElixomClaim.Lib.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<long>("SequenceNo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("NEXT VALUE FOR [dbclaim].[SalaryDefinitionSequenceNo]");
+
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 
@@ -1082,6 +1314,9 @@ namespace ElixomClaim.Lib.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SequenceNo")
+                        .IsUnique();
 
                     b.HasIndex("UserId", "IsActive");
 
@@ -1103,16 +1338,36 @@ namespace ElixomClaim.Lib.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("BankAccountName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("BankAccountNumber")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("BankAccountType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("BankBranchCode")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("BankBranchName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -1251,15 +1506,13 @@ namespace ElixomClaim.Lib.Migrations
                         .WithMany()
                         .HasForeignKey("AmountOptionId", "CollectionClientId")
                         .HasPrincipalKey("Id", "CollectionClientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ElixomClaim.Lib.Entities.CollectionPurposeOption", "PurposeOption")
                         .WithMany()
                         .HasForeignKey("PurposeOptionId", "CollectionClientId")
                         .HasPrincipalKey("Id", "CollectionClientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("AmountOption");
 

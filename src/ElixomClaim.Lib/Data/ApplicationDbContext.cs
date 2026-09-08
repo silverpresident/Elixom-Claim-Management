@@ -50,6 +50,19 @@ public class ApplicationDbContext : DbContext
         // Enforce Azure SQL schema 'dbclaim'
         modelBuilder.HasDefaultSchema(DefaultSchema);
 
+        // These database sequences back the durable, human-facing record numbers.
+        // Declaring them in the model keeps a fresh migration baseline self-contained.
+        foreach (var sequenceName in new[]
+                 {
+                     "ClaimSequenceNo", "ClaimCommentSequenceNo", "JobPaymentSequenceNo",
+                     "CollectionClientSequenceNo", "CollectionTransactionSequenceNo",
+                     "SalaryDefinitionSequenceNo", "SalaryAdjustmentSequenceNo",
+                     "PayrollSequenceNo", "PayrollEntrySequenceNo"
+                 })
+        {
+            modelBuilder.HasSequence<long>(sequenceName).StartsAt(1).IncrementsBy(1);
+        }
+
         // Global soft-delete query filters
         modelBuilder.Entity<Claim>().HasQueryFilter(c => !c.IsDeleted);
         modelBuilder.Entity<ClaimComment>().HasQueryFilter(cc => !cc.IsDeleted);
