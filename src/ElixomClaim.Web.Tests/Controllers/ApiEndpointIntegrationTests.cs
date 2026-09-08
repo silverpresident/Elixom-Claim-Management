@@ -70,6 +70,24 @@ public class ApiEndpointIntegrationTests
         Assert.Single(await verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Claims.ToListAsync());
     }
 
+    [Theory]
+    [InlineData("/api/v1/claims?page=0&pageSize=25")]
+    [InlineData("/api/v1/claims?page=1&pageSize=101")]
+    public async Task ClaimsApi_RejectsOutOfRangePagination(string path)
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var userId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = userId, Email = "pagination@example.test", NormalizedEmail = "PAGINATION@EXAMPLE.TEST", FullName = "Pagination", Role = UserRole.User, IsActive = true });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", userId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(path)).StatusCode);
+    }
+
     private static async Task<IHost> CreateHostAsync(string databaseName) => await new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services =>
     {
         services.AddLogging(); services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase(databaseName));
