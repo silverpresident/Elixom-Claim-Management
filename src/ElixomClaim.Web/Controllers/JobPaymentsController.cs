@@ -6,6 +6,8 @@ using ElixomClaim.Lib.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ElixomClaim.Web.Controllers;
 
@@ -13,8 +15,8 @@ namespace ElixomClaim.Web.Controllers;
 [Route("job-payments")]
 public class JobPaymentsController : Controller
 {
-    private readonly ApplicationDbContext _db; private readonly IJobPaymentService _service;
-    public JobPaymentsController(ApplicationDbContext db, IJobPaymentService service) { _db = db; _service = service; }
+    private readonly ApplicationDbContext _db; private readonly IJobPaymentService _service; private readonly ILogger<JobPaymentsController> _logger;
+    public JobPaymentsController(ApplicationDbContext db, IJobPaymentService service, ILogger<JobPaymentsController>? logger = null) { _db = db; _service = service; _logger = logger ?? NullLogger<JobPaymentsController>.Instance; }
     [HttpGet("")] public async Task<IActionResult> Index(JobPaymentStatus? status) => View(await _db.JobPayments.AsNoTracking().Include(j => j.PayeeUser).Include(j => j.CollectionClient).Where(j => !status.HasValue || j.Status == status).OrderByDescending(j => j.CreatedAtUtc).ToListAsync());
     [HttpGet("accountant-queue")][Authorize(Policy = PolicyNames.RequireAccountant)] public async Task<IActionResult> AccountantQueue() => View(await _db.JobPayments.AsNoTracking().Include(j => j.PayeeUser).Include(j => j.CollectionClient).Where(j => j.Status == JobPaymentStatus.Submitted || j.Status == JobPaymentStatus.Scheduled).OrderBy(j => j.ScheduledAtUtc).ThenBy(j => j.CreatedAtUtc).ToListAsync());
     [HttpGet("create")]
@@ -40,6 +42,7 @@ public class JobPaymentsController : Controller
             return View();
         }
         TempData["SuccessMessage"] = "Job payment created successfully.";
+        _logger.LogInformation("Job payment {JobPaymentId} created by {ActorId}", result.Value!.Id, CurrentUserId());
         return RedirectToAction(nameof(Details), new { id = result.Value!.Id });
     }
 

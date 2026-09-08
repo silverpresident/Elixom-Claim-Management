@@ -6,6 +6,8 @@ using ElixomClaim.Lib.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ElixomClaim.Web.Controllers;
 
@@ -15,11 +17,13 @@ public class ClaimsController : Controller
 {
     private readonly IClaimService _claimService;
     private readonly ApplicationDbContext _dbContext;
+    private readonly ILogger<ClaimsController> _logger;
 
-    public ClaimsController(IClaimService claimService, ApplicationDbContext dbContext)
+    public ClaimsController(IClaimService claimService, ApplicationDbContext dbContext, ILogger<ClaimsController>? logger = null)
     {
         _claimService = claimService;
         _dbContext = dbContext;
+        _logger = logger ?? NullLogger<ClaimsController>.Instance;
     }
 
     private Guid GetCurrentUserId()
@@ -67,6 +71,7 @@ public class ClaimsController : Controller
 
         var userId = GetCurrentUserId();
         var claim = await _claimService.CreateDraftAsync(new CreateClaimCommand(userId, input.Title, input.Description, input.Amount, input.DateOfJob));
+        _logger.LogInformation("Claim {ClaimId} draft created by {ActorId}", claim.Id, userId);
 
         return RedirectToAction(nameof(Details), new { id = claim.Id });
     }

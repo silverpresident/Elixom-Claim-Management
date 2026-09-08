@@ -6,6 +6,8 @@ using ElixomClaim.Lib.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ElixomClaim.Web.Controllers;
 
@@ -15,11 +17,13 @@ public class ManagerClaimsController : Controller
 {
     private readonly IClaimService _claimService;
     private readonly ApplicationDbContext _dbContext;
+    private readonly ILogger<ManagerClaimsController> _logger;
 
-    public ManagerClaimsController(IClaimService claimService, ApplicationDbContext dbContext)
+    public ManagerClaimsController(IClaimService claimService, ApplicationDbContext dbContext, ILogger<ManagerClaimsController>? logger = null)
     {
         _claimService = claimService;
         _dbContext = dbContext;
+        _logger = logger ?? NullLogger<ManagerClaimsController>.Instance;
     }
 
     private Guid GetCurrentUserId()
@@ -65,6 +69,7 @@ public class ManagerClaimsController : Controller
         {
             return BadRequest("Unable to accept claim.");
         }
+        _logger.LogInformation("Claim {ClaimId} accepted by {ActorId}", id, userId);
 
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -85,6 +90,7 @@ public class ManagerClaimsController : Controller
         {
             return BadRequest("Unable to reject claim.");
         }
+        _logger.LogInformation("Claim {ClaimId} rejected by {ActorId}", id, userId);
 
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -100,6 +106,7 @@ public class ManagerClaimsController : Controller
 
         var userId = GetCurrentUserId();
         await _claimService.AddCommentAsync(new AddClaimCommentCommand(id, userId, content, isPrivate));
+        _logger.LogInformation("Comment added to claim {ClaimId} by {ActorId} with private status {IsPrivate}", id, userId, isPrivate);
 
         return RedirectToAction(nameof(Details), new { id });
     }
