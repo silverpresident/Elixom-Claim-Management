@@ -38,7 +38,7 @@ The codebase is organized within a root `src/` directory containing two main pro
     │   └── Services/           # Business logic, Salary Engine, Audit Service, Email Worker
     ├── ElixomClaim.Web/        # ASP.NET Core MVC Presentation Layer
     │   ├── Controllers/        # Claims, Teller, Manager, Accountant, Admin, OAuth, Auth Controllers
-    │   ├── Middleware/         # Custom OAuth2 middleware & MCP SSE Endpoint Handler (/mcp/sse)
+    │   ├── Middleware/         # Custom OAuth2 middleware & MCP SSE Endpoint Handler (/mcp)
     │   ├── Views/              # Razor MVC views, printable HTML receipt views
     │   └── wwwroot/            # Scalable SVG favicon (favicon.svg), custom CSS
     ├── ElixomClaim.Lib.Tests/  # xUnit tests for core logic, salary recurrence, MCP security
@@ -105,7 +105,7 @@ Allows defining a default administrator email that is automatically provisioned 
 * **Collection Entry Workflow:**
 1. Select a Payee from a configured list of `CollectionClient` entities.
 2. Input Payor Name, optional Email, and optional Telephone.
-3. Select **Purpose of Payment** and **Amount Collected** (using dropdown choices pre-configured per `CollectionClient`).
+3. Select a suggested **Purpose of Payment** and **Amount Collected** from choices pre-configured per `CollectionClient`, or enter a transaction-only custom purpose and/or amount. Matching active suggestions remain linked to the transaction; custom values are immutable snapshots and never change client configuration.
 4. Select **Method of Collection** (`Cash`, `POS`, `BankTransfer`, `CreditNote`).
 5. Payment Date defaults to current timestamp.
 
