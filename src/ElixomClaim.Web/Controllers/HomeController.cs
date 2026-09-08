@@ -5,28 +5,34 @@ using ElixomClaim.Lib.Entities;
 using ElixomClaim.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace ElixomClaim.Web.Controllers;
 
 public class HomeController : Controller
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly ILogger<HomeController> _logger;
 
-    public HomeController(ApplicationDbContext dbContext)
+    public HomeController(ApplicationDbContext dbContext, ILogger<HomeController> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     public async Task<IActionResult> Index()
     {
         if (User.Identity?.IsAuthenticated != true)
         {
+            _logger.LogDebug("Anonymous user requested the home landing page.");
             return View("AnonymousLanding");
         }
 
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("UserId");
         Guid.TryParse(userIdStr, out var userId);
         var user = await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+
+        _logger.LogInformation("Home dashboard requested by actor {ActorId}; active user resolved {UserResolved}.", userId, user is not null);
 
         var viewModel = new HomeDashboardViewModel
         {
@@ -44,13 +50,16 @@ public class HomeController : Controller
 
     public IActionResult Privacy()
     {
+        _logger.LogDebug("Privacy page requested.");
         return View();
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        var requestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+        _logger.LogWarning("Error page rendered for request {RequestId}.", requestId);
+        return View(new ErrorViewModel { RequestId = requestId });
     }
 }
 

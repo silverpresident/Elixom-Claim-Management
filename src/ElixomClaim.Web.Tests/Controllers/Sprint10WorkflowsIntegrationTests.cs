@@ -36,7 +36,7 @@ public class Sprint10WorkflowsIntegrationTests
         db.Claims.Add(new DomainClaim { ClaimantUserId = userId, Title = "C2", Description = "D2", Amount = 200m, Status = ClaimStatus.Submitted });
         await db.SaveChangesAsync();
 
-        var controller = new HomeController(db);
+        var controller = new HomeController(db, NullLogger<HomeController>.Instance);
         var claimsUser = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
             new SecurityClaim(ClaimTypes.NameIdentifier, userId.ToString()),

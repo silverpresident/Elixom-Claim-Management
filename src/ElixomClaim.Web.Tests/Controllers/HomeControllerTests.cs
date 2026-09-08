@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using ElixomClaim.Lib.Data;
 using ElixomClaim.Web.Controllers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace ElixomClaim.Web.Tests.Controllers;
@@ -20,7 +21,7 @@ public class HomeControllerTests
     public void Privacy_ReturnsViewResult()
     {
         var db = CreateInMemoryDbContext();
-        var controller = new HomeController(db);
+        var controller = new HomeController(db, NullLogger<HomeController>.Instance);
 
         var result = controller.Privacy();
 
