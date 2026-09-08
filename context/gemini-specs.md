@@ -94,7 +94,7 @@ Allows defining a default administrator email that is automatically provisioned 
 * Contains Title, Description, Date of Job, Total Claimed, Created Date, and Status.
 * Can be edited or deleted by the claimant **only if not yet accepted**.
 * Deletions execute as **soft deletes** (`IsDeleted = true`).
-* Supports threaded comments (`dbclaim.ClaimComments`), differentiating between public comments and internal management private comments.
+* Supports comments (`dbclaim.ClaimComments`), differentiating between public comments and internal management private comments.
 
 
 
@@ -179,7 +179,7 @@ $$\text{Target Date} = \text{LastSalaryDate} + \text{RecurrenceMonths} + \text{R
 
 For AI Agent interactions via Model Context Protocol (MCP):
 
-* **Endpoint Paths:** `/oauth/authorize`, `/oauth/token`, and `/mcp/sse`.
+* **Endpoint Paths:** `/oauth/authorize`, `/oauth/token`, and `/mcp`.
 * **OAuth Protocol:** Full OAuth 2.0 Authorization Code grant with mandatory PKCE (`S256` code challenge).
 * **Identity Inheritance:** MCP clients pass OAuth2 bearer tokens. The `McpAuthenticationMiddleware` resolves the token to the underlying `dbclaim.Users` account, injecting their exact identity and Role Claims into `HttpContext.User`.
 * **Audit Enforcement:** Actions performed over MCP invoke `IAuditService` and are recorded in `dbclaim.AuditLogs` under the specific user's email and ID.
