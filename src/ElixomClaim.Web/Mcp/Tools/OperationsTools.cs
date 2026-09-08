@@ -2,6 +2,8 @@ using ElixomClaim.Lib.Entities;
 using ElixomClaim.Lib.Services;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ElixomClaim.Web.Mcp.Tools;
 
@@ -28,17 +30,20 @@ public sealed class OperationsTools
     private readonly IOperationRecordService _operationRecordService;
     private readonly IAuditService _audit;
     private readonly McpToolActorAccessor _actorAccessor;
+    private readonly ILogger<OperationsTools> _logger;
 
     public OperationsTools(
         ISalaryPayrollService salaryPayrollService,
         IOperationRecordService operationRecordService,
         IAuditService audit,
-        McpToolActorAccessor actorAccessor)
+        McpToolActorAccessor actorAccessor,
+        ILogger<OperationsTools>? logger = null)
     {
         _salaryPayrollService = salaryPayrollService;
         _operationRecordService = operationRecordService;
         _audit = audit;
         _actorAccessor = actorAccessor;
+        _logger = logger ?? NullLogger<OperationsTools>.Instance;
     }
 
     // Retained for direct domain-adapter unit tests. MCP discovery uses the constructor above.
@@ -46,7 +51,7 @@ public sealed class OperationsTools
         ISalaryPayrollService salaryPayrollService,
         IOperationRecordService operationRecordService,
         IAuditService audit)
-        : this(salaryPayrollService, operationRecordService, audit, null!)
+        : this(salaryPayrollService, operationRecordService, audit, null!, NullLogger<OperationsTools>.Instance)
     {
     }
 
@@ -56,6 +61,7 @@ public sealed class OperationsTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await RequestSalaryGenerationAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP salary generation operation requested by {ActorId} for definition {SalaryDefinitionId} with success {Success}", actor.Value.User.Id, request.SalaryDefinitionId, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_SALARY_GENERATION", $"SalaryDefinition:{request.SalaryDefinitionId}", cancellationToken);
         return response;
     }
@@ -66,6 +72,7 @@ public sealed class OperationsTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await RequestOutboxWakeUpAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP outbox wake-up operation requested by {ActorId} with success {Success}", actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_OUTBOX_WAKEUP", "Outbox", cancellationToken);
         return response;
     }
@@ -76,6 +83,7 @@ public sealed class OperationsTools
         var actor = await _actorAccessor.ResolveAsync(cancellationToken);
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await GetOperationStatusAsync(actor.Value!.User, request, cancellationToken);
+        _logger.LogInformation("MCP operation status read by {ActorId} with success {Success}", actor.Value.User.Id, response.Success);
         await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_STATUS", "Operation", cancellationToken);
         return response;
     }
