@@ -92,4 +92,22 @@ public class RateLimitingTests
         Assert.Equal("too_many_requests", body["error"]);
         Assert.Equal("Rate limit exceeded. Please try again later.", body["error_description"]);
     }
+
+    [Fact]
+    public async Task McpRateLimiter_EnforcesTheMcpPolicyLimit()
+    {
+        using var host = await new HostBuilder().ConfigureWebHost(webBuilder => webBuilder.UseTestServer()
+            .ConfigureServices(services => { services.AddRouting(); services.AddApplicationRateLimiting(); })
+            .Configure(app => { app.UseRouting(); app.UseRateLimiter(); app.UseEndpoints(endpoints => endpoints.MapPost("/mcp", () => Results.Ok()).RequireRateLimiting(RateLimitingConfiguration.McpPolicy)); }))
+            .StartAsync();
+
+        var client = host.GetTestClient();
+        for (var request = 0; request < 60; request++)
+            Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/mcp", JsonContent.Create(new { }))).StatusCode);
+
+        var rejected = await client.PostAsync("/mcp", JsonContent.Create(new { }));
+        Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+        var body = await rejected.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+        Assert.Equal("too_many_requests", body!["error"]);
+    }
 }
