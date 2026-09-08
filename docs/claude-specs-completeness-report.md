@@ -10,7 +10,7 @@
 
 The core application is substantially implemented: .NET 10 MVC/EF architecture, Google-only provisioned-user access, hierarchical roles, claims, collections, job payments, payroll, SMTP/ACS outbox delivery, custom OAuth, standard MCP, audit persistence, and the HTML-first UI are present.
 
-The former clean-migration, MCP-operation durability, direct MCP email-queue mutation, and missing REST-API findings are materially resolved. The system remains **not release-ready or fully specification-complete** because it lacks endpoint-level API/MCP integration tests, MCP previews still bypass shared authorization-aware services, some API commands lack the mandated idempotency/durable-operation model, production migration coordination is process-local, and formal OAuth/MCP security review remains open.
+The former clean-migration, MCP-operation durability, direct MCP email-queue mutation, MCP preview service-boundary, API command-idempotency, and migration-coordination findings are materially resolved. The system remains **not release-ready or fully specification-complete** because full endpoint-level API contract coverage and real MCP transport integration tests are incomplete, and formal OAuth/MCP security review remains open.
 
 ## Verification
 
@@ -20,9 +20,9 @@ The focused non-relational command completed successfully:
 dotnet test ElixomClaim.slnx --no-restore --filter "Category!=Integration" --logger "console;verbosity=minimal"
 ```
 
-Results: **125 Lib tests passed** and **78 Web tests passed** (203 total, no failures).
+Results: this historical command predated the current full-suite verification.
 
-An unfiltered test run was also initiated, but its relational/Testcontainers portion did not finish within the tool window. The prior full-suite evidence in the repository should be rerun and recorded after the recent API/OAuth changes. Current warnings include high-severity advisory `GHSA-q939-rpr3-3284` for `SSH.NET` 2025.1.0, two Lib `NU1510` warnings, and obsolete Testcontainers builder use in the relational audit test.
+The current unfiltered suite passes after the API/OAuth changes: **126 Lib tests and 92 Web tests (218 total)**. The transitive SSH.NET advisory, redundant Options package warnings, and obsolete Testcontainers builder usage are resolved.
 
 ## Requirement assessment
 
@@ -73,17 +73,13 @@ Each is gated by `api:access`. Dynamic OAuth registration/client scope admission
 
 ## Remaining material gaps
 
-### 1. API command/idempotency and integration contract coverage — high priority
+### 1. API contract coverage remains incomplete
 
-The new API controllers have no discovered API-specific integration/contract test class. The current test inventory contains MCP boundary/security tests but no API endpoint tests. Add tests using the in-process host for bearer authentication, `api:access` isolation, ownership/role boundaries, pagination limits, malformed input, Problem Details, sensitive projections, and each endpoint's success/failure contract.
+`ApiEndpointIntegrationTests` now covers bearer/scope isolation, ownership and role boundaries, pagination failures, sensitive collection/email projections, approved operation requests/status, and claim/payroll idempotent replay. The remaining work is exhaustive endpoint-level success/failure and Problem Details contract coverage, especially approved email-queue success and all list/detail validation combinations.
 
-The Sprint 12 contract also requires idempotency for commands. `POST /api/v1/payroll/run` executes `GenerateForDefinitionAsync` directly and accepts no idempotency key; it therefore does not offer the durable operation/idempotency semantics of MCP salary generation. The operations API offers only `GET` status, not an approved operation-request command. Either route payroll run through the durable operation service with an idempotency key, or document/prove the database uniqueness behaviour as the API's complete duplicate-request contract.
+### 2. MCP email preview boundary is resolved
 
-### 2. MCP email previews still bypass shared authorization-aware services — high priority
-
-`EmailTools` correctly delegates **queueing**, but `PreviewCollectionReceiptAsync` and `PreviewPaymentSummaryAsync` still directly query `ApplicationDbContext`. Collection preview checks only Teller-or-higher and does not apply the recording-teller-or-manager restriction enforced by [`CollectionService.ReissueReceiptAsync`](../src/ElixomClaim.Lib/Services/CollectionService.cs). A Teller can potentially preview another teller's record by ID.
-
-Move previews and their redacted recipient/template projections into shared Lib services, use the same actor ownership/client access decisions as MVC, and test cross-user denial plus role-sensitive bank/message redaction.
+MCP and REST previews delegate to the Lib-owned `IApprovedEmailPreviewService`, which enforces role authorization and returns only approved redacted template content/recipient summaries. Real HTTP coverage confirms collection previews exclude payor name/telephone and mask recipient email. The remaining concern is protocol-level MCP invocation evidence, not an adapter service-boundary bypass.
 
 ### 3. MCP protocol and operation restart recovery are not proved
 
@@ -91,9 +87,9 @@ The code registers standard Streamable HTTP MCP and contract tests inspect tool 
 
 Likewise, an `Accepted` durable operation is observable, but there is no demonstrated process-interruption/restart policy that completes, fails, or safely retries it. Define and test that recovery contract.
 
-### 4. Migration coordination is process-local
+### 4. Migration coordination is resolved in production SQL Server
 
-[`DatabaseMigrationExtensions.cs`](../src/ElixomClaim.Lib/Data/DatabaseMigrationExtensions.cs) uses a static `SemaphoreSlim`; it cannot coordinate two application instances or independent deployment jobs. The specification requires one migration runner/instance. Use an explicit single-runner deployment topology or database/distributed lock.
+[`DatabaseMigrationExtensions.cs`](../src/ElixomClaim.Lib/Data/DatabaseMigrationExtensions.cs) retains its local guard and additionally uses SQL Server's session-scoped `sp_getapplock` across the pending-migration check and migration run when production uses the SQL Server provider. Deployment should still designate a migration runner operationally, but concurrent application instances no longer race schema application.
 
 ### 5. Payout output and audit/email schema fidelity are partial
 
@@ -101,15 +97,13 @@ The job print view includes collection payer details, claims, payroll entries, d
 
 [`AuditRecord.cs`](../src/ElixomClaim.Lib/Entities/AuditRecord.cs) stores a combined `Target`, not separate entity type/ID. [`NotificationEntities.cs`](../src/ElixomClaim.Lib/Entities/NotificationEntities.cs) stores one `Recipient`, not literal `To`/`From`/`Cc`/`Bcc` headers. Separate system-copy messages are delivery-equivalent, but not a literal schema match.
 
-### 6. Logging and release hardening remain
+### 6. Release hardening remains
 
-Add/redact structured logging to `HomeController` and `McpToolActorAccessor`; decide whether the literal requirement includes pure utility services. Resolve `SSH.NET` advisory `GHSA-q939-rpr3-3284` and the Testcontainers obsolete API warning.
+The SSH.NET advisory is resolved and redundant Options/Testcontainers warnings have been removed. The custom OAuth server still requires the formally stated threat-model/interoperability/independent security review before production release.
 
-The custom OAuth server still requires the formally stated threat-model/interoperability/independent security review before production release.
+### 7. Documentation state is reconciled
 
-### 7. Documentation state conflicts
-
-`README.md` still states that implementation "has not yet been scaffolded," which conflicts with the implemented system. `MEMORY.md` currently says Sprint 12 item 6 is blocked pending a decision to retain/de-scope the API, while a later current-baseline entry says product direction is to retain and complete it. Reconcile these records before the next handoff; the API code itself is present and partly complete.
+README, MEMORY, and the Sprint 12 ledger record that the implementation is active, the versioned API is retained, and Sprint 12 remains in progress solely for remaining API/MCP evidence and external review.
 
 ## Intentional or acceptable variations
 

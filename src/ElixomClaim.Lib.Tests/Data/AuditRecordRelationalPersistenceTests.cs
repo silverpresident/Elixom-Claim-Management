@@ -9,8 +9,7 @@ namespace ElixomClaim.Lib.Tests.Data;
 [Trait("Category", "Integration")]
 public sealed class AuditRecordRelationalPersistenceTests : IAsyncLifetime
 {
-    private readonly MsSqlContainer _database = new MsSqlBuilder()
-        .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+    private readonly MsSqlContainer _database = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest")
         .WithPassword("AuditRecord_Test1!")
         .Build();
 

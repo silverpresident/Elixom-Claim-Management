@@ -9,7 +9,7 @@
 
 The core claims, collections, job-payment, payroll, identity, audit, notification, browser UI, OAuth, and MCP workflows are substantially implemented. The solution has the required .NET 10 Lib/Web/test-project split, EF Core `dbclaim` model, Google allow-list sign-in, hierarchical roles, durable email outbox, HTML print views, a clean Guid-based migration baseline, and a standard authenticated MCP server.
 
-The Gemini functional specification is now **substantially complete**. Remaining work is release/readiness oriented: the browser landing-page status is stale, the Lib test graph has a high-severity transitive dependency advisory, the independent OAuth/security review remains open, and the repository's additional Sprint 12 REST API contract/integration work is not yet finished.
+The Gemini functional specification is now **substantially complete**. Remaining work is release/readiness oriented: the independent OAuth/security review remains open, and the repository's additional Sprint 12 REST API/MCP transport contract and interoperability work is not yet finished.
 
 ## Requirement coverage
 
@@ -40,9 +40,9 @@ The Gemini functional specification is now **substantially complete**. Remaining
 
 ## Differences and delivery risks
 
-1. **Documentation and dependency debt remain.** `README.md` still claims the implementation is unscaffolded. A high-severity transitive `SSH.NET` advisory (`GHSA-q939-rpr3-3284`) exists in Lib tests. The OAuth/security review in `MEMORY.md` remains open.
-2. **Additional repository API scope remains unfinished.** `/api/v1` now includes claim create/list/detail/submit, collection and job-payment reads, payroll preview/run, actor-owned operation status, and constrained approved-email queueing under `api:access`. Email preview, operation requests, and API contract/integration coverage remain Sprint 12 work; these are additions beyond Gemini itself.
-3. **Production migration topology remains an operational condition.** The clean migration baseline and relational audit test now pass, but the application lock is process-local. A production deployment must still arrange one migration runner/instance.
+1. **Independent security review remains.** The OAuth/MCP threat model requires a formally independent review before production release.
+2. **Additional repository API scope remains unfinished.** `/api/v1` includes claims, collection/job-payment reads, payroll preview/run, actor-owned operations, approved email preview/queue, durable command replay, and real HTTP boundary coverage under `api:access`. Complete endpoint-contract and conforming-client MCP transport coverage remain Sprint 12 work; these are additions beyond Gemini itself.
+3. **Production migration topology remains an operational condition.** The clean migration baseline and relational audit test now pass, and production SQL Server migration execution holds a session-scoped `sp_getapplock`; deployment should still use a dedicated migration runner where operationally practical.
 
 ## Intentional/beneficial variations
 
@@ -60,8 +60,8 @@ The Gemini functional specification is now **substantially complete**. Remaining
 dotnet test ElixomClaim.slnx --no-restore
 ```
 
-- The complete solution suite passed: **126 Lib tests and 78 Web tests; 204 passed, 0 failed**. This includes the SQL Server/Testcontainers relational audit-migration test.
-- Observed warnings: the SSH.NET advisory, two `NU1510` unnecessary package-reference warnings, and an obsolete Testcontainers builder warning.
+- The complete solution suite passed: **126 Lib tests and 92 Web tests; 218 passed, 0 failed**. This includes the SQL Server/Testcontainers relational audit-migration test.
+- No package or build warnings were observed after restore.
 
 ## Overall assessment
 
