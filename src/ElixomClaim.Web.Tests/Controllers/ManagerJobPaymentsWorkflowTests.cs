@@ -30,6 +30,28 @@ public class ManagerJobPaymentsWorkflowTests
     }
 
     [Fact]
+    public async Task Create_Get_PreselectsClaimantFromAcceptedClaimWorkflow()
+    {
+        var db = CreateInMemoryDbContext();
+        var managerId = Guid.NewGuid();
+        var claimantId = Guid.NewGuid();
+        db.Users.AddRange(
+            new User { Id = managerId, Email = "mgr@elixom.com", Role = UserRole.Manager, IsActive = true },
+            new User { Id = claimantId, Email = "claimant@elixom.com", FullName = "Claimant", Role = UserRole.User, IsActive = true });
+        await db.SaveChangesAsync();
+
+        var controller = new JobPaymentsController(
+            db,
+            new JobPaymentService(db, new AuditService(db, NullLogger<AuditService>.Instance), new SystemClock(), NullLogger<JobPaymentService>.Instance));
+
+        var result = await controller.Create(claimantId, null);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.Equal(claimantId, controller.ViewData["SelectedPayeeUserId"]);
+        Assert.Contains(((IEnumerable<User>)controller.ViewData["Users"]!).ToList(), user => user.Id == claimantId);
+    }
+
+    [Fact]
     public async Task Manager_CreateEditDeductionAttachAndSubmit_JobPaymentWorkflow()
     {
         var db = CreateInMemoryDbContext();

@@ -57,6 +57,14 @@
                         </div>
                     }
 
+                    @if (Model.Status == ElixomClaim.Lib.Entities.ClaimStatus.Accepted && Model.PaymentStatus == ElixomClaim.Lib.Entities.ClaimPaymentStatus.Unpaid)
+                    {
+                        <div class="alert alert-success d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+                            <span>This accepted claim is ready to be added to a payment job.</span>
+                            <a asp-controller="JobPayments" asp-action="Create" asp-route-payeeUserId="@Model.ClaimantUserId" class="btn btn-success">Create job for this claimant</a>
+                        </div>
+                    }
+
                     <a asp-action="Index" class="btn btn-outline-secondary">Back to Queue</a>
                 </div>
             </div>
