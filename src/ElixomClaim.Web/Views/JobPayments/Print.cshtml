@@ -28,7 +28,19 @@
     <section>
         <h2>Collection transactions</h2>
         @if (!Model.Collections.Any()) { <p>None.</p> }
-        <ul>@foreach (var item in Model.Collections) { <li>Collection #@item.CollectionTransaction.SequenceNo — @item.CollectionTransaction.Purpose — @item.CollectionTransaction.Amount.ToString("N2") JMD (transaction fee: @item.CollectionTransaction.ProcessingFee.ToString("N2") JMD)</li> }</ul>
+        <ul>
+        @foreach (var item in Model.Collections)
+        {
+            <li>
+                Collection #@item.CollectionTransaction.SequenceNo — @item.CollectionTransaction.Purpose — @item.CollectionTransaction.Amount.ToString("N2") JMD (transaction fee: @item.CollectionTransaction.ProcessingFee.ToString("N2") JMD)<br />
+                Payor: @item.CollectionTransaction.PayorName
+                @if (!string.IsNullOrWhiteSpace(item.CollectionTransaction.PayorEmail))
+                {
+                    <text> — Email: @item.CollectionTransaction.PayorEmail</text>
+                }
+            </li>
+        }
+        </ul>
     </section>
 
     <section>

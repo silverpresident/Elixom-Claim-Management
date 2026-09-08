@@ -21,6 +21,9 @@ public class JobPaymentPrintViewTests
         var content = File.ReadAllText(path);
 
         Assert.Contains("Collection transactions", content);
+        Assert.Contains("Payor:", content);
+        Assert.Contains("PayorEmail", content);
+        Assert.DoesNotContain("PayorTelephone", content);
         Assert.Contains("Linked payrolls", content);
         Assert.Contains("Deductions", content);
         Assert.Contains("Adjustment", content);
