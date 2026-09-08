@@ -326,6 +326,44 @@ public class ApiEndpointIntegrationTests
     }
 
     [Fact]
+    public async Task McpTransport_RejectsMissingAndWrongTransportScope()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var userId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = userId, Email = "mcp-scope@example.test", NormalizedEmail = "MCP-SCOPE@EXAMPLE.TEST", FullName = "MCP Scope", Role = UserRole.User, IsActive = true });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/mcp", JsonContent.Create(new { jsonrpc = "2.0", id = 1, method = "initialize", @params = new { protocolVersion = "2025-11-25", capabilities = new { }, clientInfo = new { name = "test", version = "1" } } }))).StatusCode);
+        client.DefaultRequestHeaders.Add("X-Test-User", userId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "api:access");
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync("/mcp", JsonContent.Create(new { jsonrpc = "2.0", id = 1, method = "initialize", @params = new { protocolVersion = "2025-11-25", capabilities = new { }, clientInfo = new { name = "test", version = "1" } } }))).StatusCode);
+    }
+
+    [Fact]
+    public async Task McpTransport_InvokesClaimsToolForConcreteActor()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var userId = Guid.NewGuid();
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            db.Users.Add(new User { Id = userId, Email = "mcp-tool@example.test", NormalizedEmail = "MCP-TOOL@EXAMPLE.TEST", FullName = "MCP Tool", Role = UserRole.User, IsActive = true });
+            db.Claims.Add(new ElixomClaim.Lib.Entities.Claim { ClaimantUserId = userId, Title = "MCP owned", Description = "Visible only to actor", Amount = 10m, Status = ClaimStatus.Draft, PaymentStatus = ClaimPaymentStatus.Unpaid, CreatedAtUtc = DateTime.UtcNow, UpdatedAtUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = host.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-User", userId.ToString()); client.DefaultRequestHeaders.Add("X-Test-Scope", "mcp:access");
+        await using var transport = new HttpClientTransport(new HttpClientTransportOptions { Endpoint = new Uri("http://localhost/mcp") }, client);
+        await using var mcp = await McpClient.CreateAsync(transport);
+        var result = await mcp.CallToolAsync("claims_list", new Dictionary<string, object?> { ["request"] = new { statusFilter = (string?)null } });
+        Assert.True(result.IsError is not true, string.Join("; ", result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(block => block.Text)));
+        Assert.Contains("MCP owned", result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(block => block.Text).Single());
+    }
+
+    [Fact]
     public async Task PayrollApi_RunPersistsOnePayrollAndReplaysDurably()
     {
         using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
