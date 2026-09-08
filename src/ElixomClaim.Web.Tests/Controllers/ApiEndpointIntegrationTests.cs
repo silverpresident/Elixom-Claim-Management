@@ -148,6 +148,14 @@ public class ApiEndpointIntegrationTests
         Assert.Empty(await verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().EmailOutboxItems.ToListAsync());
     }
 
+    [Fact]
+    public async Task LegacyMcpControllerRoute_IsNotMappedAsAnApiFallback()
+    {
+        using var host = await CreateHostAsync(Guid.NewGuid().ToString("N"));
+        var client = host.GetTestClient();
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/mcp/claims")).StatusCode);
+    }
+
     private static async Task<IHost> CreateHostAsync(string databaseName) => await new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services =>
     {
         services.AddLogging(); services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase(databaseName));
