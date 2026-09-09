@@ -50,7 +50,7 @@ The product decision is literal source-model fidelity: audit records use `Entity
 | 1 | Blocked | 2026-09-09 (/root) | The local vertical slice adds literal `EntityType`/`EntityId`/`OccurredAtUtc` and message header fields plus additive migration `20260909124540_StructuredAuditAndEmailHeaders`; legacy source columns are retained and backfilled. `dotnet build ElixomClaim.slnx --no-restore` passed and focused audit/outbox tests passed (5). Completion remains blocked by the required independently observed production-shaped Azure SQL restore rehearsal, designated release owner, and safe email-provider test account. |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
-| 4 | Not started | — | — |
+| 4 | Complete | 2026-09-09 (/root) | Replaced list-only payout print presentation with captioned, responsive semantic tables for claims, collections, ordered payroll entries, deductions, and the calculation; each has category subtotals. Internal notes and bank data remain excluded. Verified `dotnet test src/ElixomClaim.Web.Tests/ElixomClaim.Web.Tests.csproj --filter FullyQualifiedName~JobPaymentPrintViewTests` (3 passed). See `Views/JobPayments/Print.cshtml` and `Web.Tests/Views/JobPaymentPrintViewTests.cs`. |
 | 5 | Not started | 2026-09-08 | Policy decided: Manager metadata-only access is limited to claims, collections, and job payments; implementation remains unstarted. |
 | 6 | Not started | — | — |
 | 7 | Not started | — | — |
