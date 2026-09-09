@@ -1,6 +1,6 @@
 # Claude Specification Completeness Report
 
-**Thorough reassessment:** 2026-09-08
+**Thorough reassessment:** 2026-09-09
 
 **Source specification:** [`context/claude-specs.md`](../context/claude-specs.md)
 
@@ -10,7 +10,7 @@
 
 Sprint 12 is complete and the application is substantially implemented. Claims, clearing-house collections, job payments, payroll, Google SSO, OAuth/PKCE, durable outbox, standard MCP, scoped REST API/OpenAPI, audit trigger, and the HTML frontend all have implementation and automated evidence.
 
-The project is **not release-ready** because Sprint 13 contains deliberate, still-unimplemented source-fidelity/release controls. The literal audit/email persistence model, manager audit domain filter, and complete payout print/email output remain gaps. The data-preserving migration rehearsal is blocked on a designated production owner and production-shaped Azure SQL restore; independent OAuth/MCP review is also still required.
+The project is **not release-ready** because Sprint 13 still has source-fidelity and release-control work. The additive literal audit/email persistence migration is now present locally, but compatibility callers and Bcc-only system-copy behaviour remain to be completed. Manager audit domain filtering and complete payout-notification fidelity also remain gaps. The data-preserving migration rehearsal is blocked on a designated production owner and production-shaped Azure SQL restore; independent OAuth/MCP review is also still required.
 
 ## Verification executed
 
@@ -46,22 +46,22 @@ The full suite completed without dependency-vulnerability, redundant-package, or
 | Durable operations | Implemented | Actor-owned idempotent reservations, status reads, approved salary run, and durable outbox wake-up lifecycle exist. The worker leases, completes/fails, and reclaims stale wake-ups; restart recovery is tested. |
 | Versioned API/OpenAPI | Implemented | `/api/v1` has approved claims, collection, job-payment, template, payroll, and operation operations behind `api:access`; commands use idempotency. Authenticated `/openapi/v1.json` excludes MCP. |
 | Privacy/CDN/favicon/HTML-only frontend | Implemented | Privacy page/footer, Jamaican contact, Bootstrap/jQuery CDN with SRI, SVG favicon, semantic views, and HTML print are present. |
-| Audit record model and visibility | Partial | Trigger/redaction/audit events exist, but literal entity fields and Manager domain filter are planned Sprint 13 work. |
-| Email record header model | Partial | Current records use a single `Recipient`; literal `To`/`From`/`Cc`/`Bcc`, Bcc-only system copies, and safe migrations are planned Sprint 13 work. |
-| Payout detail rendering | Partial | Current print/email includes linked categories and headline totals; required accessible tabular category/subtotal presentation is not complete. |
+| Audit record model and visibility | Partial | Trigger/redaction/audit events and additive `EntityType`/`EntityId`/`OccurredAtUtc` persistence migration now exist. Manager domain filtering and removal of compatibility use remain Sprint 13 work. |
+| Email record header model | Partial | Records and adapters now have `To`/`From`/`Cc`/`Bcc` fields, but queue callers still use compatibility recipient paths and configured system copies are not yet Bcc-only. |
+| Payout detail rendering | Partial | Print output now uses accessible responsive tables with category subtotals. The payout notification HTML still needs the equivalent table/subtotal and authorised-recipient/bank-detail fidelity. |
 | `ILogger<T>` coverage | Mostly implemented | Most concrete controllers/services/workers/tools log structured outcomes. A few remaining classes lack it; see finding 5. |
 
 ## Material remaining gaps
 
-### 1. Literal audit model is not implemented
+### 1. Literal audit model is locally implemented but not fully integrated
 
-The source specification defines `EntityType`, `EntityId`, and `OccurredAtUtc`. Current [`AuditRecord.cs`](../src/ElixomClaim.Lib/Entities/AuditRecord.cs) still contains combined `Target` and `TimestampUtc`. The append-only trigger is correct for the current model, but it does not satisfy literal source-model fidelity.
+The source specification defines `EntityType`, `EntityId`, and `OccurredAtUtc`. [`AuditRecord.cs`](../src/ElixomClaim.Lib/Entities/AuditRecord.cs) and migration `20260909124540_StructuredAuditAndEmailHeaders` now persist those fields and retain compatibility properties/source columns for the transition. The append-only trigger remains in place.
 
-Sprint 13 item 2 has not started. ADR 0008 and the [literal audit/email migration runbook](runbooks/literal-audit-email-migration.md) correctly define an additive, data-preserving approach: preserve legacy columns for one release, backfill structured fields, maintain trigger protection, and prohibit destructive rollback. Do not claim this requirement complete until the migration, service/projection changes, relational tests, and rehearsal have succeeded.
+This remains incomplete until query projections stop using the legacy compatibility path, relational migration tests prove the backfill/trigger invariants, and the staging rehearsal succeeds. ADR 0008 and the [literal audit/email migration runbook](runbooks/literal-audit-email-migration.md) define the required additive, data-preserving approach.
 
-### 2. Literal email headers and Bcc system copy are not implemented
+### 2. Literal email headers exist, but Bcc system copies are not implemented
 
-[`NotificationEntities.cs`](../src/ElixomClaim.Lib/Entities/NotificationEntities.cs) still stores `Recipient`, not the specified `To`, `From`, `Cc`, and `Bcc`. System copies are separate recipients/outbox rows, not Bcc-only headers. This is delivery-equivalent but not literal audit/header fidelity.
+[`NotificationEntities.cs`](../src/ElixomClaim.Lib/Entities/NotificationEntities.cs) now persists `To`, `From`, `Cc`, and `Bcc`; sender and outbox contracts carry them. Compatibility `Recipient` properties and queue callers remain during the transition. System copies are still separate recipients/outbox rows, not Bcc-only headers.
 
 Sprint 13 item 3 must update entities, mapping, sender adapters, queues/retries, preview/API/MCP projections, redaction, and test behaviour. Bcc data must never appear in bodies, previews, logs, unauthorized queries, or errors.
 
@@ -71,11 +71,11 @@ Sprint 13's ready criteria choose Manager metadata-only access for claims, colle
 
 This allows Manager metadata visibility for OAuth/security, user-administration, payroll, salary, email, and system events. Implement the accepted domain filter in shared queries/projections and add pagination/redaction/authorization tests.
 
-### 4. Payout print/email fidelity remains incomplete
+### 4. Payout notification fidelity remains incomplete
 
-[`Print.cshtml`](../src/ElixomClaim.Web/Views/JobPayments/Print.cshtml) lists claims, collection items/payer details, payroll entries, deductions, adjustments, and headline totals. It does not use the required accessible tables with category subtotals.
+[`Print.cshtml`](../src/ElixomClaim.Web/Views/JobPayments/Print.cshtml) now renders claims, collections, payrolls and ordered entries, deductions, and the calculation in captioned responsive tables with header scopes and category subtotals. `JobPaymentPrintViewTests` verifies those semantics as well as the absence of internal notes.
 
-`JobPaymentService.ComposePayoutHtml` has improved notification content to include linked payrolls, but it still represents categories as lists rather than the source-specified itemized tables/subtotals. Sprint 13 item 4 must align print and notification data/layout, include authorised recipient/bank/totals detail, and prove internal notes/unauthorised bank data remain excluded.
+`JobPaymentService.ComposePayoutHtml` has improved notification content to include linked payrolls, but it still represents categories as lists rather than the source-specified itemized tables/subtotals. Remaining Sprint 13 item 4 work is to align notification data/layout, include authorised recipient/bank/totals detail, and prove internal notes/unauthorised bank data remain excluded.
 
 ### 5. Literal logging requirement has narrow remaining exceptions
 
@@ -98,6 +98,7 @@ The independent OAuth/MCP review runbook exists, but independent reviewer select
 
 - Sprint 12 is complete; standard MCP and the separately scoped API are implemented, documented, and tested.
 - Payout email data now includes linked payrolls (though not the final required table/subtotal presentation).
+- Payout print output now has accessible responsive tables, ordered payroll-entry rows, and category subtotals; focused `JobPaymentPrintViewTests` passed (3 tests) on 2026-09-09.
 - README/MEMORY now accurately state active delivery and the Sprint 13 release-fidelity scope.
 - Current full test evidence is 236 passing tests.
 
@@ -114,8 +115,8 @@ The independent OAuth/MCP review runbook exists, but independent reviewer select
 ## Recommended completion order
 
 1. Obtain the release-owner/production-shaped restore needed to finish Sprint 13 item 1.
-2. Implement and rehearse the additive audit/email model migration (items 2–3).
-3. Implement Manager audit domain filtering and payout print/email table/subtotal fidelity (items 4–5).
+2. Complete and rehearse the additive audit/email model migration (items 2–3), including Bcc-only system copies and authorised projections.
+3. Implement Manager audit domain filtering and finish payout-notification table/subtotal fidelity (items 4–5); the print portion is complete.
 4. Resolve/document logging exceptions and complete revoked/expired-token assurance.
 5. Complete independent OAuth/MCP review and release controls before production go/no-go.
 
