@@ -153,16 +153,21 @@ public class ApplicationDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(100);
 
-            entity.Property(a => a.Target)
+            entity.Property(a => a.EntityType)
                 .IsRequired()
-                .HasMaxLength(200);
+                .HasMaxLength(100);
+
+            entity.Property(a => a.EntityId)
+                .IsRequired()
+                .HasMaxLength(100);
 
             entity.Property(a => a.IsMcpOperation)
                 .IsRequired()
                 .HasDefaultValue(false);
 
-            entity.Property(a => a.TimestampUtc)
+            entity.Property(a => a.OccurredAtUtc)
                 .IsRequired();
+            entity.HasIndex(a => new { a.EntityType, a.EntityId, a.OccurredAtUtc });
         });
 
         modelBuilder.Entity<OAuthClient>(entity =>
@@ -380,7 +385,10 @@ public class ApplicationDbContext : DbContext
         {
             entity.ToTable("EmailOutboxItems");
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Recipient).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.To).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.From).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.Cc).HasMaxLength(2000);
+            entity.Property(e => e.Bcc).HasMaxLength(2000);
             entity.Property(e => e.Subject).IsRequired().HasMaxLength(300);
             entity.Property(e => e.HtmlBody).IsRequired();
             entity.Property(e => e.RelatedEntityType).IsRequired().HasMaxLength(100);
@@ -396,7 +404,10 @@ public class ApplicationDbContext : DbContext
         {
             entity.ToTable("EmailLogs");
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Recipient).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.To).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.From).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.Cc).HasMaxLength(2000);
+            entity.Property(e => e.Bcc).HasMaxLength(2000);
             entity.Property(e => e.Subject).IsRequired().HasMaxLength(300);
             entity.Property(e => e.HtmlBody).IsRequired();
             entity.Property(e => e.Provider).IsRequired().HasMaxLength(50);

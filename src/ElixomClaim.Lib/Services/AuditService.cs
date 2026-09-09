@@ -42,7 +42,8 @@ public class AuditService : IAuditService
         var record = new AuditRecord
         {
             Action = action,
-            Target = target,
+            EntityType = ParseEntityType(target),
+            EntityId = ParseEntityId(target),
             BeforeStateJson = beforeJson,
             AfterStateJson = afterJson,
             ActorUserId = actorUserId,
@@ -50,15 +51,15 @@ public class AuditService : IAuditService
             CorrelationId = correlationId,
             IpAddress = ipAddress,
             IsMcpOperation = isMcpOperation,
-            TimestampUtc = DateTime.UtcNow
+            OccurredAtUtc = DateTime.UtcNow
         };
 
         _dbContext.AuditRecords.Add(record);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "Audit event recorded: {Action} on {Target} by {Actor} [Correlation: {CorrelationId}, MCP: {IsMcp}]",
-            action, target, actorEmail ?? actorUserId ?? "System", correlationId ?? "N/A", isMcpOperation);
+            "Audit event recorded: {Action} on {EntityType}/{EntityId} by {Actor} [Correlation: {CorrelationId}, MCP: {IsMcp}]",
+            action, record.EntityType, record.EntityId, actorEmail ?? actorUserId ?? "System", correlationId ?? "N/A", isMcpOperation);
     }
 
     public string RedactJson(string json)
@@ -145,5 +146,12 @@ public class AuditService : IAuditService
         }
 
         return SensitiveKeys.Any(s => key.IndexOf(s, StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    private static string ParseEntityType(string target) => target.Split(':', 2)[0].Trim();
+    private static string ParseEntityId(string target)
+    {
+        var parts = target.Split(':', 2);
+        return parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[1]) ? parts[1].Trim() : target.Trim();
     }
 }

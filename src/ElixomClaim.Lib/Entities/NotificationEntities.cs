@@ -12,7 +12,10 @@ public enum EmailOutboxStatus
 public class EmailOutboxItem
 {
     public Guid Id { get; set; }
-    public string Recipient { get; set; } = string.Empty;
+    public string To { get; set; } = string.Empty;
+    public string From { get; set; } = string.Empty;
+    public string? Cc { get; set; }
+    public string? Bcc { get; set; }
     public string Subject { get; set; } = string.Empty;
     public string HtmlBody { get; set; } = string.Empty;
     public string RelatedEntityType { get; set; } = string.Empty;
@@ -24,13 +27,20 @@ public class EmailOutboxItem
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? SentAtUtc { get; set; }
     public string? FailureReason { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [Obsolete("Use To.")]
+    public string Recipient { get => To; set => To = value; }
 }
 
 public class EmailLog
 {
     public Guid Id { get; set; }
     public Guid OutboxItemId { get; set; }
-    public string Recipient { get; set; } = string.Empty;
+    public string To { get; set; } = string.Empty;
+    public string From { get; set; } = string.Empty;
+    public string? Cc { get; set; }
+    public string? Bcc { get; set; }
     public string Subject { get; set; } = string.Empty;
     public string HtmlBody { get; set; } = string.Empty;
     public string Provider { get; set; } = string.Empty;
@@ -41,4 +51,8 @@ public class EmailLog
     public string? FailureReason { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? SentAtUtc { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [Obsolete("Use To.")]
+    public string Recipient { get => To; set => To = value; }
 }

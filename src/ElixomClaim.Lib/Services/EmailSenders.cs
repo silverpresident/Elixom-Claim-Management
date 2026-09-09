@@ -22,7 +22,8 @@ public class SmtpEmailSender : IEmailSender
         {
             using var client = new SmtpClient(_options.SmtpHost, _options.SmtpPort) { EnableSsl = _options.SmtpUseSsl };
             if (!string.IsNullOrWhiteSpace(_options.SmtpUserName)) client.Credentials = new NetworkCredential(_options.SmtpUserName, _options.SmtpPassword);
-            using var mail = new MailMessage(_options.FromAddress, message.Recipient, message.Subject, message.HtmlBody) { IsBodyHtml = true };
+            using var mail = new MailMessage(message.From, message.To, message.Subject, message.HtmlBody) { IsBodyHtml = true };
+            AddAddresses(mail.CC, message.Cc); AddAddresses(mail.Bcc, message.Bcc);
             await client.SendMailAsync(mail, cancellationToken);
             return new(true);
         }
@@ -31,6 +32,11 @@ public class SmtpEmailSender : IEmailSender
             _logger.LogWarning(exception, "SMTP delivery failed for queued email.");
             return new(false, "SMTP delivery failed.");
         }
+    }
+
+    private static void AddAddresses(MailAddressCollection destination, string? addresses)
+    {
+        if (!string.IsNullOrWhiteSpace(addresses)) destination.Add(addresses);
     }
 }
 
@@ -47,7 +53,8 @@ public class AcsEmailSender : IEmailSender
         {
             var client = new EmailClient(_options.AcsConnectionString);
             var content = new EmailContent(message.Subject) { Html = message.HtmlBody };
-            var email = new Azure.Communication.Email.EmailMessage(_options.FromAddress, message.Recipient, content);
+            var email = new Azure.Communication.Email.EmailMessage(message.From, message.To, content);
+            AddRecipients(email.Recipients.CC, message.Cc); AddRecipients(email.Recipients.BCC, message.Bcc);
             var operation = await client.SendAsync(WaitUntil.Completed, email, cancellationToken);
             return operation.Value.Status == EmailSendStatus.Succeeded ? new(true) : new(false, "ACS delivery did not succeed.");
         }
@@ -56,6 +63,12 @@ public class AcsEmailSender : IEmailSender
             _logger.LogWarning(exception, "ACS delivery failed for queued email.");
             return new(false, "ACS delivery failed.");
         }
+    }
+
+    private static void AddRecipients(IList<EmailAddress> destination, string? addresses)
+    {
+        if (string.IsNullOrWhiteSpace(addresses)) return;
+        foreach (var address in addresses.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) destination.Add(new EmailAddress(address));
     }
 }
 

@@ -47,7 +47,7 @@ The product decision is literal source-model fidelity: audit records use `Entity
 
 | Item | Status | Updated | Scope, evidence, or blocker |
 | --- | --- | --- | --- |
-| 1 | In progress | 2026-09-08 (/root) | User confirmed there is no existing schema or data to preserve, so the EF migration ledger was reset to clean `InitialCreate` (`20260908125717`) plus append-only audit trigger (`20260908125738`) before literal-model implementation. Verified idempotent script contains `AuditRecords` and `TR_AuditRecords_PreventMutation`; focused migration/relational tests passed (6). ADR 0008/runbook retain future production-rehearsal controls. Remaining: implement the literal audit/email model and record the staging rehearsal before item completion. |
+| 1 | Blocked | 2026-09-09 (/root) | The local vertical slice adds literal `EntityType`/`EntityId`/`OccurredAtUtc` and message header fields plus additive migration `20260909124540_StructuredAuditAndEmailHeaders`; legacy source columns are retained and backfilled. `dotnet build ElixomClaim.slnx --no-restore` passed and focused audit/outbox tests passed (5). Completion remains blocked by the required independently observed production-shaped Azure SQL restore rehearsal, designated release owner, and safe email-provider test account. |
 | 2 | Not started | — | — |
 | 3 | Not started | — | — |
 | 4 | Not started | — | — |

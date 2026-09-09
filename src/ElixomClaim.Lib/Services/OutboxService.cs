@@ -20,10 +20,10 @@ public class OutboxService : IOutboxService
         var due = await _dbContext.EmailOutboxItems.Where(e => e.Status == EmailOutboxStatus.Pending && e.AvailableAtUtc <= _clock.UtcNow).OrderBy(e => e.CreatedAtUtc).Take(batchSize).ToListAsync(cancellationToken);
         foreach (var item in due)
         {
-            if (!IsValidEmail(item.Recipient)) { await RecordOutcomeAsync(item, EmailOutboxStatus.SkippedInvalidRecipient, "Invalid recipient address.", cancellationToken); continue; }
+            if (!IsValidEmail(item.To)) { await RecordOutcomeAsync(item, EmailOutboxStatus.SkippedInvalidRecipient, "Invalid recipient address.", cancellationToken); continue; }
             item.Status = EmailOutboxStatus.Processing;
             await _dbContext.SaveChangesAsync(cancellationToken);
-            var result = await _sender.SendAsync(new EmailMessage(item.Recipient, item.Subject, item.HtmlBody), cancellationToken);
+            var result = await _sender.SendAsync(new EmailMessage(item.To, item.From, item.Cc, item.Bcc, item.Subject, item.HtmlBody), cancellationToken);
             if (result.Succeeded) await RecordOutcomeAsync(item, EmailOutboxStatus.Sent, null, cancellationToken);
             else
             {
@@ -48,7 +48,7 @@ public class OutboxService : IOutboxService
 
     private Task AddLogAsync(EmailOutboxItem item, EmailOutboxStatus status, string? reason, CancellationToken cancellationToken)
     {
-        _dbContext.EmailLogs.Add(new EmailLog { OutboxItemId = item.Id, Recipient = item.Recipient, Subject = item.Subject, HtmlBody = item.HtmlBody, Provider = _sender.ProviderName, RelatedEntityType = item.RelatedEntityType, RelatedEntityId = item.RelatedEntityId, AttemptNumber = item.AttemptCount + 1, Status = status, FailureReason = reason, CreatedAtUtc = _clock.UtcNow, SentAtUtc = status == EmailOutboxStatus.Sent ? _clock.UtcNow : null });
+        _dbContext.EmailLogs.Add(new EmailLog { OutboxItemId = item.Id, To = item.To, From = item.From, Cc = item.Cc, Bcc = item.Bcc, Subject = item.Subject, HtmlBody = item.HtmlBody, Provider = _sender.ProviderName, RelatedEntityType = item.RelatedEntityType, RelatedEntityId = item.RelatedEntityId, AttemptNumber = item.AttemptCount + 1, Status = status, FailureReason = reason, CreatedAtUtc = _clock.UtcNow, SentAtUtc = status == EmailOutboxStatus.Sent ? _clock.UtcNow : null });
         _logger.LogInformation("Outbox email {OutboxId} finished with {Status}", item.Id, status);
         return Task.CompletedTask;
     }
