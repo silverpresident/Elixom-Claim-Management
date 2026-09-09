@@ -139,7 +139,7 @@ public class CollectionService : ICollectionService
                 });
             }
             await _dbContext.SaveChangesAsync(cancellationToken);
-            await _auditService.LogAsync("COLLECTION_RECORDED", $"CollectionTransaction:{collection.Id}", afterState: new { collection.Id, collection.CollectionClientId, collection.Amount, collection.ProcessingFee, collection.Status }, actorUserId: teller.Id.ToString(), cancellationToken: cancellationToken);
+            await _auditService.LogAsync("COLLECTION_RECORDED", new AuditEntity("CollectionTransaction", collection.Id.ToString()), afterState: new { collection.Id, collection.CollectionClientId, collection.Amount, collection.ProcessingFee, collection.Status }, actorUserId: teller.Id.ToString(), cancellationToken: cancellationToken);
             if (transaction is not null) await transaction.CommitAsync(cancellationToken);
             _logger.LogInformation("Collection {CollectionId} recorded for client {CollectionClientId}", collection.Id, client.Id);
             return Result.Success(collection);
@@ -177,7 +177,7 @@ public class CollectionService : ICollectionService
             });
         }
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await _auditService.LogAsync("COLLECTION_RECEIPT_REISSUED", $"CollectionTransaction:{collection.Id}", actorUserId: actor.Id.ToString(), cancellationToken: cancellationToken);
+        await _auditService.LogAsync("COLLECTION_RECEIPT_REISSUED", new AuditEntity("CollectionTransaction", collection.Id.ToString()), actorUserId: actor.Id.ToString(), cancellationToken: cancellationToken);
         return Result.Success();
     }
 
@@ -218,7 +218,7 @@ public class CollectionService : ICollectionService
         foreach (var recipient in recipients)
             _dbContext.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient!, Subject = $"Collection receipt #{collection.SequenceNo}", HtmlBody = ComposeReceiptHtml(collection, collection.CollectionClient), RelatedEntityType = "CollectionTransaction", RelatedEntityId = collection.Id.ToString(), IdempotencyKey = $"{prefix}:{recipient!.ToUpperInvariant()}", Status = IsValidEmail(recipient!) ? EmailOutboxStatus.Pending : EmailOutboxStatus.SkippedInvalidRecipient, FailureReason = IsValidEmail(recipient!) ? null : "Invalid recipient address.", AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await _auditService.LogAsync("COLLECTION_RECEIPT_QUEUE_REQUESTED", $"CollectionTransaction:{collectionId}", actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
+        await _auditService.LogAsync("COLLECTION_RECEIPT_QUEUE_REQUESTED", new AuditEntity("CollectionTransaction", collectionId.ToString()), actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
         _logger.LogInformation("Approved collection receipt queue requested for {CollectionId} by {ActorId}", collectionId, actorUserId);
         return Result.Success(recipients.Count);
     }
