@@ -1,8 +1,10 @@
 using ElixomClaim.Lib.Common;
+using ElixomClaim.Lib.Configuration;
 using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ElixomClaim.Lib.Services;
 
@@ -11,8 +13,9 @@ public class JobPaymentService : IJobPaymentService
     private readonly ApplicationDbContext _db;
     private readonly IAuditService _audit;
     private readonly ISystemClock _clock;
+    private readonly NotificationOptions _notificationOptions;
     private readonly ILogger<JobPaymentService> _logger;
-    public JobPaymentService(ApplicationDbContext db, IAuditService audit, ISystemClock clock, ILogger<JobPaymentService> logger) { _db = db; _audit = audit; _clock = clock; _logger = logger; }
+    public JobPaymentService(ApplicationDbContext db, IAuditService audit, ISystemClock clock, ILogger<JobPaymentService> logger, IOptions<NotificationOptions>? notificationOptions = null) { _db = db; _audit = audit; _clock = clock; _logger = logger; _notificationOptions = notificationOptions?.Value ?? new NotificationOptions(); }
 
     public async Task<Result<JobPayment>> CreateAsync(CreateJobPaymentCommand c, CancellationToken ct = default)
     {
@@ -93,7 +96,7 @@ public class JobPaymentService : IJobPaymentService
         if (await _db.EmailOutboxItems.AnyAsync(item => item.IdempotencyKey.StartsWith(prefix), ct)) return Result.Success(0);
         var recipients = job.PayeeUser is not null ? new[] { job.PayeeUser.Email } : await _db.CollectionClientUsers.Where(item => item.CollectionClientId == job.CollectionClientId && item.User.IsActive).Select(item => item.User.Email).ToArrayAsync(ct);
         foreach (var recipient in recipients.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase))
-            _db.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient, Subject = $"Payout summary #{job.SequenceNo}", HtmlBody = ComposePayoutHtml(job), RelatedEntityType = "JobPayment", RelatedEntityId = job.Id.ToString(), IdempotencyKey = $"{prefix}:{recipient.ToUpperInvariant()}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
+            _db.EmailOutboxItems.Add(new EmailOutboxItem { To = recipient, From = _notificationOptions.FromAddress, Bcc = _notificationOptions.SystemCopyAddress, Subject = $"Payout summary #{job.SequenceNo}", HtmlBody = ComposePayoutHtml(job), RelatedEntityType = "JobPayment", RelatedEntityId = job.Id.ToString(), IdempotencyKey = $"{prefix}:{recipient.ToUpperInvariant()}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
         await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_SUMMARY_QUEUE_REQUESTED", job, actorUserId, ct);
         _logger.LogInformation("Approved payment summary queue requested for {JobPaymentId} by {ActorId}", jobPaymentId, actorUserId);
         return Result.Success(recipients.Length);
@@ -254,7 +257,7 @@ public class JobPaymentService : IJobPaymentService
         var originals = await _db.EmailOutboxItems.Where(e => e.RelatedEntityType == "JobPayment" && e.RelatedEntityId == job.Id.ToString() && e.Status != EmailOutboxStatus.SkippedInvalidRecipient).ToListAsync(ct);
         if (originals.Count == 0) return Result.Failure("No previously authorized payout notification is available to resend.");
         foreach (var original in originals)
-            _db.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = original.Recipient, Subject = original.Subject, HtmlBody = original.HtmlBody, RelatedEntityType = original.RelatedEntityType, RelatedEntityId = original.RelatedEntityId, IdempotencyKey = $"job-payment-resend:{job.Id}:{Guid.NewGuid():N}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
+            _db.EmailOutboxItems.Add(new EmailOutboxItem { To = original.To, From = _notificationOptions.FromAddress, Bcc = _notificationOptions.SystemCopyAddress, Subject = original.Subject, HtmlBody = original.HtmlBody, RelatedEntityType = original.RelatedEntityType, RelatedEntityId = original.RelatedEntityId, IdempotencyKey = $"job-payment-resend:{job.Id}:{Guid.NewGuid():N}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
         await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_NOTIFICATION_RESEND_QUEUED", job, actorUserId, ct); return Result.Success();
     }
 
@@ -296,7 +299,7 @@ public class JobPaymentService : IJobPaymentService
                 ? new[] { job.PayeeUser.Email }
                 : await _db.CollectionClientUsers.Where(x => x.CollectionClientId == job.CollectionClientId && x.User.IsActive).Select(x => x.User.Email).ToArrayAsync(ct);
             foreach (var recipient in recipients.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
-                _db.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient, Subject = $"Payout summary #{job.SequenceNo}", HtmlBody = ComposePayoutHtml(job), RelatedEntityType = "JobPayment", RelatedEntityId = job.Id.ToString(), IdempotencyKey = $"job-payment-paid:{job.Id}:{recipient.ToUpperInvariant()}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
+                _db.EmailOutboxItems.Add(new EmailOutboxItem { To = recipient, From = _notificationOptions.FromAddress, Bcc = _notificationOptions.SystemCopyAddress, Subject = $"Payout summary #{job.SequenceNo}", HtmlBody = ComposePayoutHtml(job), RelatedEntityType = "JobPayment", RelatedEntityId = job.Id.ToString(), IdempotencyKey = $"job-payment-paid:{job.Id}:{recipient.ToUpperInvariant()}", Status = EmailOutboxStatus.Pending, AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
             await _db.SaveChangesAsync(ct); await AuditAsync("JOB_PAYMENT_PAID", job, actorUserId, ct); if (transaction is not null) await transaction.CommitAsync(ct); return Result.Success();
         }
         catch (DbUpdateConcurrencyException) { if (transaction is not null) await transaction.RollbackAsync(ct); return Result.Failure("The job payment was changed by another operation; refresh and retry."); }
