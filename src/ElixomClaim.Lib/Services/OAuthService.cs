@@ -106,7 +106,7 @@ public class OAuthService : IOAuthService
 
         await _auditService.LogAsync(
             action: "OAUTH_CLIENT_REGISTERED",
-            target: $"OAuthClient:{clientId}",
+            entity: new AuditEntity("OAuthClient", clientId),
             afterState: new { clientId, clientName = client.ClientName, redirectUris = urisList },
             cancellationToken: cancellationToken);
 
@@ -218,7 +218,7 @@ public class OAuthService : IOAuthService
 
         await _auditService.LogAsync(
             action: "OAUTH_CONSENT_GRANTED",
-            target: $"OAuthClient:{clientId}",
+            entity: new AuditEntity("OAuthClient", clientId),
             actorUserId: userId,
             afterState: new { clientId, scope },
             cancellationToken: cancellationToken);
@@ -281,7 +281,7 @@ public class OAuthService : IOAuthService
 
         await _auditService.LogAsync(
             action: "OAUTH_AUTH_CODE_ISSUED",
-            target: $"OAuthClient:{clientId}",
+            entity: new AuditEntity("OAuthClient", clientId),
             actorUserId: userId,
             afterState: new { clientId, scope, redirectUri },
             cancellationToken: cancellationToken);
@@ -368,7 +368,7 @@ public class OAuthService : IOAuthService
 
         await _auditService.LogAsync(
             action: "OAUTH_TOKENS_ISSUED",
-            target: $"OAuthClient:{clientId}",
+            entity: new AuditEntity("OAuthClient", clientId),
             actorUserId: authCode.UserId,
             afterState: new { clientId, scope = authCode.Scope, familyId },
             cancellationToken: cancellationToken);
@@ -451,7 +451,7 @@ public class OAuthService : IOAuthService
 
         await _auditService.LogAsync(
             action: "OAUTH_TOKENS_REFRESHED",
-            target: $"OAuthClient:{clientId}",
+            entity: new AuditEntity("OAuthClient", clientId),
             actorUserId: tokenRecord.UserId,
             afterState: new { clientId, scope = tokenRecord.Scope, familyId = tokenRecord.RefreshTokenFamilyId },
             cancellationToken: cancellationToken);
@@ -482,7 +482,7 @@ public class OAuthService : IOAuthService
 
         await _auditService.LogAsync(
             action: "OAUTH_TOKEN_REVOKED",
-            target: $"OAuthClient:{tokenRecord.ClientId}",
+            entity: new AuditEntity("OAuthClient", tokenRecord.ClientId),
             actorUserId: tokenRecord.UserId,
             cancellationToken: cancellationToken);
 

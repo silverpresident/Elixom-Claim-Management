@@ -24,7 +24,7 @@ public class AuditService : IAuditService
         _logger = logger;
     }
 
-    public async Task LogAsync(
+    public Task LogAsync(
         string action,
         string target,
         object? beforeState = null,
@@ -34,16 +34,31 @@ public class AuditService : IAuditService
         string? correlationId = null,
         string? ipAddress = null,
         bool isMcpOperation = false,
+        CancellationToken cancellationToken = default) =>
+        LogAsync(action, AuditEntity.ParseLegacyTarget(target), beforeState, afterState, actorUserId, actorEmail, correlationId, ipAddress, isMcpOperation, cancellationToken);
+
+    public async Task LogAsync(
+        string action,
+        AuditEntity entity,
+        object? beforeState = null,
+        object? afterState = null,
+        string? actorUserId = null,
+        string? actorEmail = null,
+        string? correlationId = null,
+        string? ipAddress = null,
+        bool isMcpOperation = false,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(entity.EntityType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(entity.EntityId);
         var beforeJson = SerializeAndRedact(beforeState);
         var afterJson = SerializeAndRedact(afterState);
 
         var record = new AuditRecord
         {
             Action = action,
-            EntityType = ParseEntityType(target),
-            EntityId = ParseEntityId(target),
+            EntityType = entity.EntityType,
+            EntityId = entity.EntityId,
             BeforeStateJson = beforeJson,
             AfterStateJson = afterJson,
             ActorUserId = actorUserId,
@@ -148,10 +163,4 @@ public class AuditService : IAuditService
         return SensitiveKeys.Any(s => key.IndexOf(s, StringComparison.OrdinalIgnoreCase) >= 0);
     }
 
-    private static string ParseEntityType(string target) => target.Split(':', 2)[0].Trim();
-    private static string ParseEntityId(string target)
-    {
-        var parts = target.Split(':', 2);
-        return parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[1]) ? parts[1].Trim() : target.Trim();
-    }
 }

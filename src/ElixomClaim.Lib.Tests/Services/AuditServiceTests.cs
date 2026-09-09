@@ -57,7 +57,7 @@ public class AuditServiceTests
 
         await service.LogAsync(
             action: "USER_UPDATE",
-            target: "User:123",
+            entity: new AuditEntity("User", "123"),
             beforeState: beforeState,
             afterState: afterState,
             actorUserId: "admin-1",

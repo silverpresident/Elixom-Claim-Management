@@ -32,6 +32,19 @@ public class ActorResolverTests
 
         public Task LogAsync(
             string action,
+            AuditEntity entity,
+            object? beforeState = null,
+            object? afterState = null,
+            string? actorUserId = null,
+            string? actorEmail = null,
+            string? correlationId = null,
+            string? ipAddress = null,
+            bool isMcpOperation = false,
+            CancellationToken cancellationToken = default) =>
+            LogAsync(action, $"{entity.EntityType}:{entity.EntityId}", beforeState, afterState, actorUserId, actorEmail, correlationId, ipAddress, isMcpOperation, cancellationToken);
+
+        public Task LogAsync(
+            string action,
             string target,
             object? beforeState = null,
             object? afterState = null,
