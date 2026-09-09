@@ -46,7 +46,7 @@ The full suite completed without dependency-vulnerability, redundant-package, or
 | Durable operations | Implemented | Actor-owned idempotent reservations, status reads, approved salary run, and durable outbox wake-up lifecycle exist. The worker leases, completes/fails, and reclaims stale wake-ups; restart recovery is tested. |
 | Versioned API/OpenAPI | Implemented | `/api/v1` has approved claims, collection, job-payment, template, payroll, and operation operations behind `api:access`; commands use idempotency. Authenticated `/openapi/v1.json` excludes MCP. |
 | Privacy/CDN/favicon/HTML-only frontend | Implemented | Privacy page/footer, Jamaican contact, Bootstrap/jQuery CDN with SRI, SVG favicon, semantic views, and HTML print are present. |
-| Audit record model and visibility | Partial | Trigger/redaction/audit events and additive `EntityType`/`EntityId`/`OccurredAtUtc` persistence migration now exist. Manager domain filtering and removal of compatibility use remain Sprint 13 work. |
+| Audit record model and visibility | Partial | Trigger/redaction/audit events, additive `EntityType`/`EntityId`/`OccurredAtUtc` persistence, structured production projections, and the typed `AuditEntity` service contract now exist. Remaining legacy callers and Manager domain filtering remain Sprint 13 work. |
 | Email record header model | Partial | Records and adapters now have `To`/`From`/`Cc`/`Bcc` fields, but queue callers still use compatibility recipient paths and configured system copies are not yet Bcc-only. |
 | Payout detail rendering | Partial | Print output now uses accessible responsive tables with category subtotals. The payout notification HTML still needs the equivalent table/subtotal and authorised-recipient/bank-detail fidelity. |
 | `ILogger<T>` coverage | Mostly implemented | Most concrete controllers/services/workers/tools log structured outcomes. A few remaining classes lack it; see finding 5. |
@@ -57,7 +57,7 @@ The full suite completed without dependency-vulnerability, redundant-package, or
 
 The source specification defines `EntityType`, `EntityId`, and `OccurredAtUtc`. [`AuditRecord.cs`](../src/ElixomClaim.Lib/Entities/AuditRecord.cs) and migration `20260909124540_StructuredAuditAndEmailHeaders` now persist those fields and retain compatibility properties/source columns for the transition. The append-only trigger remains in place.
 
-This remains incomplete until query projections stop using the legacy compatibility path, relational migration tests prove the backfill/trigger invariants, and the staging rehearsal succeeds. ADR 0008 and the [literal audit/email migration runbook](runbooks/literal-audit-email-migration.md) define the required additive, data-preserving approach.
+Production query projections now use structured fields, and relational tests prove the migration backfill can restore the append-only trigger. `AuditEntity` is the primary service contract and the OAuth lifecycle uses it directly. This remains incomplete until non-OAuth callers leave the marked string compatibility adapter and the staging rehearsal succeeds. ADR 0008 and the [literal audit/email migration runbook](runbooks/literal-audit-email-migration.md) define the required additive, data-preserving approach.
 
 ### 2. Literal email headers exist, but Bcc system copies are not implemented
 
@@ -99,6 +99,7 @@ The independent OAuth/MCP review runbook exists, but independent reviewer select
 - Sprint 12 is complete; standard MCP and the separately scoped API are implemented, documented, and tested.
 - Payout email data now includes linked payrolls (though not the final required table/subtotal presentation).
 - Payout print output now has accessible responsive tables, ordered payroll-entry rows, and category subtotals; focused `JobPaymentPrintViewTests` passed (3 tests) on 2026-09-09.
+- Audit projections now use literal entity/time fields, and OAuth lifecycle attribution uses the typed `AuditEntity` contract; focused audit/OAuth tests passed (10 tests) on 2026-09-09.
 - README/MEMORY now accurately state active delivery and the Sprint 13 release-fidelity scope.
 - Current full test evidence is 236 passing tests.
 
