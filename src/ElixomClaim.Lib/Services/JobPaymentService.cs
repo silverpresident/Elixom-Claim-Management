@@ -155,7 +155,7 @@ public class JobPaymentService : IJobPaymentService
             await _db.SaveChangesAsync(ct);
             await _audit.LogAsync(
                 "JOB_PAYMENT_CLAIMS_ATTACHED",
-                $"JobPayment:{job.Id}",
+                new AuditEntity("JobPayment", job.Id.ToString()),
                 afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid, ClaimIds = claimIds },
                 actorUserId: c.ActorUserId.ToString(),
                 cancellationToken: ct);
@@ -214,7 +214,7 @@ public class JobPaymentService : IJobPaymentService
             await _db.SaveChangesAsync(ct);
             await _audit.LogAsync(
                 "JOB_PAYMENT_COLLECTIONS_ATTACHED",
-                $"JobPayment:{job.Id}",
+                new AuditEntity("JobPayment", job.Id.ToString()),
                 afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid, CollectionTransactionIds = collectionIds },
                 actorUserId: c.ActorUserId.ToString(),
                 cancellationToken: ct);
@@ -343,7 +343,7 @@ public class JobPaymentService : IJobPaymentService
     }
     private async Task<Result<JobPayment>> ProcessingJobAsync(Guid actor, Guid id, CancellationToken ct) { var auth = await AuthorizeAsync(actor, ct); if (auth.IsFailure) return Result.Failure<JobPayment>(auth.Error); var job = await _db.JobPayments.SingleOrDefaultAsync(j => j.Id == id, ct); return job is null ? Result.Failure<JobPayment>("Job payment was not found.") : job.Status != JobPaymentStatus.Processing ? Result.Failure<JobPayment>("Only Processing job payments can be changed.") : Result.Success(job); }
     private async Task<Result> AuthorizeAsync(Guid actor, CancellationToken ct) { var role = await _db.Users.Where(u => u.Id == actor && u.IsActive).Select(u => (UserRole?)u.Role).SingleOrDefaultAsync(ct); return role is { } r && r.HasMinimumRole(UserRole.Manager) ? Result.Success() : Result.Failure("Manager access is required."); }
-    private Task AuditAsync(string action, JobPayment job, Guid actor, CancellationToken ct) => _audit.LogAsync(action, $"JobPayment:{job.Id}", afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid }, actorUserId: actor.ToString(), cancellationToken: ct);
+    private Task AuditAsync(string action, JobPayment job, Guid actor, CancellationToken ct) => _audit.LogAsync(action, new AuditEntity("JobPayment", job.Id.ToString()), afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid }, actorUserId: actor.ToString(), cancellationToken: ct);
     private static string? Trim(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private static JobPaymentReadModel ToReadModel(JobPayment job, bool canViewTransaction) => new(job.Id, job.SequenceNo, job.PayeeUserId, job.CollectionClientId, job.Status, job.JobTotal, job.ClientProcessingFee, job.TotalTxnProcessingFee, job.TotalDeductions, job.TotalPaid, job.PublicNote, canViewTransaction ? job.PaymentTransactionNumber : RedactTransactionNumber(job.PaymentTransactionNumber), job.CreatedAtUtc);
     private static string? RedactTransactionNumber(string? number) => string.IsNullOrEmpty(number) ? null : number.Length <= 4 ? "****" : "****" + number[^4..];
