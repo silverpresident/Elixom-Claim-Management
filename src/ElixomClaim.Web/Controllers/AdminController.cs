@@ -31,7 +31,7 @@ public class AdminController : Controller
     public async Task<IActionResult> Index()
     {
         ViewBag.UserCount = await _dbContext.Users.CountAsync();
-        ViewBag.RecentAuditCount = await _dbContext.AuditRecords.CountAsync(record => record.TimestampUtc >= DateTime.UtcNow.AddDays(-7));
+        ViewBag.RecentAuditCount = await _dbContext.AuditRecords.CountAsync(record => record.OccurredAtUtc >= DateTime.UtcNow.AddDays(-7));
         ViewBag.PendingEmailCount = await _dbContext.EmailOutboxItems.CountAsync(item => item.Status == EmailOutboxStatus.Pending || item.Status == EmailOutboxStatus.Processing);
         return View();
     }
@@ -94,7 +94,7 @@ public class AdminController : Controller
     public async Task<IActionResult> AuditLogs()
     {
         var records = await _dbContext.AuditRecords
-            .OrderByDescending(a => a.TimestampUtc)
+            .OrderByDescending(a => a.OccurredAtUtc)
             .Take(200)
             .ToListAsync();
 
@@ -105,11 +105,12 @@ public class AdminController : Controller
             Id = r.Id,
             ActorEmail = r.ActorEmail,
             Action = r.Action,
-            Target = r.Target,
+            EntityType = r.EntityType,
+            EntityId = r.EntityId,
             CorrelationId = r.CorrelationId,
             IpAddress = r.IpAddress,
             IsMcpOperation = r.IsMcpOperation,
-            TimestampUtc = r.TimestampUtc,
+            OccurredAtUtc = r.OccurredAtUtc,
             // Strict projection: Manager sees operational metadata only; never email body, bank details, or state details
             BeforeStateJson = isAdministrator ? r.BeforeStateJson : null,
             AfterStateJson = isAdministrator ? r.AfterStateJson : null

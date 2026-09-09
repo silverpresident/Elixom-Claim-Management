@@ -12,6 +12,29 @@ namespace ElixomClaim.Lib.Migrations
         {
             // Retain legacy source columns for one release.  This is deliberately
             // additive: historical audit and delivery records are never rewritten.
+            // The append-only trigger is temporarily replaced inside this migration
+            // transaction so the one-time structured-field backfill can run.
+            migrationBuilder.Sql("DROP TRIGGER [dbclaim].[TR_AuditRecords_PreventMutation];");
+
+            migrationBuilder.AlterColumn<string>(
+                name: "Target",
+                schema: "dbclaim",
+                table: "AuditRecords",
+                type: "nvarchar(200)",
+                maxLength: 200,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "nvarchar(200)",
+                oldMaxLength: 200);
+
+            migrationBuilder.AlterColumn<DateTime>(
+                name: "TimestampUtc",
+                schema: "dbclaim",
+                table: "AuditRecords",
+                type: "datetime2",
+                nullable: true,
+                oldClrType: typeof(DateTime),
+                oldType: "datetime2");
 
             migrationBuilder.AddColumn<string>(
                 name: "From",
@@ -116,6 +139,17 @@ namespace ElixomClaim.Lib.Migrations
                 UPDATE [dbclaim].[EmailLogs] SET [To] = [Recipient];
                 """);
 
+            migrationBuilder.Sql("""
+                CREATE TRIGGER [dbclaim].[TR_AuditRecords_PreventMutation]
+                ON [dbclaim].[AuditRecords]
+                AFTER UPDATE, DELETE
+                AS
+                BEGIN
+                    SET NOCOUNT ON;
+                    THROW 51000, 'Audit records are append-only and cannot be modified or deleted.', 1;
+                END;
+                """);
+
             migrationBuilder.CreateIndex(
                 name: "IX_AuditRecords_EntityType_EntityId_OccurredAtUtc",
                 schema: "dbclaim",
@@ -174,6 +208,8 @@ namespace ElixomClaim.Lib.Migrations
             migrationBuilder.DropColumn(name: "From", schema: "dbclaim", table: "EmailOutboxItems");
             migrationBuilder.DropColumn(name: "From", schema: "dbclaim", table: "EmailLogs");
             migrationBuilder.DropColumn(name: "OccurredAtUtc", schema: "dbclaim", table: "AuditRecords");
+            migrationBuilder.AlterColumn<DateTime>(name: "TimestampUtc", schema: "dbclaim", table: "AuditRecords", type: "datetime2", nullable: false, defaultValue: new DateTime(1, 1, 1), oldClrType: typeof(DateTime), oldType: "datetime2", oldNullable: true);
+            migrationBuilder.AlterColumn<string>(name: "Target", schema: "dbclaim", table: "AuditRecords", type: "nvarchar(200)", maxLength: 200, nullable: false, defaultValue: "", oldClrType: typeof(string), oldType: "nvarchar(200)", oldMaxLength: 200, oldNullable: true);
         }
     }
 }

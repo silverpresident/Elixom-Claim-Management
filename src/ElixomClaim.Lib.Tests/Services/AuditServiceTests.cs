@@ -69,7 +69,9 @@ public class AuditServiceTests
         var record = await db.AuditRecords.FirstOrDefaultAsync();
         Assert.NotNull(record);
         Assert.Equal("USER_UPDATE", record.Action);
-        Assert.Equal("User:123", record.Target);
+        Assert.Equal("User", record.EntityType);
+        Assert.Equal("123", record.EntityId);
+        Assert.NotEqual(default, record.OccurredAtUtc);
         Assert.Equal("admin-1", record.ActorUserId);
         Assert.Equal("admin@elixom.com", record.ActorEmail);
         Assert.Equal("corr-789", record.CorrelationId);

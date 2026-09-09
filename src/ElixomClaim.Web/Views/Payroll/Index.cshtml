@@ -18,5 +18,5 @@
         }
         </tbody></table></div> }
     </div></section>
-    @if (Model.IsHistory && Model.AuditRecords.Any()) { <section class="card shadow-sm border-0"><div class="card-header bg-light"><h5 class="mb-0">Recent Payroll Audit Events</h5></div><ul class="list-group list-group-flush">@foreach (var audit in Model.AuditRecords) { <li class="list-group-item d-flex justify-content-between"><span><strong>@audit.Action</strong> — <small class="text-muted">@audit.Target</small></span><time datetime="@audit.TimestampUtc.ToString("O")" class="small text-muted">@audit.TimestampUtc.ToString("yyyy-MM-dd HH:mm") UTC</time></li> }</ul></section> }
+    @if (Model.IsHistory && Model.AuditRecords.Any()) { <section class="card shadow-sm border-0"><div class="card-header bg-light"><h5 class="mb-0">Recent Payroll Audit Events</h5></div><ul class="list-group list-group-flush">@foreach (var audit in Model.AuditRecords) { <li class="list-group-item d-flex justify-content-between"><span><strong>@audit.Action</strong> — <small class="text-muted">@audit.EntityType:@audit.EntityId</small></span><time datetime="@audit.OccurredAtUtc.ToString("O")" class="small text-muted">@audit.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</time></li> }</ul></section> }
 </div>

@@ -33,7 +33,7 @@ public sealed class PayrollController : Controller
             IsHistory = isHistory,
             Payrolls = await payrolls.OrderByDescending(payroll => payroll.GeneratedAtUtc).Take(50).ToListAsync(),
             AuditRecords = isHistory
-                ? await _db.AuditRecords.AsNoTracking().Where(record => record.Target.StartsWith("Payroll:")).OrderByDescending(record => record.TimestampUtc).Take(20).ToListAsync()
+                ? await _db.AuditRecords.AsNoTracking().Where(record => record.EntityType == "Payroll").OrderByDescending(record => record.OccurredAtUtc).Take(20).ToListAsync()
                 : []
         });
     }

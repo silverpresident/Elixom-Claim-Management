@@ -54,7 +54,8 @@ public sealed class AuditRecordRelationalPersistenceTests : IAsyncLifetime
         context.AuditRecords.Add(new AuditRecord
         {
             Action = "TEST_AUDIT_APPEND_ONLY",
-            Target = "audit-record-test"
+            EntityType = "AuditRecord",
+            EntityId = "audit-record-test"
         });
         await context.SaveChangesAsync();
 

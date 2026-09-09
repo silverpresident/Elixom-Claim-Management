@@ -39,10 +39,10 @@
                         @foreach (var log in Model)
                         {
                             <tr>
-                                <td>@log.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                <td>@log.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
                                 <td>@(log.ActorEmail ?? "System")</td>
                                 <td><span class="badge bg-secondary">@log.Action</span></td>
-                                <td><code>@log.Target</code></td>
+                                <td><code>@log.EntityType:@log.EntityId</code></td>
                                 <td><small class="text-muted">@log.CorrelationId</small></td>
                                 <td>
                                     @if (log.IsMcpOperation)

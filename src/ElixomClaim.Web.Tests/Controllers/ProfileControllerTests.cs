@@ -134,7 +134,8 @@ public class ProfileControllerTests
 
         var auditLog = await db.AuditRecords.FirstOrDefaultAsync(a => a.Action == "USER_BANK_DETAILS_UPDATED");
         Assert.NotNull(auditLog);
-        Assert.Contains(user.Id.ToString(), auditLog.Target);
+        Assert.Equal("User", auditLog.EntityType);
+        Assert.Equal(user.Id.ToString(), auditLog.EntityId);
         Assert.NotNull(auditLog.AfterStateJson);
         Assert.Contains("\"BankAccountNumber\":\"[REDACTED]\"", auditLog.AfterStateJson);
         Assert.DoesNotContain("987654321", auditLog.AfterStateJson);
