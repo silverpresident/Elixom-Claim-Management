@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Net.Http.Json;
 using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
@@ -44,14 +45,27 @@ public class ApiEndpointIntegrationTests
         var response = await client.GetAsync("/openapi/v1.json");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var document = await response.Content.ReadAsStringAsync();
-        Assert.Contains("/api/v1/claims", document);
-        Assert.Contains("/api/v1/collections", document);
-        Assert.Contains("/api/v1/job-payments", document);
-        Assert.Contains("/api/v1/email-templates/preview", document);
-        Assert.Contains("/api/v1/payroll/run", document);
-        Assert.Contains("/api/v1/operations", document);
-        Assert.DoesNotContain("/mcp", document);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var paths = document.RootElement.GetProperty("paths");
+        Assert.Equal(new Dictionary<string, string[]>
+        {
+            ["/api/v1/claims"] = ["get", "post"],
+            ["/api/v1/claims/{id}"] = ["get"],
+            ["/api/v1/claims/{id}/submit"] = ["post"],
+            ["/api/v1/collections"] = ["get"],
+            ["/api/v1/collections/{id}"] = ["get"],
+            ["/api/v1/job-payments"] = ["get"],
+            ["/api/v1/job-payments/{id}"] = ["get"],
+            ["/api/v1/email-templates/preview"] = ["post"],
+            ["/api/v1/email-templates/queue"] = ["post"],
+            ["/api/v1/payroll/preview"] = ["post"],
+            ["/api/v1/payroll/run"] = ["post"],
+            ["/api/v1/operations"] = ["post"],
+            ["/api/v1/operations/{idempotencyKey}"] = ["get"]
+        }, paths.EnumerateObject().ToDictionary(
+            path => path.Name,
+            path => path.Value.EnumerateObject().Select(operation => operation.Name).Order().ToArray()));
+        Assert.False(paths.TryGetProperty("/mcp", out _));
     }
 
     [Fact]
@@ -433,8 +447,13 @@ public class ApiEndpointIntegrationTests
         await using var transport = new HttpClientTransport(new HttpClientTransportOptions { Endpoint = new Uri("http://localhost/mcp") }, client);
         await using var mcp = await McpClient.CreateAsync(transport);
         var tools = await mcp.ListToolsAsync();
-        Assert.Contains(tools, tool => tool.Name == "claims_list");
-        Assert.Contains(tools, tool => tool.Name == "operations_status");
+        Assert.Equal(new[]
+        {
+            "claims_get", "claims_list", "claims_submit", "collections_get", "collections_list",
+            "email_preview", "email_queue", "job_payments_get", "job_payments_list",
+            "operations_outbox_wakeup", "operations_salary_generation", "operations_status",
+            "payroll_preview", "payroll_run"
+        }, tools.Select(tool => tool.Name).Order());
     }
 
     [Fact]

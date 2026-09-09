@@ -9,7 +9,7 @@
 
 The core claims, collections, job-payment, payroll, identity, audit, notification, browser UI, OAuth, and MCP workflows are substantially implemented. The solution has the required .NET 10 Lib/Web/test-project split, EF Core `dbclaim` model, Google allow-list sign-in, hierarchical roles, durable email outbox, HTML print views, a clean Guid-based migration baseline, and a standard authenticated MCP server.
 
-The Gemini functional specification is now **complete by implementation evidence**. All four domain workflows, role boundaries, HTML-only receipt/email pipeline, OAuth/MCP identity boundary, audit trail, and frontend requirements have a corresponding implementation path. Remaining work is release/readiness oriented: the independent OAuth/security review remains open, and the repository's additional Sprint 12 REST API/MCP transport contract and interoperability work is not yet finished.
+The Gemini functional specification is now **complete by implementation evidence**. All four domain workflows, role boundaries, HTML-only receipt/email pipeline, OAuth/MCP identity boundary, audit trail, and frontend requirements have a corresponding implementation path. Remaining work is release/readiness oriented: the independent OAuth/security review remains open. The repository's additional Sprint 12 REST API/MCP endpoint-contract and conforming-client interoperability coverage is complete.
 
 ## Requirement coverage
 
@@ -41,7 +41,7 @@ The Gemini functional specification is now **complete by implementation evidence
 ## Differences and delivery risks
 
 1. **Independent security review remains.** The OAuth/MCP threat model requires a formally independent review before production release.
-2. **Additional repository API scope remains unfinished.** `/api/v1` includes claims, collection/job-payment reads, payroll preview/run, actor-owned operations, approved email preview/queue, durable command replay, and real HTTP boundary coverage under `api:access`. Complete endpoint-contract and conforming-client MCP transport coverage remain Sprint 12 work; these are additions beyond Gemini itself.
+2. **Additional repository API scope is complete.** `/api/v1` includes claims, collection/job-payment reads, payroll preview/run, actor-owned operations, approved email preview/queue, durable command replay, and real HTTP boundary coverage under `api:access`. Sprint 12 additionally verifies the complete published OpenAPI operation inventory and every stable MCP tool discovered through the official conforming SDK client; these are additions beyond Gemini itself.
 3. **Production migration topology remains an operational condition.** The clean migration baseline and relational audit test now pass, and production SQL Server migration execution holds a session-scoped `sp_getapplock`; deployment should still use a dedicated migration runner where operationally practical.
 
 ## Intentional/beneficial variations
@@ -60,7 +60,7 @@ The Gemini functional specification is now **complete by implementation evidence
 dotnet test ElixomClaim.slnx --no-restore
 ```
 
-- The complete solution suite passed: **126 Lib tests and 98 Web tests; 224 passed, 0 failed**. This includes the SQL Server/Testcontainers relational audit-migration test and current API/MCP integration coverage.
+- The complete solution suite passed: **236 tests, 0 failed**. This includes the SQL Server/Testcontainers relational audit-migration test and current API/MCP integration coverage.
 - No package or build warnings were observed after restore.
 
 ## Overall assessment
