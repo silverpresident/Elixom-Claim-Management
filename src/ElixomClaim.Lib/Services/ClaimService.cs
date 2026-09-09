@@ -45,7 +45,7 @@ public class ClaimService : IClaimService
 
         await _auditService.LogAsync(
             action: "CLAIM_DRAFT_CREATED",
-            target: $"Claim:{claim.Id}",
+            entity: new AuditEntity("Claim", claim.Id.ToString()),
             afterState: new { claim.Id, claim.Title, claim.Amount, claim.Status },
             actorUserId: command.ClaimantUserId.ToString(),
             cancellationToken: cancellationToken);
@@ -86,7 +86,7 @@ public class ClaimService : IClaimService
 
         await _auditService.LogAsync(
             action: "CLAIM_DRAFT_EDITED",
-            target: $"Claim:{claim.Id}",
+            entity: new AuditEntity("Claim", claim.Id.ToString()),
             beforeState: beforeState,
             afterState: new { claim.Title, claim.Description, claim.Amount, claim.DateOfJob },
             actorUserId: command.ActorUserId.ToString(),
@@ -120,7 +120,7 @@ public class ClaimService : IClaimService
 
         await _auditService.LogAsync(
             action: "CLAIM_SUBMITTED",
-            target: $"Claim:{claim.Id}",
+            entity: new AuditEntity("Claim", claim.Id.ToString()),
             afterState: new { claim.Id, claim.Status },
             actorUserId: command.ActorUserId.ToString(),
             cancellationToken: cancellationToken);
@@ -148,7 +148,7 @@ public class ClaimService : IClaimService
 
         await _auditService.LogAsync(
             action: "CLAIM_ACCEPTED",
-            target: $"Claim:{claim.Id}",
+            entity: new AuditEntity("Claim", claim.Id.ToString()),
             afterState: new { claim.Id, claim.Status },
             actorUserId: command.ActorUserId.ToString(),
             cancellationToken: cancellationToken);
@@ -182,7 +182,7 @@ public class ClaimService : IClaimService
 
         await _auditService.LogAsync(
             action: "CLAIM_REJECTED",
-            target: $"Claim:{claim.Id}",
+            entity: new AuditEntity("Claim", claim.Id.ToString()),
             afterState: new { claim.Id, claim.Status, claim.RejectionReason },
             actorUserId: command.ActorUserId.ToString(),
             cancellationToken: cancellationToken);
@@ -216,7 +216,7 @@ public class ClaimService : IClaimService
 
         await _auditService.LogAsync(
             action: "CLAIM_SOFT_DELETED",
-            target: $"Claim:{claim.Id}",
+            entity: new AuditEntity("Claim", claim.Id.ToString()),
             actorUserId: command.ActorUserId.ToString(),
             cancellationToken: cancellationToken);
 
@@ -246,7 +246,7 @@ public class ClaimService : IClaimService
 
         await _auditService.LogAsync(
             action: "CLAIM_COMMENT_ADDED",
-            target: $"Claim:{claim.Id}",
+            entity: new AuditEntity("Claim", claim.Id.ToString()),
             afterState: new { comment.Id, comment.IsPrivate },
             actorUserId: command.AuthorUserId.ToString(),
             cancellationToken: cancellationToken);
