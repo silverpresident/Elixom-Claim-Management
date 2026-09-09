@@ -30,7 +30,10 @@ public class CollectionServiceTests
         Assert.Equal(500m, result.Value!.Amount);
         Assert.Equal(12.50m, result.Value.ProcessingFee);
         Assert.Equal(CollectionStatus.Collected, result.Value.Status);
-        Assert.Equal(2, db.EmailOutboxItems.Count()); // payor and system-copy recipients
+        var receipt = Assert.Single(db.EmailOutboxItems);
+        Assert.Equal("payor@anonymized.example.com", receipt.To);
+        Assert.Equal("no-reply@anonymized.example.com", receipt.From);
+        Assert.Equal("system@anonymized.example.com", receipt.Bcc);
         Assert.Contains(db.AuditRecords, audit => audit.Action == "COLLECTION_RECORDED");
     }
 
@@ -112,7 +115,7 @@ public class CollectionServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Contains(db.EmailOutboxItems, item => item.Status == EmailOutboxStatus.SkippedInvalidRecipient);
-        Assert.Contains(db.EmailOutboxItems, item => item.Recipient == "system@anonymized.example.com" && item.Status == EmailOutboxStatus.Pending);
+        Assert.Contains(db.EmailOutboxItems, item => item.To == "no-reply@anonymized.example.com" && item.Bcc == "system@anonymized.example.com" && item.Status == EmailOutboxStatus.Pending);
         Assert.Contains(db.EmailLogs, log => log.Status == EmailOutboxStatus.SkippedInvalidRecipient);
     }
 

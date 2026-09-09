@@ -118,15 +118,16 @@ public class CollectionService : ICollectionService
                     CreatedAtUtc = _clock.UtcNow
                 });
             }
-            var recipients = new[] { collection.PayorEmail, _notificationOptions.SystemCopyAddress }
+            var recipients = new[] { collection.PayorEmail }
                 .Concat(await _dbContext.CollectionClientUsers.Where(a => a.CollectionClientId == client.Id && a.User.IsActive).Select(a => a.User.Email).ToListAsync(cancellationToken))
-                .Where(email => !string.IsNullOrWhiteSpace(email)).Distinct(StringComparer.OrdinalIgnoreCase);
+                .Where(email => !string.IsNullOrWhiteSpace(email)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (recipients.Count == 0 && !string.IsNullOrWhiteSpace(_notificationOptions.SystemCopyAddress)) recipients.Add(_notificationOptions.FromAddress);
             foreach (var recipient in recipients)
             {
                 var valid = IsValidEmail(recipient!);
                 _dbContext.EmailOutboxItems.Add(new EmailOutboxItem
                 {
-                    Recipient = recipient!,
+                    To = recipient!, From = _notificationOptions.FromAddress, Bcc = _notificationOptions.SystemCopyAddress,
                     Subject = $"Collection receipt #{collection.SequenceNo}",
                     HtmlBody = ComposeReceiptHtml(collection, client),
                     RelatedEntityType = "CollectionTransaction",
@@ -214,9 +215,10 @@ public class CollectionService : ICollectionService
         var prefix = $"approved-collection-receipt:{collectionId}:{idempotencyKey.Trim()}";
         if (await _dbContext.EmailOutboxItems.AnyAsync(item => item.IdempotencyKey.StartsWith(prefix), cancellationToken)) return Result.Success(0);
         var clientRecipients = await _dbContext.CollectionClientUsers.Where(item => item.CollectionClientId == collection.CollectionClientId && item.User.IsActive).Select(item => item.User.Email).ToListAsync(cancellationToken);
-        var recipients = new[] { collection.PayorEmail, _notificationOptions.SystemCopyAddress }.Concat(clientRecipients).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var recipients = new[] { collection.PayorEmail }.Concat(clientRecipients).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (recipients.Count == 0 && !string.IsNullOrWhiteSpace(_notificationOptions.SystemCopyAddress)) recipients.Add(_notificationOptions.FromAddress);
         foreach (var recipient in recipients)
-            _dbContext.EmailOutboxItems.Add(new EmailOutboxItem { Recipient = recipient!, Subject = $"Collection receipt #{collection.SequenceNo}", HtmlBody = ComposeReceiptHtml(collection, collection.CollectionClient), RelatedEntityType = "CollectionTransaction", RelatedEntityId = collection.Id.ToString(), IdempotencyKey = $"{prefix}:{recipient!.ToUpperInvariant()}", Status = IsValidEmail(recipient!) ? EmailOutboxStatus.Pending : EmailOutboxStatus.SkippedInvalidRecipient, FailureReason = IsValidEmail(recipient!) ? null : "Invalid recipient address.", AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
+            _dbContext.EmailOutboxItems.Add(new EmailOutboxItem { To = recipient!, From = _notificationOptions.FromAddress, Bcc = _notificationOptions.SystemCopyAddress, Subject = $"Collection receipt #{collection.SequenceNo}", HtmlBody = ComposeReceiptHtml(collection, collection.CollectionClient), RelatedEntityType = "CollectionTransaction", RelatedEntityId = collection.Id.ToString(), IdempotencyKey = $"{prefix}:{recipient!.ToUpperInvariant()}", Status = IsValidEmail(recipient!) ? EmailOutboxStatus.Pending : EmailOutboxStatus.SkippedInvalidRecipient, FailureReason = IsValidEmail(recipient!) ? null : "Invalid recipient address.", AvailableAtUtc = _clock.UtcNow, CreatedAtUtc = _clock.UtcNow });
         await _dbContext.SaveChangesAsync(cancellationToken);
         await _auditService.LogAsync("COLLECTION_RECEIPT_QUEUE_REQUESTED", new AuditEntity("CollectionTransaction", collectionId.ToString()), actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
         _logger.LogInformation("Approved collection receipt queue requested for {CollectionId} by {ActorId}", collectionId, actorUserId);
