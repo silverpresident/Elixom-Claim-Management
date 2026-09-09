@@ -270,11 +270,12 @@ public sealed class EmailTools
             .Select(a => a.User.Email)
             .ToListAsync(ct);
 
-        var recipients = new[] { collection.PayorEmail, _notificationOptions.SystemCopyAddress }
+        var recipients = new[] { collection.PayorEmail }
             .Concat(clientUsers)
             .Where(e => !string.IsNullOrWhiteSpace(e))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+        if (recipients.Count == 0 && !string.IsNullOrWhiteSpace(_notificationOptions.SystemCopyAddress)) recipients.Add(_notificationOptions.FromAddress);
 
         int queuedCount = 0;
         var html = ComposeReceiptHtml(collection, collection.CollectionClient);
@@ -288,7 +289,7 @@ public sealed class EmailTools
             {
                 _dbContext.EmailOutboxItems.Add(new EmailOutboxItem
                 {
-                    Recipient = recipient!,
+                    To = recipient!, From = _notificationOptions.FromAddress, Bcc = _notificationOptions.SystemCopyAddress,
                     Subject = subject,
                     HtmlBody = html,
                     RelatedEntityType = "CollectionTransaction",
@@ -354,7 +355,7 @@ public sealed class EmailTools
             {
                 _dbContext.EmailOutboxItems.Add(new EmailOutboxItem
                 {
-                    Recipient = recipient!,
+                    To = recipient!, From = _notificationOptions.FromAddress, Bcc = _notificationOptions.SystemCopyAddress,
                     Subject = subject,
                     HtmlBody = html,
                     RelatedEntityType = "JobPayment",
