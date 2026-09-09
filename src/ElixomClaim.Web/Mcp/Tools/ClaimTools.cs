@@ -109,7 +109,7 @@ public sealed class ClaimTools
                 c.CreatedAtUtc
             )).ToList();
 
-            await _audit.LogAsync("MCP_CLAIMS_LIST", $"Actor:{actor.Id}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+            await _audit.LogAsync("MCP_CLAIMS_LIST", new AuditEntity("User", actor.Id.ToString()), actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new ClaimListResponse(true, null, dtos);
         }
         catch (OperationCanceledException)
@@ -143,7 +143,7 @@ public sealed class ClaimTools
                 claim.CreatedAtUtc
             );
 
-            await _audit.LogAsync("MCP_CLAIM_GET", $"Claim:{request.ClaimId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+            await _audit.LogAsync("MCP_CLAIM_GET", new AuditEntity("Claim", request.ClaimId.ToString()), actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new ClaimDetailResponse(true, null, dto);
         }
         catch (OperationCanceledException)
@@ -166,7 +166,7 @@ public sealed class ClaimTools
                 return new ClaimOperationResponse(false, "Failed to submit claim. Only draft claims owned by the user can be submitted.");
             }
 
-            await _audit.LogAsync("MCP_CLAIM_SUBMIT", $"Claim:{request.ClaimId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+            await _audit.LogAsync("MCP_CLAIM_SUBMIT", new AuditEntity("Claim", request.ClaimId.ToString()), actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new ClaimOperationResponse(true, null);
         }
         catch (OperationCanceledException)

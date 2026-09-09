@@ -193,7 +193,7 @@ public sealed class EmailTools
             if (!string.IsNullOrWhiteSpace(cu)) recipients.Add(RedactEmail(cu));
         }
 
-        await _audit.LogAsync("MCP_EMAIL_PREVIEW", $"CollectionReceipt:{collectionId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+        await _audit.LogAsync("MCP_EMAIL_PREVIEW", new AuditEntity("CollectionTransaction", collectionId.ToString()), actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
         return new EmailPreviewResponse(true, null, subject, html, recipients.Distinct().ToList());
     }
 
@@ -236,7 +236,7 @@ public sealed class EmailTools
             }
         }
 
-        await _audit.LogAsync("MCP_EMAIL_PREVIEW", $"PaymentSummary:{jobPaymentId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+        await _audit.LogAsync("MCP_EMAIL_PREVIEW", new AuditEntity("JobPayment", jobPaymentId.ToString()), actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
         return new EmailPreviewResponse(true, null, subject, html, recipients.Distinct().ToList());
     }
 
@@ -304,7 +304,7 @@ public sealed class EmailTools
         }
 
         await _dbContext.SaveChangesAsync(ct);
-        await _audit.LogAsync("MCP_EMAIL_QUEUE_SEND", $"CollectionReceipt:{collectionId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+        await _audit.LogAsync("MCP_EMAIL_QUEUE_SEND", new AuditEntity("CollectionTransaction", collectionId.ToString()), actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
         return new EmailQueueSendResponse(true, null, queuedCount);
     }
 
@@ -370,7 +370,7 @@ public sealed class EmailTools
         }
 
         await _dbContext.SaveChangesAsync(ct);
-        await _audit.LogAsync("MCP_EMAIL_QUEUE_SEND", $"PaymentSummary:{jobPaymentId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+        await _audit.LogAsync("MCP_EMAIL_QUEUE_SEND", new AuditEntity("JobPayment", jobPaymentId.ToString()), actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
         return new EmailQueueSendResponse(true, null, queuedCount);
     }
 
