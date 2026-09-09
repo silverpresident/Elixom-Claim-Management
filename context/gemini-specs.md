@@ -59,7 +59,7 @@ Authentication for human users is strictly handled via **Google OAuth 2.0 SSO**.
 | **Teller** | Access the **Payment Clearing House**. Collect payee payments, view 24h collections, print/reissue HTML receipts. |
 | **Manager** | Inherits Teller capabilities. Review/accept/reject claims, review collections, build & manage Job Payments. |
 | **Accountant** | Inherits Manager capabilities. Manage Salary definitions, execute Payroll runs, schedule & execute Job Payments. |
-| **Administrator** | Access User Management (add/edit users, assign roles, block users), view system Audit Logs, full access. |
+| **Administrator** | Access User Management (add/edit users, assign roles, block users), view system Audit Records, full access. |
 
 ### 2.1 Configuration Bootstrapping (`appsettings.json`)
 
@@ -182,13 +182,13 @@ For AI Agent interactions via Model Context Protocol (MCP):
 * **Endpoint Paths:** `/oauth/authorize`, `/oauth/token`, and `/mcp`.
 * **OAuth Protocol:** Full OAuth 2.0 Authorization Code grant with mandatory PKCE (`S256` code challenge).
 * **Identity Inheritance:** MCP clients pass OAuth2 bearer tokens. The `McpAuthenticationMiddleware` resolves the token to the underlying `dbclaim.Users` account, injecting their exact identity and Role Claims into `HttpContext.User`.
-* **Audit Enforcement:** Actions performed over MCP invoke `IAuditService` and are recorded in `dbclaim.AuditLogs` under the specific user's email and ID.
+* **Audit Enforcement:** Actions performed over MCP invoke `IAuditService` and are recorded in `dbclaim.AuditRecords` under the specific user's email and ID.
 
 ---
 
 ## 5. Audit Logging & System Email Engine
 
-### 5.1 Audit Logs (`dbclaim.AuditLogs`)
+### 5.1 Audit Records (`dbclaim.AuditRecords`)
 
 All security events, role modifications, status transitions, collection entries, and payment state changes are written to the database with `UserId`, `UserEmail`, `Action`, `EntityName`, `EntityId`, `OldValuesJson`, `NewValuesJson`, `IpAddress`, and `TimestampUtc`. Accessible by `Manager` and `Administrator` roles.
 
@@ -215,7 +215,7 @@ All security events, role modifications, status transitions, collection entries,
 4. **MCP Security:** MCP executions authenticate via OAuth2 tokens, inheriting caller identity, permissions, and role claims (`User`, `Teller`, `Manager`, `Accountant`, `Administrator`).
 5. **No PDF Documents:** Do NOT introduce PDF generation libraries. Printable views must be rendered as clean HTML/CSS views (`/Teller/PrintReceipt/{id}`).
 6. **Notification Queue:** Use background worker (`EmailProcessingWorker`) supporting Azure Communication Services and Standard SMTP.
-7. **Audit Logging:** Log all mutations, OAuth2 token issuances, and MCP tool executions to `dbclaim.AuditLogs` via `IAuditService`.
+7. **Audit Logging:** Log all mutations, OAuth2 token issuances, and MCP tool executions to `dbclaim.AuditRecords` via `IAuditService`.
 8. **CDN Front-End:** Do not serve Bootstrap or jQuery locally in `wwwroot`. Use defined CDN links exclusively.
 9. **Code Cleanliness:** Permanently remove `Class1.cs` upon initialization.
 10. **User-facing record numbers:** Keep Guid keys for technical identity and relationships, but show durable `SequenceNo` values for claims, comments, job payments, collection clients/transactions, and salary/payroll records in screens, printable documents, and notifications.
@@ -233,13 +233,13 @@ All security events, role modifications, status transitions, collection entries,
 - **Target Framework:** .NET 10 (C# 14) MVC
 - **Database Schema:** `dbclaim`
 - **Identity & OAuth:** Custom built-in OAuth 2.0 Authorization Server (`/oauth/*`) for MCP clients; Google SSO for web browser sessions.
-- **MCP Security:** MCP tool executions inherit the caller's identity and log actions to `dbclaim.AuditLogs`.
+- **MCP Security:** MCP tool executions inherit the caller's identity and log actions to `dbclaim.AuditRecords`.
 - **Email Delivery:** Asynchronous Channel worker (`EmailProcessingWorker`) supporting ACS Email and Standard SMTP logging to `dbclaim.EmailLogs`.
 - **Receipt Rendering:** Responsive Razor HTML templates; PDF output is explicitly forbidden.
 
 ## Key Architectural Commitments
 1. **Central Shared Library (`ElixomClaim.Lib`):** Contains DbContext, Entities, Services, Salary Engine, Audit Engine, and MCP Tools.
 2. **Soft Delete Standard:** Claims apply soft deletes (`IsDeleted = true`).
-3. **Audit Accountability:** Every action executed manually or via MCP maps to the specific user account and writes to `dbclaim.AuditLogs`.
+3. **Audit Accountability:** Every action executed manually or via MCP maps to the specific user account and writes to `dbclaim.AuditRecords`.
 
 ```
