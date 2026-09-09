@@ -60,6 +60,33 @@ public class AdminControllerTests
     }
 
     [Fact]
+    public async Task AuditLogs_ManagerRole_OnlySeesApprovedOperationalDomains()
+    {
+        var db = CreateInMemoryDbContext();
+        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
+        await audit.LogAsync("CLAIM_UPDATED", new AuditEntity("Claim", "100"));
+        await audit.LogAsync("PAYROLL_GENERATED", new AuditEntity("Payroll", "200"));
+        await audit.LogAsync("OAUTH_TOKEN_REVOKED", new AuditEntity("OAuthClient", "client-1"));
+
+        var controller = new AdminController(db, audit, NullLogger<AdminController>.Instance)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new SecurityClaim(ClaimTypes.Role, UserRole.Manager.ToString()) }, "TestAuth"))
+                }
+            }
+        };
+
+        var model = Assert.IsAssignableFrom<IEnumerable<AuditRecordViewModel>>(Assert.IsType<ViewResult>(await controller.AuditLogs()).Model);
+        var log = Assert.Single(model);
+        Assert.Equal("Claim", log.EntityType);
+        Assert.Null(log.BeforeStateJson);
+        Assert.Null(log.AfterStateJson);
+    }
+
+    [Fact]
     public async Task AuditLogs_AdministratorRole_IncludesRedactedStateData()
     {
         var db = CreateInMemoryDbContext();

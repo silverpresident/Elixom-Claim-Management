@@ -46,7 +46,7 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
         if (!await _db.Users.AnyAsync(user => user.Id == command.UserId && user.IsActive, cancellationToken)) return Result.Failure<SalaryDefinition>("Active payee user was not found.");
         var definition = new SalaryDefinition { UserId = command.UserId, Description = command.Description.Trim(), BaseAmount = command.BaseAmount, FirstSalaryDate = command.FirstSalaryDate, LastSalaryDate = command.FirstSalaryDate, StartDate = command.StartDate, EndDate = command.EndDate, RecurrenceDays = command.RecurrenceDays, RecurrenceMonths = command.RecurrenceMonths, NearestWeekday = command.NearestWeekday, CreatedAtUtc = _clock.UtcNow, UpdatedAtUtc = _clock.UtcNow };
         _db.SalaryDefinitions.Add(definition); await _db.SaveChangesAsync(cancellationToken);
-        await _audit.LogAsync("SALARY_DEFINITION_CREATED", $"SalaryDefinition:{definition.Id}", afterState: new { definition.Id, definition.UserId, definition.BaseAmount }, actorUserId: command.ActorUserId.ToString(), cancellationToken: cancellationToken);
+        await _audit.LogAsync("SALARY_DEFINITION_CREATED", new AuditEntity("SalaryDefinition", definition.Id.ToString()), afterState: new { definition.Id, definition.UserId, definition.BaseAmount }, actorUserId: command.ActorUserId.ToString(), cancellationToken: cancellationToken);
         return Result.Success(definition);
     }
 
@@ -73,7 +73,7 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
         definition.UpdatedAtUtc = _clock.UtcNow;
 
         await _db.SaveChangesAsync(cancellationToken);
-        await _audit.LogAsync("SALARY_ADJUSTMENT_ADDED", $"SalaryDefinition:{definition.Id}", afterState: new { adjustment.Id, adjustment.Title, adjustment.Type, adjustment.PercentageRate, adjustment.FixedValue }, actorUserId: command.ActorUserId.ToString(), cancellationToken: cancellationToken);
+        await _audit.LogAsync("SALARY_ADJUSTMENT_ADDED", new AuditEntity("SalaryDefinition", definition.Id.ToString()), afterState: new { adjustment.Id, adjustment.Title, adjustment.Type, adjustment.PercentageRate, adjustment.FixedValue }, actorUserId: command.ActorUserId.ToString(), cancellationToken: cancellationToken);
         return Result.Success(adjustment);
     }
 
@@ -116,7 +116,7 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
             definition.LastSalaryDate = plan.DueDate;
             definition.UpdatedAtUtc = _clock.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
-            await _audit.LogAsync("PAYROLL_GENERATED", $"Payroll:{payroll.Id}", afterState: new { payroll.Id, payroll.SalaryDefinitionId, payroll.PeriodEndingDate, payroll.PayrollTotal }, actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
+            await _audit.LogAsync("PAYROLL_GENERATED", new AuditEntity("Payroll", payroll.Id.ToString()), afterState: new { payroll.Id, payroll.SalaryDefinitionId, payroll.PeriodEndingDate, payroll.PayrollTotal }, actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
             if (transaction is not null)
                 await transaction.CommitAsync(cancellationToken);
             _logger.LogInformation("Generated payroll {PayrollId} for salary definition {SalaryDefinitionId}.", payroll.Id, definition.Id);
@@ -146,7 +146,7 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
                 var payroll = CreatePayroll(definition, plan.DueDate);
                 _db.Payrolls.Add(payroll); definition.LastSalaryDate = plan.DueDate; definition.UpdatedAtUtc = _clock.UtcNow;
                 await _db.SaveChangesAsync(cancellationToken);
-                await _audit.LogAsync("PAYROLL_SCHEDULED_GENERATION", $"Payroll:{payroll.Id}", afterState: new { payroll.Id, payroll.SalaryDefinitionId, payroll.PeriodEndingDate }, cancellationToken: cancellationToken);
+                await _audit.LogAsync("PAYROLL_SCHEDULED_GENERATION", new AuditEntity("Payroll", payroll.Id.ToString()), afterState: new { payroll.Id, payroll.SalaryDefinitionId, payroll.PeriodEndingDate }, cancellationToken: cancellationToken);
                 generated++;
             }
             catch (DbUpdateException) { _db.ChangeTracker.Clear(); }
@@ -165,7 +165,7 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
         payroll.Entries.Add(new PayrollEntry { Description = description.Trim(), Amount = amount, Type = PayrollEntryType.Custom, IsLocked = false, SortOrder = payroll.Entries.Count, CreatedAtUtc = _clock.UtcNow });
         payroll.PayrollTotal += amount;
         await _db.SaveChangesAsync(cancellationToken);
-        await _audit.LogAsync("PAYROLL_CUSTOM_ENTRY_ADDED", $"Payroll:{payroll.Id}", afterState: new { payroll.Id, payroll.PayrollTotal }, actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
+        await _audit.LogAsync("PAYROLL_CUSTOM_ENTRY_ADDED", new AuditEntity("Payroll", payroll.Id.ToString()), afterState: new { payroll.Id, payroll.PayrollTotal }, actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
         return Result.Success();
     }
 
@@ -185,7 +185,7 @@ public sealed class SalaryPayrollService : ISalaryPayrollService
             var jobPayment = new JobPayment { PayeeUserId = payroll.UserId, Status = JobPaymentStatus.Processing, JobTotal = payroll.PayrollTotal, TotalPaid = payroll.PayrollTotal, Currency = "JMD", CreatedAtUtc = _clock.UtcNow };
             _db.JobPayments.Add(jobPayment); await _db.SaveChangesAsync(cancellationToken);
             _db.JobPaymentPayrolls.Add(new JobPaymentPayroll { JobPaymentId = jobPayment.Id, PayrollId = payroll.Id }); await _db.SaveChangesAsync(cancellationToken);
-            await _audit.LogAsync("PAYROLL_SUBMITTED", $"Payroll:{payroll.Id}", afterState: new { payroll.Id, payroll.Status, JobPaymentId = jobPayment.Id }, actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
+            await _audit.LogAsync("PAYROLL_SUBMITTED", new AuditEntity("Payroll", payroll.Id.ToString()), afterState: new { payroll.Id, payroll.Status, JobPaymentId = jobPayment.Id }, actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
             if (transaction is not null) await transaction.CommitAsync(cancellationToken);
             return Result.Success(jobPayment);
         }

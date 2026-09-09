@@ -93,12 +93,17 @@ public class AdminController : Controller
     [Authorize(Policy = PolicyNames.RequireManager)]
     public async Task<IActionResult> AuditLogs()
     {
-        var records = await _dbContext.AuditRecords
+        var isAdministrator = User.IsInRole(UserRole.Administrator.ToString());
+        var query = _dbContext.AuditRecords.AsNoTracking();
+        if (!isAdministrator)
+        {
+            query = query.Where(record => record.EntityType == "Claim" || record.EntityType == "CollectionTransaction" || record.EntityType == "JobPayment");
+        }
+
+        var records = await query
             .OrderByDescending(a => a.OccurredAtUtc)
             .Take(200)
             .ToListAsync();
-
-        var isAdministrator = User.IsInRole(UserRole.Administrator.ToString());
 
         var viewModels = records.Select(r => new Models.AuditRecordViewModel
         {
