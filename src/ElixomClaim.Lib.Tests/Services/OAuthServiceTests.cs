@@ -48,6 +48,11 @@ public class OAuthServiceTests
         var clientInDb = await oauth.GetClientAsync(result.ClientId);
         Assert.NotNull(clientInDb);
         Assert.True(clientInDb.IsActive);
+        var auditRecord = await db.AuditRecords.SingleAsync();
+        Assert.Equal("OAUTH_CLIENT_REGISTERED", auditRecord.Action);
+        Assert.Equal("OAuthClient", auditRecord.EntityType);
+        Assert.Equal(result.ClientId, auditRecord.EntityId);
+        Assert.False(auditRecord.IsMcpOperation);
     }
 
     [Fact]
