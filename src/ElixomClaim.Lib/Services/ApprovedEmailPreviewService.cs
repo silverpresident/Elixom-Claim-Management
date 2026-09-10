@@ -4,21 +4,33 @@ using ElixomClaim.Lib.Configuration;
 using ElixomClaim.Lib.Data;
 using ElixomClaim.Lib.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ElixomClaim.Lib.Services;
 
-public sealed class ApprovedEmailPreviewService(ApplicationDbContext db, IOptions<NotificationOptions> notifications, IAuditService audit) : IApprovedEmailPreviewService
+public sealed class ApprovedEmailPreviewService(ApplicationDbContext db, IOptions<NotificationOptions> notifications, IAuditService audit, ILogger<ApprovedEmailPreviewService> logger) : IApprovedEmailPreviewService
 {
     public async Task<Result<ApprovedEmailPreview>> PreviewAsync(Guid actorUserId, string templateType, Guid entityId, CancellationToken ct = default)
     {
         if (!string.Equals(templateType, "CollectionReceipt", StringComparison.OrdinalIgnoreCase) && !string.Equals(templateType, "PaymentSummary", StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("Approved email preview rejected for unsupported template type {TemplateType} by actor {ActorId}", templateType, actorUserId);
             return Result.Failure<ApprovedEmailPreview>("Unsupported or prohibited email template. Only CollectionReceipt and PaymentSummary are approved.");
+        }
         var role = await db.Users.Where(user => user.Id == actorUserId && user.IsActive).Select(user => (UserRole?)user.Role).SingleOrDefaultAsync(ct);
-        if (role is null) return Result.Failure<ApprovedEmailPreview>("Approved template preview is not available.");
+        if (role is null)
+        {
+            logger.LogWarning("Approved email preview rejected for inactive or unknown actor {ActorId}", actorUserId);
+            return Result.Failure<ApprovedEmailPreview>("Approved template preview is not available.");
+        }
         if (string.Equals(templateType, "CollectionReceipt", StringComparison.OrdinalIgnoreCase))
         {
-            if (!role.Value.HasMinimumRole(UserRole.Teller)) return Result.Failure<ApprovedEmailPreview>("Teller access is required.");
+            if (!role.Value.HasMinimumRole(UserRole.Teller))
+            {
+                logger.LogWarning("Collection receipt preview denied for actor {ActorId}", actorUserId);
+                return Result.Failure<ApprovedEmailPreview>("Teller access is required.");
+            }
             var collectionQuery = db.CollectionTransactions
                 .Include(item => item.CollectionClient)
                 .Where(item => item.Id == entityId);
@@ -27,25 +39,39 @@ public sealed class ApprovedEmailPreviewService(ApplicationDbContext db, IOption
             if (!role.Value.HasMinimumRole(UserRole.Manager))
                 collectionQuery = collectionQuery.Where(item => item.TellerUserId == actorUserId);
             var collection = await collectionQuery.SingleOrDefaultAsync(ct);
-            if (collection is null) return Result.Failure<ApprovedEmailPreview>("Collection record was not found or is not available.");
+            if (collection is null)
+            {
+                logger.LogWarning("Collection receipt preview unavailable for collection {CollectionId} and actor {ActorId}", entityId, actorUserId);
+                return Result.Failure<ApprovedEmailPreview>("Collection record was not found or is not available.");
+            }
             var recipients = new[] { collection.PayorEmail, notifications.Value.SystemCopyAddress }.Where(value => !string.IsNullOrWhiteSpace(value)).Select(RedactEmail).ToList();
             var clientUsers = await db.CollectionClientUsers.Where(item => item.CollectionClientId == collection.CollectionClientId && item.User.IsActive).Select(item => item.User.Email).ToListAsync(ct);
             recipients.AddRange(clientUsers.Where(value => !string.IsNullOrWhiteSpace(value)).Select(RedactEmail));
             await audit.LogAsync("EMAIL_TEMPLATE_PREVIEW", new AuditEntity("CollectionTransaction", entityId.ToString()), actorUserId: actorUserId.ToString(), cancellationToken: ct);
+            logger.LogInformation("Collection receipt preview approved for collection {CollectionId} and actor {ActorId}", entityId, actorUserId);
             return Result.Success(new ApprovedEmailPreview($"Collection Receipt #{collection.SequenceNo}", $"<article><h1>Collection receipt</h1><p>Receipt #{collection.SequenceNo}</p><p>Client: {HtmlEncoder.Default.Encode(collection.CollectionClient.Name)}</p><p>Amount: {collection.Amount:N2} JMD</p></article>", recipients.Distinct().ToList()));
         }
         if (string.Equals(templateType, "PaymentSummary", StringComparison.OrdinalIgnoreCase))
         {
-            if (!role.Value.HasMinimumRole(UserRole.Manager)) return Result.Failure<ApprovedEmailPreview>("Manager access is required.");
+            if (!role.Value.HasMinimumRole(UserRole.Manager))
+            {
+                logger.LogWarning("Payment summary preview denied for actor {ActorId}", actorUserId);
+                return Result.Failure<ApprovedEmailPreview>("Manager access is required.");
+            }
             var jobQuery = db.JobPayments.Include(item => item.PayeeUser).Where(item => item.Id == entityId);
             // Managers may preview their own payout only. Accountant and Administrator
             // roles need wider access to reconcile and settle payment operations.
             if (!role.Value.HasMinimumRole(UserRole.Accountant))
                 jobQuery = jobQuery.Where(item => item.PayeeUserId == actorUserId);
             var job = await jobQuery.SingleOrDefaultAsync(ct);
-            if (job is null) return Result.Failure<ApprovedEmailPreview>("Job payment record was not found or is not available.");
+            if (job is null)
+            {
+                logger.LogWarning("Payment summary preview unavailable for job payment {JobPaymentId} and actor {ActorId}", entityId, actorUserId);
+                return Result.Failure<ApprovedEmailPreview>("Job payment record was not found or is not available.");
+            }
             var recipients = job.PayeeUser is null ? [] : new[] { RedactEmail(job.PayeeUser.Email) };
             await audit.LogAsync("EMAIL_TEMPLATE_PREVIEW", new AuditEntity("JobPayment", entityId.ToString()), actorUserId: actorUserId.ToString(), cancellationToken: ct);
+            logger.LogInformation("Payment summary preview approved for job payment {JobPaymentId} and actor {ActorId}", entityId, actorUserId);
             return Result.Success(new ApprovedEmailPreview($"Payout summary #{job.SequenceNo}", $"<article><h1>Payout summary</h1><p>Payment #{job.SequenceNo}</p><p>Total paid: {job.TotalPaid:N2} JMD</p></article>", recipients));
         }
         return Result.Failure<ApprovedEmailPreview>("Unsupported or prohibited email template. Only CollectionReceipt and PaymentSummary are approved.");

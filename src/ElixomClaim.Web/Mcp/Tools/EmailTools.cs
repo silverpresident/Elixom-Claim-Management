@@ -69,7 +69,7 @@ public sealed class EmailTools
         IAuditService audit,
         ISystemClock clock,
         IOptions<NotificationOptions> notificationOptions)
-        : this(dbContext, audit, clock, notificationOptions, null!, NullLogger<EmailTools>.Instance, null!, null!, new ApprovedEmailPreviewService(dbContext, notificationOptions, audit))
+        : this(dbContext, audit, clock, notificationOptions, null!, NullLogger<EmailTools>.Instance, null!, null!, new ApprovedEmailPreviewService(dbContext, notificationOptions, audit, NullLogger<ApprovedEmailPreviewService>.Instance))
     {
     }
 
