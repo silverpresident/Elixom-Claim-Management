@@ -1,126 +1,124 @@
 # Claude Specification Completeness Report
 
-**Thorough reassessment:** 2026-09-09
+**Assessment date:** 2026-09-10
 
 **Source specification:** [`context/claude-specs.md`](../context/claude-specs.md)
-
-**Method:** Inspected the current implementation, entities/mappings/migrations, MVC/API/MCP/worker boundaries, authorization paths, UI/print output, release documentation, and test results. This report describes the checked-out code, not planned Sprint 13 work.
+**Repository state assessed:** current checked-out worktree, commit `ec52cb9` (`fix(email): hide Bcc from delivery views`)
 
 ## Executive conclusion
 
-Sprint 12 is complete and the application is substantially implemented. Claims, clearing-house collections, job payments, payroll, Google SSO, OAuth/PKCE, durable outbox, standard MCP, scoped REST API/OpenAPI, audit trigger, and the HTML frontend all have implementation and automated evidence.
+The implementation is substantially complete against the product specification. The core claim, clearing-house, job-payment, salary/payroll, Google SSO, custom OAuth, durable notification, MVC, official MCP, and versioned API flows are present and have extensive unit/integration coverage.
 
-The project is **not release-ready** because Sprint 13 still has source-fidelity and release-control work. The additive literal audit/email persistence migration is now present locally, but compatibility callers and Bcc-only system-copy behaviour remain to be completed. Manager audit domain filtering and complete payout-notification fidelity also remain gaps. The data-preserving migration rehearsal is blocked on a designated production owner and production-shaped Azure SQL restore; independent OAuth/MCP review is also still required.
+It is **not release-ready**. Sprint 13 remains incomplete: the literal audit/email migration has not been rehearsed on a production-shaped Azure SQL restore; the typed audit migration has remaining legacy callers; email-header handling has residual compatibility/coverage gaps; release assurance, independent OAuth/MCP review, and staging evidence are outstanding. In addition, the current full test run is not green: one Web integration test has an assertion that conflicts with the newer Bcc-only system-copy behavior.
 
-## Verification executed
+## Verification performed
 
 ```bash
-dotnet test ElixomClaim.slnx --no-restore --logger "console;verbosity=minimal"
+dotnet test ElixomClaim.slnx --no-restore --no-build --logger "console;verbosity=minimal"
 ```
 
-| Project | Passed | Failed |
-| --- | ---: | ---: |
-| `ElixomClaim.Lib.Tests` | 129 | 0 |
-| `ElixomClaim.Web.Tests` | 107 | 0 |
-| Total | 236 | 0 |
+| Test project | Passed | Failed | Total | Result |
+| --- | ---: | ---: | ---: | --- |
+| `ElixomClaim.Lib.Tests` | 129 | 0 | 129 | Passed |
+| `ElixomClaim.Web.Tests` | 108 | 1 | 109 | Failed |
+| **Total** | **237** | **1** | **238** | **Not green** |
 
-The full suite completed without dependency-vulnerability, redundant-package, or obsolete-Testcontainers warnings.
+The failed test is `ApiEndpointIntegrationTests.EmailTemplatesApi_QueuesOnlyApprovedRecipientsIdempotently` at line 358. It expects two outbox records but observed one. The current queue implementation deliberately sends one visible-recipient message and stores the configured system-copy address in its `Bcc` header. The test must be reconciled with the approved Bcc-only design before a green verification claim can be made.
+
+This was a read/audit exercise except for replacing this report. No application behavior, migration, or sprint progress record was changed.
 
 ## Requirement assessment
 
-| Requirement area | Status | Evidence / variation |
+| Specification area | Status | Evidence and assessment |
 | --- | --- | --- |
-| .NET 10 solution and Lib/Web/test split | Implemented | Required projects/layers exist; no `Class1.cs` remains. Domain/data/services are in Lib; MVC/OAuth/MCP/hosted adapters are in Web. |
-| Azure SQL `dbclaim`, Guid IDs, JMD, UTC, display numbers | Implemented | Guid technical IDs, `decimal(18,2)`, JMD, UTC persistence, concurrency fields, and database sequence-backed record numbers are implemented. |
-| Clean migrations and append-only audit trigger | Implemented for current baseline | The clean Guid baseline and audit-trigger migration apply on relational tests. The historical ledger was reset only after the documented confirmation that no deployed schema/data required preservation. |
-| Google SSO/provisioned users/bootstrap admin | Implemented | Google-only sign-in, active provisioned-user validation, no password flow, and bootstrap admin seed/promotion are wired. |
-| Single hierarchical role model | Implemented | Blocked/User/Teller/Manager/Accountant/Administrator hierarchy, policies, and shared service checks are present. |
-| Claims workflow | Mostly implemented | Own draft create/edit/delete, submit, management decision, comments, soft deletion, payment state, payment history, MVC/API/MCP support, and tests exist. Comment append-only behaviour remains service-enforced rather than a database constraint. |
-| Collections and receipts | Mostly implemented | Client configuration, bank details, options, assignments, server-owned fee snapshots, free entry snapshots, teller capture, 24-hour queue, reissue, durable receipt queue, and HTML print are present. |
-| Job payment lifecycle/settlement | Mostly implemented | Exactly-one-payee invariant; Processing-only lines/deductions; compatible attachments; totals/fees; submit/schedule/paid cascade; immutable paid records; adjustment flow; and idempotent notification records are implemented. |
-| Salary and payroll | Implemented | Shared recurrence planner, deterministic weekday tie-break, bounds, locked generated entries, custom-negative protection, submitted-job creation, and hosted scheduling are present. |
-| Email transports/outbox | Mostly implemented | SMTP/ACS implementations, durable outbox, retry/backoff, valid-recipient continuity, skipped optional payor outcome, and per-attempt email logs exist. Header-field fidelity is not yet implemented. |
-| Custom OAuth server | Mostly implemented | Dynamic public PKCE-only registration, confidential client validation, consent, strict redirects, code/token hashing, refresh family rotation/replay revocation, scopes, rate limits, and audits are present. Independent review remains. |
-| Official MCP transport/tools | Implemented with residual assurance gap | Official stateless `/mcp` requires Bearer, `mcp:access`, and rate limit; six domain classes are registered. Real protocol tests cover discovery, invocation, scope denial, ownership, cancellation, and legacy-route retirement. Revoked/expired-token transport coverage is not explicit. |
-| MCP/API email and preview boundaries | Implemented | Approved templates only; no arbitrary recipient/body; queues delegate to Lib services. Preview ownership/redaction is shared: Teller-owned collections, manager own-user payouts, and Accountant/Administrator reconciliation scope. |
-| Durable operations | Implemented | Actor-owned idempotent reservations, status reads, approved salary run, and durable outbox wake-up lifecycle exist. The worker leases, completes/fails, and reclaims stale wake-ups; restart recovery is tested. |
-| Versioned API/OpenAPI | Implemented | `/api/v1` has approved claims, collection, job-payment, template, payroll, and operation operations behind `api:access`; commands use idempotency. Authenticated `/openapi/v1.json` excludes MCP. |
-| Privacy/CDN/favicon/HTML-only frontend | Implemented | Privacy page/footer, Jamaican contact, Bootstrap/jQuery CDN with SRI, SVG favicon, semantic views, and HTML print are present. |
-| Audit record model and visibility | Partial | Trigger/redaction/audit events, additive `EntityType`/`EntityId`/`OccurredAtUtc` persistence, structured production projections, and the typed `AuditEntity` service contract now exist. Remaining legacy callers and Manager domain filtering remain Sprint 13 work. |
-| Email record header model | Partial | Records and adapters now have `To`/`From`/`Cc`/`Bcc` fields, but queue callers still use compatibility recipient paths and configured system copies are not yet Bcc-only. |
-| Payout detail rendering | Partial | Print output now uses accessible responsive tables with category subtotals. The payout notification HTML still needs the equivalent table/subtotal and authorised-recipient/bank-detail fidelity. |
-| `ILogger<T>` coverage | Mostly implemented | Most concrete controllers/services/workers/tools log structured outcomes. A few remaining classes lack it; see finding 5. |
+| .NET 10 / ASP.NET Core MVC / C# solution | Implemented | `ElixomClaim.Lib`, `ElixomClaim.Web`, and matching xUnit projects exist. The projects target .NET 10; no scaffold `Class1.cs` remains. |
+| Lib/Web separation | Implemented | Entities, EF context, services, and shared authorization are in Lib. MVC, Google authentication wiring, OAuth endpoints, MCP transport, and hosted services are in Web. |
+| Azure SQL and `dbclaim` | Implemented, deployment evidence pending | EF Core SQL Server configuration, `HasDefaultSchema("dbclaim")`, migrations, relational migration tests, and guarded production migration coordination are present. A release-environment migration rehearsal is still blocked. |
+| Guid, UTC, money, display records | Implemented | Guid technical keys are used consistently; monetary mapping uses `decimal(18,2)`, JMD domain handling, UTC fields, and sequence-backed user-facing record numbers. This is a documented refinement of the source spec, which permitted either int or Guid IDs. |
+| Google-only provisioned sign-in | Implemented | Google-only authentication, active provisioned-user validation, no password flow, and a bootstrap `DefaultAdminEmail` promotion/seed path are present and tested. |
+| Hierarchical single role model | Implemented | `Blocked`, `User`, `Teller`, `Manager`, `Accountant`, and `Administrator` are represented as a hierarchy through shared policies/handlers, retaining ownership checks in services. |
+| Claims | Implemented | Draft creation, owner edit/soft delete, submission, accept/reject, public/private append-only comments, payment status, job attachment, payment history, MVC/API/MCP routes, and service tests are present. |
+| Clearing-house collections | Implemented | Client configuration, active-user assignments, scoped options, custom immutable snapshots, teller-local date conversion, payor details, system-owned fee snapshot, status lifecycle, reissue, HTML receipt, and print route are present. |
+| Job payments | Implemented | The user-or-client payee invariant, same-client collection constraint, processing-only line/deduction edits, calculated fees/totals, submit/schedule/paid lifecycle, atomic settlement cascade, idempotent payout queueing, and linked adjustment/reversal model are implemented. |
+| Salary and payroll | Implemented | Definitions, adjustments, deterministic recurrence planning, inclusive date bounds, generated locked entries, custom-entry net-pay guard, submission-created job payment, and thin hosted scheduling are implemented with tests. |
+| Durable outbox and email providers | Mostly implemented | Lib exposes `IEmailSender`; SMTP and ACS senders are configuration-selected. Outbox retry/backoff, per-attempt `EmailLog`, idempotency, and optional-payor handling are implemented. Header-model migration and regression coverage remain incomplete. |
+| Custom OAuth 2.0 server | Mostly implemented | Registration, authorization, consent, code exchange, PKCE S256, strict redirect validation, token/refresh handling, revocation, scopes, rate limits, audit, and bearer identity projection are implemented in-house. Independent protocol/security review and release evidence remain open. |
+| Official MCP server | Implemented with assurance gap | Official stateless Streamable HTTP is mapped at `/mcp`, protected by custom bearer auth, `mcp:access`, and rate limiting. Six domain tool classes use constrained DTOs and shared services. Expired/revoked-token transport evidence remains a Sprint 13 item. |
+| MCP email/operation constraints | Implemented | Email tools are limited to approved receipt/payment-summary composition/queueing; adapters do not accept arbitrary recipients or bodies. Operations create auditable idempotent durable requests rather than invoking workers directly. |
+| Versioned REST API/OpenAPI | Implemented | Approved resources live at `/api/v1`, require separate `api:access`, use actor/ownership checks and command idempotency, and publish scope-protected `/openapi/v1.json` excluding MVC/MCP routes. |
+| Audit trail and immutability | Partial | Append-only Azure SQL protection and broad mutation/OAuth/MCP audit coverage exist. The literal `EntityType`/`EntityId`/`OccurredAtUtc` model is present, but migration completion and all typed callers/projections are not complete. |
+| Role dashboards and workflows | Implemented | User claims/payment history, teller collection work, manager review/attachment, accountant scheduling/settlement and payroll workspaces, and administrator user/configuration/audit screens are present. |
+| HTML-only printable output | Implemented | Collection and job-payment views provide responsive print-focused HTML. No PDF feature was found. Job-payment print includes semantic item tables and subtotals. |
+| Privacy, CDN assets, favicon | Implemented | A substantive privacy page is linked from the footer; Bootstrap/jQuery use CDN links; no local Bootstrap/jQuery distribution was found; a project SVG favicon is present. |
+| Logging requirement | Mostly implemented | Controllers, most services, sender adapters, workers, and tool adapters inject `ILogger<T>`. `ApprovedEmailPreviewService`, `McpToolActorAccessor`, `SalaryRecurrencePlanner`, and `SystemClock` do not; pure utilities can be formally exempted, while preview/actor boundaries need a deliberate logging decision. |
+| Agent guidance / durable memory | Implemented | Root `AGENTS.md` and `MEMORY.md` describe delivery order, architecture, security, test, and handoff expectations. |
 
-## Material remaining gaps
+## Detailed differences, variations, and incomplete work
 
-### 1. Literal audit model is locally implemented but not fully integrated
+### Literal audit persistence is only partially migrated
 
-The source specification defines `EntityType`, `EntityId`, and `OccurredAtUtc`. [`AuditRecord.cs`](../src/ElixomClaim.Lib/Entities/AuditRecord.cs) and migration `20260909124540_StructuredAuditAndEmailHeaders` now persist those fields and retain compatibility properties/source columns for the transition. The append-only trigger remains in place.
+The specification requires `OccurredAtUtc`, `EntityType`, and `EntityId`. The current `AuditRecord` model, mappings, migration `20260909124540_StructuredAuditAndEmailHeaders`, structured query projections, and append-only trigger support this model. The migration is additive and retains/backfills legacy source columns for one release, as documented in ADR 0008 and the literal migration runbook.
 
-Production query projections now use structured fields, and relational tests prove the migration backfill can restore the append-only trigger. `AuditEntity` is the primary service contract and the OAuth lifecycle uses it directly. This remains incomplete until non-OAuth callers leave the marked string compatibility adapter and the staging rehearsal succeeds. ADR 0008 and the [literal audit/email migration runbook](runbooks/literal-audit-email-migration.md) define the required additive, data-preserving approach.
+The old string-target compatibility contract has not been fully eliminated. `IAuditService` retains an obsolete `LogAsync(..., string target, ...)` overload, and current production calls still use it in `AdminController` (user role/status), `ProfileController` (bank details), and `ActorResolver.LogAuditAsync` (shared API/MCP adapter helper). The compatibility entity properties are not mapped, so this is incomplete source-contract migration rather than a schema regression. Sprint 13 item 2 should move the remaining callers to `AuditEntity`, then add attribution/projection evidence for every remaining surface.
 
-### 2. Literal email headers exist, but Bcc system copies are not implemented
+### Literal email headers and Bcc-only copies are substantially, not completely, integrated
 
-[`NotificationEntities.cs`](../src/ElixomClaim.Lib/Entities/NotificationEntities.cs) now persists `To`, `From`, `Cc`, and `Bcc`; sender and outbox contracts carry them. Compatibility `Recipient` properties and queue callers remain during the transition. System copies are still separate recipients/outbox rows, not Bcc-only headers.
+`EmailOutboxItem` and `EmailLog` have `To`, `From`, `Cc`, and `Bcc`. SMTP and ACS adapters send `Cc`/`Bcc`; normal collection-receipt and payout-summary queues set the configured sender and Bcc-only system copy; administrator delivery views render only visible `To`/`From` information. This is a privacy improvement over the source wording that allowed CC or BCC.
 
-Sprint 13 item 3 must update entities, mapping, sender adapters, queues/retries, preview/API/MCP projections, redaction, and test behaviour. Bcc data must never appear in bodies, previews, logs, unauthorized queries, or errors.
+Residual issues are visible in the code:
 
-### 3. Manager audit visibility policy is decided but not enforced
+- Obsolete non-persisted `Recipient` compatibility properties remain, and the collection missing-payor skip path still initializes records through them.
+- Missing-payor skipped outbox/email-log records do not set `From` or `Bcc`. They record an intentional non-send, but need an explicit literal-header decision and test.
+- `EmailLog` persists Bcc for authorised delivery evidence while administrator views hide it. Sprint 13 must prove it is absent from unauthorised projections, previews, operational logs, audit payloads, and failure responses.
+- The failing integration test still reflects the former separate system-copy recipient model.
 
-Sprint 13's ready criteria choose Manager metadata-only access for claims, collections, and job payments; all other audit domains and before/after state remain Administrator-only. Current [`AdminController.cs`](../src/ElixomClaim.Web/Controllers/AdminController.cs) instead returns the latest 200 audit records without filtering action/target domain for a Manager.
+This is therefore **Bcc behavior implemented in main delivery paths, migration/projection/test closure pending**, not a fully complete email-header implementation.
 
-This allows Manager metadata visibility for OAuth/security, user-administration, payroll, salary, email, and system events. Implement the accepted domain filter in shared queries/projections and add pagination/redaction/authorization tests.
+### Payout presentation is ahead of notification parity
 
-### 4. Payout notification fidelity remains incomplete
+`Views/JobPayments/Print.cshtml` implements accessible, responsive, captioned tables for claims, collections, payrolls and ordered entries, deductions, and final calculation, with subtotals. Internal notes and bank details are excluded from print output.
 
-[`Print.cshtml`](../src/ElixomClaim.Web/Views/JobPayments/Print.cshtml) now renders claims, collections, payrolls and ordered entries, deductions, and the calculation in captioned responsive tables with header scopes and category subtotals. `JobPaymentPrintViewTests` verifies those semantics as well as the absence of internal notes.
+The paid notification must also provide appropriate itemized payout information. `JobPaymentService.ComposePayoutHtml` includes payout and linked payroll information, but Sprint 13 still calls for evidence of equivalent table/subtotal markup, authorised bank/recipient rules, and redaction regression coverage. Treat print fidelity as complete and notification fidelity as partial until that evidence is finished.
 
-`JobPaymentService.ComposePayoutHtml` has improved notification content to include linked payrolls, but it still represents categories as lists rather than the source-specified itemized tables/subtotals. Remaining Sprint 13 item 4 work is to align notification data/layout, include authorised recipient/bank/totals detail, and prove internal notes/unauthorised bank data remain excluded.
+### Manager audit scope is implemented in MVC, but complete surface evidence remains open
 
-### 5. Literal logging requirement has narrow remaining exceptions
+`AdminController.AuditLogs` limits non-administrators to `Claim`, `CollectionTransaction`, and `JobPayment` records and strips before/after JSON. This matches the documented least-privilege decision: Managers receive metadata only; payroll, salary, user administration, OAuth/security, email delivery, and state data remain Administrator-only.
 
-`grep` found no `ILogger<T>` injection in:
+The remaining concern is assurance scope: Sprint 13 still requires pagination plus API/MCP authorization and redaction review/tests. This should not be presented as a completed release control until those paths are demonstrably absent or protected.
 
-- `ApprovedEmailPreviewService`
-- `McpToolActorAccessor`
-- `SalaryRecurrencePlanner`
-- `SystemClock`
+### Release controls cannot be completed locally
 
-The planner and clock are deterministic utilities; Sprint 13 should either record a formal pure-utility exemption or add safe logging where a meaningful decision/outcome occurs. `ApprovedEmailPreviewService` and the actor accessor are security-sensitive boundaries and should have redacted structured outcome/security logs.
+The following remain external release blockers:
 
-### 6. Release controls are externally blocked
+- independently observed rehearsal of the additive audit/email migration on a production-shaped Azure SQL restored copy;
+- a named release owner, single migration-runner evidence, safe email-provider test account, backup/restore/PITR evidence, and go/no-go record;
+- independent OAuth/MCP threat-model and interoperability review, remediation/retest, and sign-off; and
+- staging smoke tests for Google sign-in, PKCE/refresh/revocation, scope isolation, notification delivery, audit immutability, retry/recovery, and retention.
 
-The literal migration rehearsal is correctly blocked pending a named release owner and production-shaped Azure SQL restore. The runbook requires one runner, observer, safe email configuration, script checksum/idempotence, append-only validation, backup/PITR evidence, and redacted sign-off. This cannot be completed by local code changes alone.
+Runbooks and ADRs exist, but documentation is not execution evidence.
 
-The independent OAuth/MCP review runbook exists, but independent reviewer selection, review execution, remediation, and go/no-go evidence remain release gates. Explicit revoked/expired bearer transport coverage should also be added as part of that assurance work.
+### Source-structure variation: flat controllers rather than MVC Areas
 
-## Resolved since the prior report
+The source structure illustrates `Areas/Admin`, `Areas/Manager`, `Areas/Teller`, and `Areas/Accountant`. The current implementation uses role-oriented controllers/views rather than ASP.NET MVC Areas. Authorization policies and route behavior provide the functional separation, so this is a maintainability variation rather than a demonstrated functional deficiency.
 
-- Sprint 12 is complete; standard MCP and the separately scoped API are implemented, documented, and tested.
-- Payout email data now includes linked payrolls (though not the final required table/subtotal presentation).
-- Payout print output now has accessible responsive tables, ordered payroll-entry rows, and category subtotals; focused `JobPaymentPrintViewTests` passed (3 tests) on 2026-09-09.
-- Audit projections now use literal entity/time fields, and OAuth lifecycle attribution uses the typed `AuditEntity` contract; focused audit/OAuth tests passed (10 tests) on 2026-09-09.
-- README/MEMORY now accurately state active delivery and the Sprint 13 release-fidelity scope.
-- Current full test evidence is 236 passing tests.
+### Compatible enhancements beyond the source specification
 
-## Intentional or acceptable variations
-
-| Source wording | Current implementation | Assessment |
+| Source baseline | Current implementation | Assessment |
 | --- | --- | --- |
-| IDs may be int or Guid | Guid technical IDs plus display sequences | Improvement and consistently applied. |
-| Simple email queue | Durable transactional outbox with retries/idempotency | Reliability improvement. |
-| No detailed paid-record correction flow | Approval-based linked adjustments/reversals | Protects financial history. |
-| Example `/mcp/sse` | Official stateless Streamable HTTP `/mcp` | Valid standards-conformant equivalent. |
-| System copy as CC/BCC | Separate recipient record | Delivery-equivalent only; Sprint 13 intentionally changes this to Bcc-only literal fidelity. |
+| ID may be int or Guid | Guid technical IDs plus durable display sequences | Consistent refinement. |
+| Basic email send/log expectation | Transactional outbox, retries, idempotency, per-attempt logs, durable wake-up operations | Reliability improvement. |
+| No paid-record correction workflow specified | Auditable linked adjustment/reversal workflow | Financial-record protection improvement. |
+| Suggested MCP routes/tools | Official SDK Streamable HTTP MCP at `/mcp`, plus separately scoped REST API | Standards-conformant extension. |
+| System copy can be CC or BCC | Bcc-only system copy in normal queue paths | Privacy-preserving decision; test closure remains. |
 
-## Recommended completion order
+## Completion priorities
 
-1. Obtain the release-owner/production-shaped restore needed to finish Sprint 13 item 1.
-2. Complete and rehearse the additive audit/email model migration (items 2–3), including Bcc-only system copies and authorised projections.
-3. Implement Manager audit domain filtering and finish payout-notification table/subtotal fidelity (items 4–5); the print portion is complete.
-4. Resolve/document logging exceptions and complete revoked/expired-token assurance.
-5. Complete independent OAuth/MCP review and release controls before production go/no-go.
+1. Correct/reconcile the failing API integration assertion with the Bcc-only system-copy contract, then rerun the full suite.
+2. Finish Sprint 13 items 2–3: replace remaining string-target audit calls, retire header compatibility paths, define missing-payor header semantics, and add redaction/projection/provider/retry coverage.
+3. Finish payout-notification table/subtotal and authorised-bank-data regression evidence; retain the complete print work.
+4. Complete Manager audit pagination and API/MCP surface assurance, then resolve or formally exempt remaining logger exceptions.
+5. Execute the production-shaped migration rehearsal, independent OAuth/MCP review, staging smoke tests, backup/restore checks, and release go/no-go process.
 
 ## Delivery-state note
 
-Sprint 12 is complete. Sprint 13 is active, with its literal-model migration/rehearsal blocked on external release-environment ownership. This report is an assessment artefact and does not claim any backlog item.
+`MEMORY.md` records Sprint 12 as complete and Sprint 13 as active/partially blocked. This assessment agrees with that ordering. The software has a broad working implementation, but the remaining literal-model migration work, test failure, and release controls prevent a complete or production-ready declaration.
