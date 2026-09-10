@@ -43,7 +43,7 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         };
         _dbContext.CollectionClients.Add(client);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await AuditAsync("COLLECTION_CLIENT_CREATED", $"CollectionClient:{client.Id}", command.ActorUserId, new { client.Id, client.Name }, cancellationToken);
+        await AuditAsync("COLLECTION_CLIENT_CREATED", new AuditEntity("CollectionClient", client.Id.ToString()), command.ActorUserId, new { client.Id, client.Name }, cancellationToken);
         return Result.Success(client);
     }
 
@@ -70,7 +70,7 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         client.UpdatedAtUtc = _clock.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await AuditAsync("COLLECTION_CLIENT_UPDATED", $"CollectionClient:{client.Id}", command.ActorUserId, new { client.Id, client.Name, client.PerJobProcessingFee, client.PerTransactionFee }, cancellationToken);
+        await AuditAsync("COLLECTION_CLIENT_UPDATED", new AuditEntity("CollectionClient", client.Id.ToString()), command.ActorUserId, new { client.Id, client.Name, client.PerJobProcessingFee, client.PerTransactionFee }, cancellationToken);
         return Result.Success(client);
     }
 
@@ -98,7 +98,7 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         await _dbContext.SaveChangesAsync(cancellationToken);
         await AuditAsync(
             command.IsActive ? "COLLECTION_CLIENT_ENABLED" : "COLLECTION_CLIENT_DISABLED",
-            $"CollectionClient:{client.Id}",
+            new AuditEntity("CollectionClient", client.Id.ToString()),
             command.ActorUserId,
             new { client.Id, client.Name, client.IsActive },
             cancellationToken);
@@ -117,7 +117,7 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
 
         _dbContext.CollectionClientUsers.Add(new CollectionClientUser { CollectionClientId = command.CollectionClientId, UserId = command.UserId, AssignedAtUtc = _clock.UtcNow });
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await AuditAsync("COLLECTION_CLIENT_USER_ASSIGNED", $"CollectionClient:{command.CollectionClientId}", command.ActorUserId, new { command.UserId }, cancellationToken);
+        await AuditAsync("COLLECTION_CLIENT_USER_ASSIGNED", new AuditEntity("CollectionClient", command.CollectionClientId.ToString()), command.ActorUserId, new { command.UserId }, cancellationToken);
         return Result.Success();
     }
 
@@ -130,7 +130,7 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
 
         _dbContext.CollectionClientUsers.Remove(assignment);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await AuditAsync("COLLECTION_CLIENT_USER_REMOVED", $"CollectionClient:{command.CollectionClientId}", command.ActorUserId, new { command.UserId }, cancellationToken);
+        await AuditAsync("COLLECTION_CLIENT_USER_REMOVED", new AuditEntity("CollectionClient", command.CollectionClientId.ToString()), command.ActorUserId, new { command.UserId }, cancellationToken);
         return Result.Success();
     }
 
@@ -157,7 +157,7 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         var option = new CollectionAmountOption { CollectionClientId = command.CollectionClientId, Name = name, Amount = command.Amount, DisplayOrder = command.DisplayOrder };
         _dbContext.CollectionAmountOptions.Add(option);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await AuditAsync("COLLECTION_AMOUNT_OPTION_ADDED", $"CollectionClient:{command.CollectionClientId}", command.ActorUserId, new { option.Id, option.Name, option.Amount }, cancellationToken);
+        await AuditAsync("COLLECTION_AMOUNT_OPTION_ADDED", new AuditEntity("CollectionClient", command.CollectionClientId.ToString()), command.ActorUserId, new { option.Id, option.Name, option.Amount }, cancellationToken);
         return Result.Success(option);
     }
 
@@ -185,7 +185,7 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         };
         _dbContext.CollectionClientBankDetails.Add(detail);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        await AuditAsync("COLLECTION_CLIENT_BANK_DETAIL_ADDED", $"CollectionClient:{command.CollectionClientId}", command.ActorUserId, new { detail.Id }, cancellationToken);
+        await AuditAsync("COLLECTION_CLIENT_BANK_DETAIL_ADDED", new AuditEntity("CollectionClient", command.CollectionClientId.ToString()), command.ActorUserId, new { detail.Id }, cancellationToken);
         return Result.Success(detail);
     }
 
@@ -197,7 +197,7 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         var name = inputName.Trim();
         if (await _dbContext.CollectionPurposeOptions.AnyAsync(o => o.CollectionClientId == clientId && o.Name == name, cancellationToken)) return Result.Failure<CollectionPurposeOption>("This purpose option already exists for the client.");
         var option = await create(name);
-        await AuditAsync(auditAction, $"CollectionClient:{clientId}", actorUserId, new { option.Id, option.Name }, cancellationToken);
+        await AuditAsync(auditAction, new AuditEntity("CollectionClient", clientId.ToString()), actorUserId, new { option.Id, option.Name }, cancellationToken);
         return Result.Success(option);
     }
 
@@ -217,9 +217,9 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
 
     private Task<bool> ClientExistsAsync(Guid clientId, CancellationToken cancellationToken) => _dbContext.CollectionClients.AnyAsync(c => c.Id == clientId, cancellationToken);
 
-    private async Task AuditAsync(string action, string target, Guid actorUserId, object afterState, CancellationToken cancellationToken)
+    private async Task AuditAsync(string action, AuditEntity entity, Guid actorUserId, object afterState, CancellationToken cancellationToken)
     {
-        await _auditService.LogAsync(action, target, afterState: afterState, actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
-        _logger.LogInformation("Collection client configuration updated: {Action} {Target}", action, target);
+        await _auditService.LogAsync(action, entity, afterState: afterState, actorUserId: actorUserId.ToString(), cancellationToken: cancellationToken);
+        _logger.LogInformation("Collection client configuration updated: {Action} {EntityType} {EntityId}", action, entity.EntityType, entity.EntityId);
     }
 }

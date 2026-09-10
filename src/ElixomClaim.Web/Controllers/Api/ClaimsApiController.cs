@@ -52,7 +52,7 @@ public sealed class ClaimsApiController : ControllerBase
             return Problem(statusCode: StatusCodes.Status409Conflict, detail: "Only an owned draft claim can be submitted.");
         }
         await _operations.UpdateStatusAsync(reservation.Record.Id, "Completed", $"Claim:{id}", ct);
-        await _actors.LogAuditAsync(new ActorContext(actor, "api", "api:access", HttpContext.TraceIdentifier, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", false), "API_CLAIM_SUBMIT", $"Claim:{id}", cancellationToken: ct);
+        await _actors.LogAuditAsync(new ActorContext(actor, "api", "api:access", HttpContext.TraceIdentifier, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", false), "API_CLAIM_SUBMIT", new AuditEntity("Claim", id.ToString()), cancellationToken: ct);
         _logger.LogInformation("API claim {ClaimId} submitted by {ActorId}.", id, actor.Id);
         return NoContent();
     }

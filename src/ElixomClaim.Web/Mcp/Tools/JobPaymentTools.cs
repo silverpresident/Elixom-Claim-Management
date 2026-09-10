@@ -48,7 +48,7 @@ public sealed class JobPaymentTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await ListJobPaymentsAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP job payment list completed for actor {ActorId} with success {Success}", actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_JOB_PAYMENTS_LIST", "JobPayments", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_JOB_PAYMENTS_LIST", new AuditEntity("JobPayment", "List"), cancellationToken);
         return response;
     }
 
@@ -59,7 +59,7 @@ public sealed class JobPaymentTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await GetJobPaymentAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP job payment {JobPaymentId} read by {ActorId} with success {Success}", request.JobPaymentId, actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_JOB_PAYMENTS_GET", $"JobPayment:{request.JobPaymentId}", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_JOB_PAYMENTS_GET", new AuditEntity("JobPayment", request.JobPaymentId.ToString()), cancellationToken);
         return response;
     }
 

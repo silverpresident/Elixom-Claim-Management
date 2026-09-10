@@ -87,7 +87,7 @@ public class ProfileController : Controller
         user.DisplayName = string.IsNullOrWhiteSpace(displayName) ? null : displayName;
         user.UpdatedAtUtc = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync();
-        await _auditService.LogAsync("USER_DISPLAY_NAME_UPDATED", $"User:{user.Id}", beforeState, new { user.DisplayName }, user.Id.ToString(), user.Email);
+        await _auditService.LogAsync("USER_DISPLAY_NAME_UPDATED", new AuditEntity("User", user.Id.ToString()), beforeState, new { user.DisplayName }, user.Id.ToString(), user.Email);
         _logger.LogInformation("User profile display name updated for {UserId}", user.Id);
 
         TempData["SuccessMessage"] = "Your display name has been updated.";
@@ -148,7 +148,7 @@ public class ProfileController : Controller
 
         await _auditService.LogAsync(
             action: "USER_BANK_DETAILS_UPDATED",
-            target: $"User:{user.Id}",
+            entity: new AuditEntity("User", user.Id.ToString()),
             beforeState: beforeState,
             afterState: afterState,
             actorUserId: user.Id.ToString(),

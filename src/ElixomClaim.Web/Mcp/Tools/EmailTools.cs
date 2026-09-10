@@ -80,7 +80,7 @@ public sealed class EmailTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null, null, null);
         var response = await PreviewAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP email preview {TemplateType} completed for actor {ActorId} with success {Success}", request.TemplateType, actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_EMAIL_PREVIEW", $"Template:{request.TemplateType}", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_EMAIL_PREVIEW", new AuditEntity("EmailTemplate", request.TemplateType), cancellationToken);
         return response;
     }
 
@@ -91,7 +91,7 @@ public sealed class EmailTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", 0);
         var response = await QueueSendAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP email queue request {TemplateType} completed for actor {ActorId} with success {Success} and queued count {QueuedCount}", request.TemplateType, actor.Value.User.Id, response.Success, response.QueuedCount);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_EMAIL_QUEUE", $"Template:{request.TemplateType}", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_EMAIL_QUEUE", new AuditEntity("EmailTemplate", request.TemplateType), cancellationToken);
         return response;
     }
 

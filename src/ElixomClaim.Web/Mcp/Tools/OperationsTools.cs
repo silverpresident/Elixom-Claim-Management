@@ -62,7 +62,7 @@ public sealed class OperationsTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await RequestSalaryGenerationAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP salary generation operation requested by {ActorId} for definition {SalaryDefinitionId} with success {Success}", actor.Value.User.Id, request.SalaryDefinitionId, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_SALARY_GENERATION", $"SalaryDefinition:{request.SalaryDefinitionId}", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_SALARY_GENERATION", new AuditEntity("SalaryDefinition", request.SalaryDefinitionId.ToString()), cancellationToken);
         return response;
     }
 
@@ -73,7 +73,7 @@ public sealed class OperationsTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await RequestOutboxWakeUpAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP outbox wake-up operation requested by {ActorId} with success {Success}", actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_OUTBOX_WAKEUP", "Outbox", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_OUTBOX_WAKEUP", new AuditEntity("EmailOutbox", "WakeUp"), cancellationToken);
         return response;
     }
 
@@ -84,7 +84,7 @@ public sealed class OperationsTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await GetOperationStatusAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP operation status read by {ActorId} with success {Success}", actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_STATUS", "Operation", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_OPERATIONS_STATUS", new AuditEntity("OperationRecord", request.IdempotencyKey), cancellationToken);
         return response;
     }
 
@@ -125,7 +125,7 @@ public sealed class OperationsTools
 
             var record = await _operationRecordService.UpdateStatusAsync(reservation.Record.Id, status, details, ct);
 
-            await _audit.LogAsync("MCP_OPERATIONS_SALARY_GEN", $"SalaryDefinition:{request.SalaryDefinitionId}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+            await _audit.LogAsync("MCP_OPERATIONS_SALARY_GEN", new AuditEntity("OperationRecord", record.Id.ToString()), afterState: new { SalaryDefinitionId = request.SalaryDefinitionId, record.Status }, actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
             return new OperationResponse(result.IsSuccess, result.Error, MapToDto(record));
         }
         catch (OperationCanceledException)
@@ -165,7 +165,7 @@ public sealed class OperationsTools
         // The hosted dispatcher owns provider dispatch. This adapter only persists an
         // auditable wake-up request; the dispatcher will pick up due outbox work on
         // its normal polling cycle rather than MCP invoking worker internals.
-        await _audit.LogAsync("MCP_OPERATIONS_OUTBOX_WAKEUP", $"BatchSize:{requestedBatchSize}", actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
+        await _audit.LogAsync("MCP_OPERATIONS_OUTBOX_WAKEUP", new AuditEntity("OperationRecord", record.Id.ToString()), afterState: new { BatchSize = requestedBatchSize }, actorUserId: actor.Id.ToString(), isMcpOperation: true, cancellationToken: ct);
         return new OperationResponse(true, "Outbox wake-up request accepted.", MapToDto(record));
     }
 

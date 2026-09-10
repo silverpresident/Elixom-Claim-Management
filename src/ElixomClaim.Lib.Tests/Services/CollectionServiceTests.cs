@@ -114,9 +114,45 @@ public class CollectionServiceTests
         var result = await CreateService(db).RecordAsync(new(teller.Id, client.Id, purpose.Id, amount.Id, "Payor", null, CollectionMethod.Cash, 0m, DateTime.UtcNow));
 
         Assert.True(result.IsSuccess);
-        Assert.Contains(db.EmailOutboxItems, item => item.Status == EmailOutboxStatus.SkippedInvalidRecipient);
+        var skippedPayor = Assert.Single(db.EmailOutboxItems.Where(item => item.Status == EmailOutboxStatus.SkippedInvalidRecipient));
+        Assert.Equal(string.Empty, skippedPayor.To);
+        Assert.Equal("no-reply@anonymized.example.com", skippedPayor.From);
+        Assert.Equal("system@anonymized.example.com", skippedPayor.Bcc);
         Assert.Contains(db.EmailOutboxItems, item => item.To == "no-reply@anonymized.example.com" && item.Bcc == "system@anonymized.example.com" && item.Status == EmailOutboxStatus.Pending);
-        Assert.Contains(db.EmailLogs, log => log.Status == EmailOutboxStatus.SkippedInvalidRecipient);
+        Assert.Contains(db.EmailLogs, log => log.Status == EmailOutboxStatus.SkippedInvalidRecipient && log.To == string.Empty && log.From == "no-reply@anonymized.example.com" && log.Bcc == "system@anonymized.example.com");
+    }
+
+    [Fact]
+    public async Task ReissueReceiptAsync_PersistsHeadersAndDispatchesOnlyVisibleRecipients()
+    {
+        await using var db = CreateDb();
+        var teller = User(UserRole.Teller, "teller@anonymized.example.com");
+        var client = new CollectionClient { Name = "Acme" };
+        db.AddRange(teller, client);
+        await db.SaveChangesAsync();
+        var collection = new CollectionTransaction
+        {
+            CollectionClientId = client.Id, TellerUserId = teller.Id, PayorName = "Payor", PayorEmail = "payor@anonymized.example.com",
+            Purpose = "Service", Amount = 500m, PaymentDateUtc = DateTime.UtcNow
+        };
+        db.CollectionTransactions.Add(collection);
+        db.EmailOutboxItems.Add(new EmailOutboxItem
+        {
+            To = collection.PayorEmail, From = "no-reply@anonymized.example.com", Bcc = "system@anonymized.example.com",
+            Subject = "Original", HtmlBody = "<p>Original</p>", RelatedEntityType = "CollectionTransaction", RelatedEntityId = collection.Id.ToString(),
+            IdempotencyKey = "original", Status = EmailOutboxStatus.Sent
+        });
+        await db.SaveChangesAsync();
+
+        var result = await CreateService(db).ReissueReceiptAsync(collection.Id, teller.Id);
+
+        Assert.True(result.IsSuccess);
+        var reissue = Assert.Single(db.EmailOutboxItems.Where(item => item.IdempotencyKey.StartsWith($"collection-receipt-reissue:{collection.Id}:")));
+        Assert.Equal("payor@anonymized.example.com", reissue.To);
+        Assert.Equal("no-reply@anonymized.example.com", reissue.From);
+        Assert.Equal("system@anonymized.example.com", reissue.Bcc);
+        Assert.Equal(EmailOutboxStatus.Pending, reissue.Status);
+        Assert.DoesNotContain("system@anonymized.example.com", reissue.HtmlBody, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

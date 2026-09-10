@@ -31,7 +31,7 @@ public sealed class ApprovedEmailPreviewService(ApplicationDbContext db, IOption
             var recipients = new[] { collection.PayorEmail, notifications.Value.SystemCopyAddress }.Where(value => !string.IsNullOrWhiteSpace(value)).Select(RedactEmail).ToList();
             var clientUsers = await db.CollectionClientUsers.Where(item => item.CollectionClientId == collection.CollectionClientId && item.User.IsActive).Select(item => item.User.Email).ToListAsync(ct);
             recipients.AddRange(clientUsers.Where(value => !string.IsNullOrWhiteSpace(value)).Select(RedactEmail));
-            await audit.LogAsync("EMAIL_TEMPLATE_PREVIEW", $"CollectionReceipt:{entityId}", actorUserId: actorUserId.ToString(), cancellationToken: ct);
+            await audit.LogAsync("EMAIL_TEMPLATE_PREVIEW", new AuditEntity("CollectionTransaction", entityId.ToString()), actorUserId: actorUserId.ToString(), cancellationToken: ct);
             return Result.Success(new ApprovedEmailPreview($"Collection receipt #{collection.SequenceNo}", $"<article><h1>Collection receipt</h1><p>Receipt #{collection.SequenceNo}</p><p>Client: {HtmlEncoder.Default.Encode(collection.CollectionClient.Name)}</p><p>Amount: {collection.Amount:N2} JMD</p></article>", recipients.Distinct().ToList()));
         }
         if (string.Equals(templateType, "PaymentSummary", StringComparison.OrdinalIgnoreCase))
@@ -45,7 +45,7 @@ public sealed class ApprovedEmailPreviewService(ApplicationDbContext db, IOption
             var job = await jobQuery.SingleOrDefaultAsync(ct);
             if (job is null) return Result.Failure<ApprovedEmailPreview>("Job payment record was not found or is not available.");
             var recipients = job.PayeeUser is null ? [] : new[] { RedactEmail(job.PayeeUser.Email) };
-            await audit.LogAsync("EMAIL_TEMPLATE_PREVIEW", $"PaymentSummary:{entityId}", actorUserId: actorUserId.ToString(), cancellationToken: ct);
+            await audit.LogAsync("EMAIL_TEMPLATE_PREVIEW", new AuditEntity("JobPayment", entityId.ToString()), actorUserId: actorUserId.ToString(), cancellationToken: ct);
             return Result.Success(new ApprovedEmailPreview($"Payout summary #{job.SequenceNo}", $"<article><h1>Payout summary</h1><p>Payment #{job.SequenceNo}</p><p>Total paid: {job.TotalPaid:N2} JMD</p></article>", recipients));
         }
         return Result.Failure<ApprovedEmailPreview>("Unsupported or prohibited email template. Only CollectionReceipt and PaymentSummary are approved.");

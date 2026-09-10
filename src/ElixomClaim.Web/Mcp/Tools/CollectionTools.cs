@@ -45,7 +45,7 @@ public sealed class CollectionTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await ListCollectionsAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP collections list completed for actor {ActorId} with success {Success}", actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_COLLECTIONS_LIST", "Collections", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_COLLECTIONS_LIST", new AuditEntity("CollectionTransaction", "List"), cancellationToken);
         return response;
     }
 
@@ -56,7 +56,7 @@ public sealed class CollectionTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null);
         var response = await GetCollectionAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP collection {CollectionId} read by {ActorId} with success {Success}", request.CollectionId, actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_COLLECTIONS_GET", $"Collection:{request.CollectionId}", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_COLLECTIONS_GET", new AuditEntity("CollectionTransaction", request.CollectionId.ToString()), cancellationToken);
         return response;
     }
 

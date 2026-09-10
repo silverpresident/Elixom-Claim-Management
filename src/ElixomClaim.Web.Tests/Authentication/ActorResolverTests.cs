@@ -173,7 +173,7 @@ public class ActorResolverTests
         var user = new User { Id = Guid.NewGuid(), Email = "actor@example.test", FullName = "Actor User", Role = UserRole.Accountant, IsActive = true };
         var actorContext = new ActorContext(user, "client_1", "mcp:access", "corr_123", "127.0.0.1", IsMcp: true);
 
-        await resolver.LogAuditAsync(actorContext, "TEST_ACTION", "Target:123");
+        await resolver.LogAuditAsync(actorContext, "TEST_ACTION", new AuditEntity("Target", "123"));
 
         Assert.Equal("TEST_ACTION", audit.LastAction);
         Assert.Equal("Target:123", audit.LastTarget);

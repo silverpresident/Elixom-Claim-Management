@@ -1,4 +1,5 @@
 using ElixomClaim.Lib.Common;
+using ElixomClaim.Lib.Services;
 using ElixomClaim.Web.Services;
 
 namespace ElixomClaim.Web.Mcp.Tools;
@@ -31,7 +32,7 @@ public sealed class McpToolActorAccessor
     public Task AuditAsync(
         ActorContext actor,
         string action,
-        string target,
+        AuditEntity entity,
         CancellationToken cancellationToken) =>
-        _actorResolver.LogAuditAsync(actor, action, target, cancellationToken: cancellationToken);
+        _actorResolver.LogAuditAsync(actor, action, entity, cancellationToken: cancellationToken);
 }

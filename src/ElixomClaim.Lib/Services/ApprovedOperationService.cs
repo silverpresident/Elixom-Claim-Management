@@ -19,7 +19,7 @@ public sealed class ApprovedOperationService(ApplicationDbContext db, IOperation
         {
             var generated = await payroll.GenerateForDefinitionAsync(salaryDefinitionId, actorUserId, asOfDate, ct);
             var record = await records.UpdateStatusAsync(reservation.Record.Id, generated.IsSuccess ? "Completed" : "Failed", generated.IsSuccess ? "Salary generation completed." : generated.Error, ct);
-            await audit.LogAsync("OPERATION_SALARY_GENERATION_REQUESTED", $"SalaryDefinition:{salaryDefinitionId}", actorUserId: actorUserId.ToString(), cancellationToken: ct);
+            await audit.LogAsync("OPERATION_SALARY_GENERATION_REQUESTED", new AuditEntity("OperationRecord", record.Id.ToString()), afterState: new { SalaryDefinitionId = salaryDefinitionId, record.Status }, actorUserId: actorUserId.ToString(), cancellationToken: ct);
             logger.LogInformation("Approved salary generation operation {OperationId} completed with status {Status}", record.Id, record.Status);
             return generated.IsSuccess ? Result.Success(record) : Result.Failure<OperationRecord>(generated.Error);
         }
@@ -42,7 +42,7 @@ public sealed class ApprovedOperationService(ApplicationDbContext db, IOperation
         {
             var requestedBatchSize = Math.Clamp(batchSize ?? 25, 1, 100);
             await records.UpdateStatusAsync(reservation.Record.Id, "Accepted", $"BatchSize:{requestedBatchSize}", ct);
-            await audit.LogAsync("OPERATION_OUTBOX_WAKEUP_REQUESTED", $"BatchSize:{requestedBatchSize}", actorUserId: actorUserId.ToString(), cancellationToken: ct);
+            await audit.LogAsync("OPERATION_OUTBOX_WAKEUP_REQUESTED", new AuditEntity("OperationRecord", reservation.Record.Id.ToString()), afterState: new { BatchSize = requestedBatchSize }, actorUserId: actorUserId.ToString(), cancellationToken: ct);
         }
         logger.LogInformation("Approved outbox wake-up operation {OperationId} accepted for actor {ActorId}", reservation.Record.Id, actorUserId);
         return Result.Success(reservation.Record);

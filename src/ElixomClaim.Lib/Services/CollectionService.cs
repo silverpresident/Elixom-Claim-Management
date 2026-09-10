@@ -91,7 +91,9 @@ public class CollectionService : ICollectionService
             {
                 var skippedPayor = new EmailOutboxItem
                 {
-                    Recipient = string.Empty,
+                    To = string.Empty,
+                    From = _notificationOptions.FromAddress,
+                    Bcc = _notificationOptions.SystemCopyAddress,
                     Subject = $"Collection receipt #{collection.SequenceNo}",
                     HtmlBody = ComposeReceiptHtml(collection, client),
                     RelatedEntityType = "CollectionTransaction",
@@ -106,7 +108,9 @@ public class CollectionService : ICollectionService
                 _dbContext.EmailLogs.Add(new EmailLog
                 {
                     OutboxItemId = skippedPayor.Id,
-                    Recipient = string.Empty,
+                    To = skippedPayor.To,
+                    From = skippedPayor.From,
+                    Bcc = skippedPayor.Bcc,
                     Subject = skippedPayor.Subject,
                     HtmlBody = skippedPayor.HtmlBody,
                     Provider = "NotSent",
@@ -160,13 +164,15 @@ public class CollectionService : ICollectionService
         if (actor is null || collection is null || !actor.Role.HasMinimumRole(UserRole.Teller)) return Result.Failure("Collection receipt was not found.");
         if (actor.Id != collection.TellerUserId && !actor.Role.HasMinimumRole(UserRole.Manager)) return Result.Failure("Only the recording teller or a manager may reissue this receipt.");
 
-        var recipients = await _dbContext.EmailOutboxItems.Where(e => e.RelatedEntityType == "CollectionTransaction" && e.RelatedEntityId == collection.Id.ToString() && e.Status != EmailOutboxStatus.SkippedInvalidRecipient).Select(e => e.Recipient).Distinct().ToListAsync(cancellationToken);
+        var recipients = await _dbContext.EmailOutboxItems.Where(e => e.RelatedEntityType == "CollectionTransaction" && e.RelatedEntityId == collection.Id.ToString() && e.Status != EmailOutboxStatus.SkippedInvalidRecipient).Select(e => e.To).Distinct().ToListAsync(cancellationToken);
         if (recipients.Count == 0) return Result.Failure("There are no valid configured receipt recipients.");
         foreach (var recipient in recipients.Where(IsValidEmail))
         {
             _dbContext.EmailOutboxItems.Add(new EmailOutboxItem
             {
-                Recipient = recipient,
+                To = recipient,
+                From = _notificationOptions.FromAddress,
+                Bcc = _notificationOptions.SystemCopyAddress,
                 Subject = $"Collection receipt reissue #{collection.SequenceNo}",
                 HtmlBody = ComposeReceiptHtml(collection, collection.CollectionClient),
                 RelatedEntityType = "CollectionTransaction",

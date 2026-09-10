@@ -355,8 +355,10 @@ public class ApiEndpointIntegrationTests
         Assert.Equal(HttpStatusCode.Accepted, (await client.PostAsync("/api/v1/email-templates/queue", JsonContent.Create(request))).StatusCode);
         using var verifyScope = host.Services.CreateScope();
         var outbox = await verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>().EmailOutboxItems.ToListAsync();
-        Assert.Equal(2, outbox.Count);
-        Assert.All(outbox, item => Assert.Contains(item.Recipient, new[] { "payor@example.test", "ops@example.test" }));
+        var receipt = Assert.Single(outbox);
+        Assert.Equal("payor@example.test", receipt.To);
+        Assert.Equal("no-reply@example.test", receipt.From);
+        Assert.Equal("ops@example.test", receipt.Bcc);
     }
 
     [Fact]
@@ -577,7 +579,7 @@ public class ApiEndpointIntegrationTests
     private static async Task<IHost> CreateHostAsync(string databaseName) => await new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services =>
     {
         services.AddLogging(); services.AddDbContext<ApplicationDbContext>(options => options.UseInMemoryDatabase(databaseName));
-        services.Configure<ElixomClaim.Lib.Configuration.NotificationOptions>(options => options.SystemCopyAddress = "ops@example.test");
+        services.Configure<ElixomClaim.Lib.Configuration.NotificationOptions>(options => { options.FromAddress = "no-reply@example.test"; options.SystemCopyAddress = "ops@example.test"; });
         services.AddSingleton<ElixomClaim.Lib.Services.ISystemClock, ElixomClaim.Lib.Services.SystemClock>(); services.AddSingleton<ISalaryRecurrencePlanner, SalaryRecurrencePlanner>(); services.AddScoped<IAuditService, AuditService>(); services.AddScoped<IClaimService, ClaimService>(); services.AddScoped<ICollectionService, CollectionService>(); services.AddScoped<IJobPaymentService, JobPaymentService>(); services.AddScoped<ISalaryPayrollService, SalaryPayrollService>(); services.AddScoped<IApprovedEmailPreviewService, ApprovedEmailPreviewService>(); services.AddScoped<IOperationRecordService, OperationRecordService>(); services.AddScoped<IApprovedOperationService, ApprovedOperationService>(); services.AddScoped<IActorResolver, ActorResolver>(); services.AddScoped<McpToolActorAccessor>(); services.AddHttpContextAccessor();
         services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", _ => { });
         services.AddAuthorization(options => { options.AddPolicy("ApiAccess", policy => { policy.AddAuthenticationSchemes("Test"); policy.RequireAuthenticatedUser(); policy.RequireAssertion(context => context.User.HasClaim("scope", "api:access")); }); options.AddPolicy("McpAccess", policy => { policy.AddAuthenticationSchemes("Test"); policy.RequireAuthenticatedUser(); policy.RequireAssertion(context => context.User.HasClaim("scope", "mcp:access")); }); });

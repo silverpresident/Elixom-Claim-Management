@@ -54,7 +54,7 @@ public sealed class ClaimTools
         if (!actor.IsSuccess) return new ClaimListResponse(false, "MCP authorization failed.", null);
         var response = await ListClaimsAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP claim list completed for actor {ActorId} with success {Success}", actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_LIST", "Claims", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_LIST", new AuditEntity("Claim", "List"), cancellationToken);
         return response;
     }
 
@@ -65,7 +65,7 @@ public sealed class ClaimTools
         if (!actor.IsSuccess) return new ClaimDetailResponse(false, "MCP authorization failed.", null);
         var response = await GetClaimAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP claim {ClaimId} read by {ActorId} with success {Success}", request.ClaimId, actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_GET", $"Claim:{request.ClaimId}", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_GET", new AuditEntity("Claim", request.ClaimId.ToString()), cancellationToken);
         return response;
     }
 
@@ -76,7 +76,7 @@ public sealed class ClaimTools
         if (!actor.IsSuccess) return new ClaimOperationResponse(false, "MCP authorization failed.");
         var response = await SubmitClaimAsync(actor.Value!.User, request, cancellationToken);
         _logger.LogInformation("MCP claim {ClaimId} submit requested by {ActorId} with success {Success}", request.ClaimId, actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_SUBMIT", $"Claim:{request.ClaimId}", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_CLAIMS_SUBMIT", new AuditEntity("Claim", request.ClaimId.ToString()), cancellationToken);
         return response;
     }
 

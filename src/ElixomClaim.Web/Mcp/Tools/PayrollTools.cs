@@ -25,7 +25,7 @@ public sealed class PayrollTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null, null, null, null);
         var response = await PreviewAsync(request, actor.Value!.User.Id, cancellationToken);
         _logger.LogInformation("MCP payroll preview completed for salary definition {SalaryDefinitionId} and actor {ActorId} with success {Success}", request.SalaryDefinitionId, actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_PAYROLL_PREVIEW", $"SalaryDefinition:{request.SalaryDefinitionId}", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_PAYROLL_PREVIEW", new AuditEntity("SalaryDefinition", request.SalaryDefinitionId.ToString()), cancellationToken);
         return response;
     }
 
@@ -36,9 +36,9 @@ public sealed class PayrollTools
         if (!actor.IsSuccess) return new(false, "MCP authorization failed.", null, null, null, null);
         var response = await RunAsync(request, actor.Value!.User.Id, cancellationToken);
         _logger.LogInformation("MCP payroll run completed for salary definition {SalaryDefinitionId} and actor {ActorId} with success {Success}", request.SalaryDefinitionId, actor.Value.User.Id, response.Success);
-        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_PAYROLL_RUN", $"SalaryDefinition:{request.SalaryDefinitionId}", cancellationToken);
+        await _actorAccessor.AuditAsync(actor.Value, "MCP_TOOL_PAYROLL_RUN", new AuditEntity("SalaryDefinition", request.SalaryDefinitionId.ToString()), cancellationToken);
         return response;
     }
-    public async Task<PayrollToolResponse> PreviewAsync(PayrollPreviewRequest request, Guid actor, CancellationToken ct) { var result = await _service.PreviewAsync(request.SalaryDefinitionId, actor, request.AsOfDate, ct); await _audit.LogAsync("MCP_PAYROLL_PREVIEW", $"SalaryDefinition:{request.SalaryDefinitionId}", actorUserId: actor.ToString(), isMcpOperation: true, cancellationToken: ct); return result.IsSuccess ? new(true, null, result.Value!.DueDate, result.Value.Eligibility.ToString(), result.Value.ProjectedTotal, null) : new(false, result.Error, null, null, null, null); }
-    public async Task<PayrollToolResponse> RunAsync(PayrollRunRequest request, Guid actor, CancellationToken ct) { var result = await _service.GenerateForDefinitionAsync(request.SalaryDefinitionId, actor, request.AsOfDate, ct); await _audit.LogAsync("MCP_PAYROLL_RUN", $"SalaryDefinition:{request.SalaryDefinitionId}", actorUserId: actor.ToString(), isMcpOperation: true, cancellationToken: ct); return result.IsSuccess ? new(true, null, result.Value!.PeriodEndingDate, SalaryGenerationEligibility.Eligible.ToString(), result.Value.PayrollTotal, result.Value.Id) : new(false, result.Error, null, null, null, null); }
+    public async Task<PayrollToolResponse> PreviewAsync(PayrollPreviewRequest request, Guid actor, CancellationToken ct) { var result = await _service.PreviewAsync(request.SalaryDefinitionId, actor, request.AsOfDate, ct); await _audit.LogAsync("MCP_PAYROLL_PREVIEW", new AuditEntity("SalaryDefinition", request.SalaryDefinitionId.ToString()), actorUserId: actor.ToString(), isMcpOperation: true, cancellationToken: ct); return result.IsSuccess ? new(true, null, result.Value!.DueDate, result.Value.Eligibility.ToString(), result.Value.ProjectedTotal, null) : new(false, result.Error, null, null, null, null); }
+    public async Task<PayrollToolResponse> RunAsync(PayrollRunRequest request, Guid actor, CancellationToken ct) { var result = await _service.GenerateForDefinitionAsync(request.SalaryDefinitionId, actor, request.AsOfDate, ct); await _audit.LogAsync("MCP_PAYROLL_RUN", new AuditEntity("SalaryDefinition", request.SalaryDefinitionId.ToString()), actorUserId: actor.ToString(), isMcpOperation: true, cancellationToken: ct); return result.IsSuccess ? new(true, null, result.Value!.PeriodEndingDate, SalaryGenerationEligibility.Eligible.ToString(), result.Value.PayrollTotal, result.Value.Id) : new(false, result.Error, null, null, null, null); }
 }

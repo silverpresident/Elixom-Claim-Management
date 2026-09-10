@@ -78,7 +78,7 @@ public class AdminController : Controller
 
         await _auditService.LogAsync(
             action: "USER_ROLE_OR_STATUS_UPDATED",
-            target: $"User:{user.Id}",
+            entity: new AuditEntity("User", user.Id.ToString()),
             beforeState: new { role = oldRole, isActive = oldIsActive },
             afterState: new { role = user.Role, isActive = user.IsActive },
             actorUserId: User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,

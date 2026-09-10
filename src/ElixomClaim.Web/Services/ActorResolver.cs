@@ -27,7 +27,7 @@ public interface IActorResolver
     Task LogAuditAsync(
         ActorContext actor,
         string action,
-        string target,
+        AuditEntity entity,
         object? beforeState = null,
         object? afterState = null,
         CancellationToken cancellationToken = default);
@@ -110,14 +110,14 @@ public class ActorResolver : IActorResolver
     public async Task LogAuditAsync(
         ActorContext actor,
         string action,
-        string target,
+        AuditEntity entity,
         object? beforeState = null,
         object? afterState = null,
         CancellationToken cancellationToken = default)
     {
         await _auditService.LogAsync(
             action: action,
-            target: target,
+            entity: entity,
             actorUserId: actor.User.Id.ToString(),
             actorEmail: actor.User.Email,
             correlationId: actor.CorrelationId,
