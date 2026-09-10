@@ -61,11 +61,12 @@ namespace ElixomClaim.Lib.Migrations
                     CorrelationId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     IpAddress = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Action = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Target = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    EntityType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    EntityId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     BeforeStateJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     AfterStateJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsMcpOperation = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
-                    TimestampUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    OccurredAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -100,7 +101,10 @@ namespace ElixomClaim.Lib.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     OutboxItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Recipient = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    To = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
+                    From = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Cc = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    Bcc = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     Subject = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     HtmlBody = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Provider = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
@@ -123,7 +127,10 @@ namespace ElixomClaim.Lib.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Recipient = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    To = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
+                    From = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Cc = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    Bcc = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     Subject = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     HtmlBody = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RelatedEntityType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
@@ -794,6 +801,12 @@ namespace ElixomClaim.Lib.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_AuditRecords_EntityType_EntityId_OccurredAtUtc",
+                schema: "dbclaim",
+                table: "AuditRecords",
+                columns: new[] { "EntityType", "EntityId", "OccurredAtUtc" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ClaimComments_AuthorUserId",
                 schema: "dbclaim",
                 table: "ClaimComments",
@@ -1077,11 +1090,24 @@ namespace ElixomClaim.Lib.Migrations
                 table: "Users",
                 column: "NormalizedEmail",
                 unique: true);
+
+            migrationBuilder.Sql("""
+                CREATE TRIGGER [dbclaim].[TR_AuditRecords_PreventMutation]
+                ON [dbclaim].[AuditRecords]
+                AFTER UPDATE, DELETE
+                AS
+                BEGIN
+                    SET NOCOUNT ON;
+                    THROW 51000, 'Audit records are append-only and cannot be modified or deleted.', 1;
+                END;
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql("DROP TRIGGER [dbclaim].[TR_AuditRecords_PreventMutation];");
+
             migrationBuilder.DropTable(
                 name: "AuditRecords",
                 schema: "dbclaim");
