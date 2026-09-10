@@ -68,7 +68,32 @@ public static class DevelopmentDataSeeder
         db.AddRange(draftClaim, acceptedClaim,
             new ClaimComment { Id = Guid.Parse("51000000-0000-0000-0000-000000000101"), ClaimId = draftClaim.Id, AuthorUserId = UserIds[UserRole.User], Content = "Sample claimant comment", CreatedAtUtc = now },
             new ClaimComment { Id = Guid.Parse("51000000-0000-0000-0000-000000000102"), ClaimId = acceptedClaim.Id, AuthorUserId = UserIds[UserRole.Manager], Content = "Sample management comment", IsPrivate = true, CreatedAtUtc = now });
-
+        for(int i = 0; i < 6; i++)
+        {
+            db.Add(new Claim{
+                Id = Guid.Parse($"50000000-0000-0000-0000-00000000010{i + 3}"),
+                ClaimantUserId = UserIds[UserRole.User],
+                Title = $"Development claim {i + 1}",
+                Description = $"Sample claim {i + 1}",
+                DateOfJob = now,
+                Amount = 1000.00m + (i * 500.00m),
+                Status = (ClaimStatus)(1 + (i % 4)), // Cycle through Draft, Submitted, Accepted, Rejected
+                PaymentStatus = (ClaimPaymentStatus)(1 + (i % 3)), // Cycle through Unpaid, Paid, Rejected
+                CreatedAtUtc = now.AddMinutes(i + 1),
+                UpdatedAtUtc = now.AddMinutes(i + 1)
+            });
+        }
+        for(int i = 0; i < 3; i++)
+        {
+            db.Add(new ClaimComment
+            {
+                Id = Guid.Parse($"51000000-0000-0000-0000-00000000010{i + 3}"),
+                ClaimId = acceptedClaim.Id,
+                AuthorUserId = UserIds[UserRole.User],
+                Content = $"Sample claimant comment {i + 1}",
+                CreatedAtUtc = now.AddMinutes(i + 1)
+            });
+        }
         var collection = new CollectionTransaction
         {
             Id = Guid.Parse("60000000-0000-0000-0000-000000000101"),
@@ -88,6 +113,76 @@ public static class DevelopmentDataSeeder
             CreatedAtUtc = now
         };
         db.Add(collection);
+        await db.SaveChangesAsync(cancellationToken);
+        db.CollectionTransactions.AddRange(
+            new CollectionTransaction
+            {
+                Id = Guid.Parse("60000000-0000-0000-0000-000000000102"),
+                CollectionClientId = client.Id,
+                PurposeOptionId = purpose.Id,
+                Purpose = purpose.Name,
+                AmountOptionId = amount.Id,
+                TellerUserId = UserIds[UserRole.Teller],
+                PayorName = "Development Payor - recent collection",
+                ReferenceNumber = "DEV-COL-002",
+                Method = CollectionMethod.Cash,
+                Status = CollectionStatus.Collected,
+                Amount = 1500.00m,
+                ProcessingFee = client.PerTransactionFee,
+                PaymentDateUtc = now.AddDays(-1),
+                CreatedAtUtc = now.AddDays(-1)
+            },
+            new CollectionTransaction
+            {
+                Id = Guid.Parse("60000000-0000-0000-0000-000000000103"),
+                CollectionClientId = client.Id,
+                PurposeOptionId = purpose.Id,
+                Purpose = purpose.Name,
+                AmountOptionId = amount.Id,
+                TellerUserId = UserIds[UserRole.Teller],
+                PayorName = "Development Payor - older collection",
+                ReferenceNumber = "DEV-COL-003",
+                Method = CollectionMethod.BankTransfer,
+                Status = CollectionStatus.Collected,
+                Amount = 3000.00m,
+                ProcessingFee = client.PerTransactionFee,
+                PaymentDateUtc = now.AddDays(-14),
+                CreatedAtUtc = now.AddDays(-14)
+            },
+            new CollectionTransaction
+            {
+                Id = Guid.Parse("60000000-0000-0000-0000-000000000104"),
+                CollectionClientId = client.Id,
+                PurposeOptionId = purpose.Id,
+                Purpose = purpose.Name,
+                AmountOptionId = amount.Id,
+                TellerUserId = UserIds[UserRole.Teller],
+                PayorName = "Development Payor - processing",
+                ReferenceNumber = "DEV-COL-004",
+                Method = CollectionMethod.Pos,
+                Status = CollectionStatus.Processing,
+                Amount = 2500.00m,
+                ProcessingFee = client.PerTransactionFee,
+                PaymentDateUtc = now.AddDays(-7),
+                CreatedAtUtc = now.AddDays(-7)
+            },
+            new CollectionTransaction
+            {
+                Id = Guid.Parse("60000000-0000-0000-0000-000000000105"),
+                CollectionClientId = client.Id,
+                PurposeOptionId = purpose.Id,
+                Purpose = purpose.Name,
+                AmountOptionId = amount.Id,
+                TellerUserId = UserIds[UserRole.Teller],
+                PayorName = "Development Payor - transferred",
+                ReferenceNumber = "DEV-COL-005",
+                Method = CollectionMethod.CreditNote,
+                Status = CollectionStatus.Transferred,
+                Amount = 5000.00m,
+                ProcessingFee = client.PerTransactionFee,
+                PaymentDateUtc = now.AddDays(-30),
+                CreatedAtUtc = now.AddDays(-30)
+            });
         await db.SaveChangesAsync(cancellationToken);
 
         var salary = new SalaryDefinition

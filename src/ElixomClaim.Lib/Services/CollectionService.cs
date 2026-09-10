@@ -238,5 +238,5 @@ public class CollectionService : ICollectionService
     }
 
     private static string ComposeReceiptHtml(CollectionTransaction collection, CollectionClient client) =>
-        $"<article><h1>Collection receipt</h1><p>Receipt #{collection.SequenceNo}</p><dl><dt>Client</dt><dd>{HtmlEncoder.Default.Encode(client.Name)}</dd><dt>Purpose</dt><dd>{HtmlEncoder.Default.Encode(collection.Purpose)}</dd><dt>Amount</dt><dd>{collection.Amount:N2} JMD</dd><dt>Payment date (UTC)</dt><dd>{collection.PaymentDateUtc:yyyy-MM-dd HH:mm}</dd><dt>Method</dt><dd>{collection.Method}</dd></dl></article>";
+        $"<article><h1>Collection Receipt</h1><p>Receipt #{collection.SequenceNo}</p><dl><dt>Client</dt><dd>{HtmlEncoder.Default.Encode(client.Name)}</dd><dt>Purpose</dt><dd>{HtmlEncoder.Default.Encode(collection.Purpose)}</dd><dt>Amount</dt><dd>{collection.Amount:N2} JMD</dd><dt>Payment date (UTC)</dt><dd>{collection.PaymentDateUtc:yyyy-MM-dd HH:mm}</dd><dt>Method</dt><dd>{collection.Method}</dd></dl></article>";
 }

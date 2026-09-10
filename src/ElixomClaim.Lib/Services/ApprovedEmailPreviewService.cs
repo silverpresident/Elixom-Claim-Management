@@ -32,7 +32,7 @@ public sealed class ApprovedEmailPreviewService(ApplicationDbContext db, IOption
             var clientUsers = await db.CollectionClientUsers.Where(item => item.CollectionClientId == collection.CollectionClientId && item.User.IsActive).Select(item => item.User.Email).ToListAsync(ct);
             recipients.AddRange(clientUsers.Where(value => !string.IsNullOrWhiteSpace(value)).Select(RedactEmail));
             await audit.LogAsync("EMAIL_TEMPLATE_PREVIEW", new AuditEntity("CollectionTransaction", entityId.ToString()), actorUserId: actorUserId.ToString(), cancellationToken: ct);
-            return Result.Success(new ApprovedEmailPreview($"Collection receipt #{collection.SequenceNo}", $"<article><h1>Collection receipt</h1><p>Receipt #{collection.SequenceNo}</p><p>Client: {HtmlEncoder.Default.Encode(collection.CollectionClient.Name)}</p><p>Amount: {collection.Amount:N2} JMD</p></article>", recipients.Distinct().ToList()));
+            return Result.Success(new ApprovedEmailPreview($"Collection Receipt #{collection.SequenceNo}", $"<article><h1>Collection receipt</h1><p>Receipt #{collection.SequenceNo}</p><p>Client: {HtmlEncoder.Default.Encode(collection.CollectionClient.Name)}</p><p>Amount: {collection.Amount:N2} JMD</p></article>", recipients.Distinct().ToList()));
         }
         if (string.Equals(templateType, "PaymentSummary", StringComparison.OrdinalIgnoreCase))
         {
