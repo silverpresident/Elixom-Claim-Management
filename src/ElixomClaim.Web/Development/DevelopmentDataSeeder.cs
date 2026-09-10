@@ -63,6 +63,64 @@ public static class DevelopmentDataSeeder
             new CollectionClientUser { CollectionClientId = client.Id, UserId = UserIds[UserRole.User], AssignedAtUtc = now },
             new CollectionClientBankDetail { Id = Guid.Parse("21000000-0000-0000-0000-000000000001"), CollectionClientId = client.Id, AccountName = "Development Client", BankName = "Example Bank", BranchCode = "DEV-001", BranchName = "Development Branch", AccountType = CollectionBankAccountTypes.Current, AccountNumber = "DEV-CLIENT-001", CreatedAtUtc = now });
 
+        var additionalClients = new[]
+        {
+            (Id: Guid.Parse("20000000-0000-0000-0000-000000000002"), Name: "Development Community Fund", Description: "Local development community-fund collections", PerJobFee: 30.00m, PerTransactionFee: 6.00m,
+                Purposes: new[] { "Monthly contribution", "Event registration" },
+                Amounts: new[] { ("Contribution", 1000.00m), ("Event fee", 3500.00m) }),
+            (Id: Guid.Parse("20000000-0000-0000-0000-000000000003"), Name: "Development School Support", Description: "Local development school-support collections", PerJobFee: 40.00m, PerTransactionFee: 7.50m,
+                Purposes: new[] { "Tuition payment", "Uniform contribution", "Activity fee" },
+                Amounts: new[] { ("Primary payment", 5000.00m), ("Secondary payment", 7500.00m), ("Activity fee", 1500.00m) }),
+            (Id: Guid.Parse("20000000-0000-0000-0000-000000000004"), Name: "Development Sports Club", Description: "Local development sports-club collections", PerJobFee: 35.00m, PerTransactionFee: 5.50m,
+                Purposes: new[] { "Membership renewal", "Training session" },
+                Amounts: new[] { ("Annual membership", 4000.00m), ("Training fee", 1200.00m) })
+        };
+
+        foreach (var additionalClient in additionalClients)
+        {
+            db.Add(new CollectionClient
+            {
+                Id = additionalClient.Id,
+                Name = additionalClient.Name,
+                Description = additionalClient.Description,
+                PerJobProcessingFee = additionalClient.PerJobFee,
+                PerTransactionFee = additionalClient.PerTransactionFee,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            });
+            db.Add(new CollectionClientUser
+            {
+                CollectionClientId = additionalClient.Id,
+                UserId = UserIds[UserRole.User],
+                AssignedAtUtc = now
+            });
+
+            for (var index = 0; index < additionalClient.Purposes.Length; index++)
+            {
+                db.Add(new CollectionPurposeOption
+                {
+                    Id = Guid.Parse($"40000000-0000-0000-0000-000000{additionalClient.Id.ToString()[^3..]}{index + 1:D3}"),
+                    CollectionClientId = additionalClient.Id,
+                    Name = additionalClient.Purposes[index],
+                    DisplayOrder = index + 1,
+                    CreatedAtUtc = now
+                });
+            }
+
+            for (var index = 0; index < additionalClient.Amounts.Length; index++)
+            {
+                db.Add(new CollectionAmountOption
+                {
+                    Id = Guid.Parse($"40000000-0000-0000-0000-000000{additionalClient.Id.ToString()[^3..]}{index + 101:D3}"),
+                    CollectionClientId = additionalClient.Id,
+                    Name = additionalClient.Amounts[index].Item1,
+                    Amount = additionalClient.Amounts[index].Item2,
+                    DisplayOrder = index + 1,
+                    CreatedAtUtc = now
+                });
+            }
+        }
+
         var draftClaim = new Claim { Id = Guid.Parse("50000000-0000-0000-0000-000000000101"), ClaimantUserId = UserIds[UserRole.User], Title = "Development mileage", Description = "Sample draft claim", DateOfJob = now, Amount = 1200.00m, Status = ClaimStatus.Draft, CreatedAtUtc = now, UpdatedAtUtc = now };
         var acceptedClaim = new Claim { Id = Guid.Parse("50000000-0000-0000-0000-000000000102"), ClaimantUserId = UserIds[UserRole.User], Title = "Development supplies", Description = "Sample accepted claim", DateOfJob = now, Amount = 3400.00m, Status = ClaimStatus.Accepted, PaymentStatus = ClaimPaymentStatus.Processing, CreatedAtUtc = now, UpdatedAtUtc = now };
         db.AddRange(draftClaim, acceptedClaim,
