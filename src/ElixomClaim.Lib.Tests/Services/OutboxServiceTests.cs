@@ -25,7 +25,14 @@ public class OutboxServiceTests
         Assert.Equal(EmailOutboxStatus.Sent, item.Status);
         Assert.Single(sender.Messages);
         Assert.Single(db.EmailLogs);
-        Assert.Equal(EmailOutboxStatus.Sent, db.EmailLogs.Single().Status);
+        Assert.Equal("payor@anonymized.example.com", sender.Messages.Single().To);
+        Assert.Equal("no-reply@anonymized.example.com", sender.Messages.Single().From);
+        Assert.Equal("system@anonymized.example.com", sender.Messages.Single().Bcc);
+        var log = db.EmailLogs.Single();
+        Assert.Equal(EmailOutboxStatus.Sent, log.Status);
+        Assert.Equal("payor@anonymized.example.com", log.To);
+        Assert.Equal("no-reply@anonymized.example.com", log.From);
+        Assert.Equal("system@anonymized.example.com", log.Bcc);
     }
 
     [Fact]
@@ -57,11 +64,14 @@ public class OutboxServiceTests
         Assert.Equal(EmailOutboxStatus.Pending, item.Status);
         Assert.Equal(1, item.AttemptCount);
         Assert.True(item.AvailableAtUtc >= before.AddMinutes(2));
-        Assert.Single(db.EmailLogs);
+        var log = Assert.Single(db.EmailLogs);
+        Assert.Equal(item.To, log.To);
+        Assert.Equal(item.From, log.From);
+        Assert.Equal(item.Bcc, log.Bcc);
     }
 
     private static ApplicationDbContext CreateDb() => new(new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-    private static EmailOutboxItem Outbox(string recipient) => new() { Recipient = recipient, Subject = "Receipt", HtmlBody = "<p>Receipt</p>", RelatedEntityType = "CollectionTransaction", RelatedEntityId = "1", IdempotencyKey = Guid.NewGuid().ToString("N"), AvailableAtUtc = DateTime.UtcNow.AddMinutes(-1) };
+    private static EmailOutboxItem Outbox(string recipient) => new() { To = recipient, From = "no-reply@anonymized.example.com", Bcc = "system@anonymized.example.com", Subject = "Receipt", HtmlBody = "<p>Receipt</p>", RelatedEntityType = "CollectionTransaction", RelatedEntityId = "1", IdempotencyKey = Guid.NewGuid().ToString("N"), AvailableAtUtc = DateTime.UtcNow.AddMinutes(-1) };
 
     private sealed class StubEmailSender(bool success) : IEmailSender
     {
