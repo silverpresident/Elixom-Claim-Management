@@ -146,7 +146,7 @@ public class DomainAuditabilityFieldsTests
         var outboxItem = new EmailOutboxItem
         {
             Id = Guid.NewGuid(),
-            Recipient = "payee@example.com",
+            To = "payee@example.com",
             Subject = "Test Email",
             HtmlBody = "<p>Hello</p>",
             RelatedEntityType = "JobPayment",

@@ -145,7 +145,7 @@ public class McpToolBoundaryTests
 
         var outboxItems = await db.EmailOutboxItems.ToListAsync();
         Assert.Single(outboxItems);
-        Assert.Equal("payee@elixom.com", outboxItems[0].Recipient);
+        Assert.Equal("payee@elixom.com", outboxItems[0].To);
         Assert.Equal(EmailOutboxStatus.Pending, outboxItems[0].Status);
 
         // Send 2 with same idempotency key: Deduplicated, no new items added

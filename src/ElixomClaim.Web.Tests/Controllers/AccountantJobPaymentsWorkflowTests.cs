@@ -91,7 +91,7 @@ public class AccountantJobPaymentsWorkflowTests
         // Check Outbox Email Created
         var outbox = await db.EmailOutboxItems.FirstOrDefaultAsync(e => e.RelatedEntityId == job.Id.ToString());
         Assert.NotNull(outbox);
-        Assert.Equal("payee2@elixom.com", outbox.Recipient);
+        Assert.Equal("payee2@elixom.com", outbox.To);
 
         // 3. Create Adjustment
         var adjustResult = await controller.CreateAdjustment(job.Id, -100m, "Overpayment correction");

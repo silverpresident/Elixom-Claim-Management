@@ -230,7 +230,7 @@ public class Sprint11EndToEndSecurityAndWorkflowTests
         // Verify notification outbox item created
         var outboxItem = await db.EmailOutboxItems.FirstOrDefaultAsync(o => o.RelatedEntityId == paidJob.Id.ToString());
         Assert.NotNull(outboxItem);
-        Assert.Equal(claimant.Email, outboxItem.Recipient);
+        Assert.Equal(claimant.Email, outboxItem.To);
     }
 
     [Fact]

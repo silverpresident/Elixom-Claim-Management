@@ -153,7 +153,7 @@ public class AdminControllerTests
         var emailLog = new EmailLog
         {
             Id = Guid.NewGuid(),
-            Recipient = "recipient@example.com",
+            To = "recipient@example.com",
             Subject = "Payment summary",
             HtmlBody = "<p>Encoded review only</p>",
             Provider = "Development",

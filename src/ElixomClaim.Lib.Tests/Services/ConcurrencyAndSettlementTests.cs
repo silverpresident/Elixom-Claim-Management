@@ -72,7 +72,7 @@ public class ConcurrencyAndSettlementTests
         {
             dbInit.EmailOutboxItems.Add(new EmailOutboxItem
             {
-                Recipient = $"test{i}@example.com",
+                To = $"test{i}@example.com",
                 Subject = $"Subject {i}",
                 HtmlBody = "<p>Test</p>",
                 RelatedEntityType = "Test",
