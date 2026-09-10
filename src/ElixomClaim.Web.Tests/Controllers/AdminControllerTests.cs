@@ -51,7 +51,7 @@ public class AdminControllerTests
 
         var result = await controller.AuditLogs();
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsAssignableFrom<IEnumerable<AuditRecordViewModel>>(viewResult.Model);
+        var model = Assert.IsType<AuditLogPageViewModel>(viewResult.Model).Records;
 
         var log = Assert.Single(model);
         Assert.Null(log.BeforeStateJson);
@@ -79,7 +79,7 @@ public class AdminControllerTests
             }
         };
 
-        var model = Assert.IsAssignableFrom<IEnumerable<AuditRecordViewModel>>(Assert.IsType<ViewResult>(await controller.AuditLogs()).Model);
+        var model = Assert.IsType<AuditLogPageViewModel>(Assert.IsType<ViewResult>(await controller.AuditLogs()).Model).Records;
         var log = Assert.Single(model);
         Assert.Equal("Claim", log.EntityType);
         Assert.Null(log.BeforeStateJson);
@@ -113,11 +113,36 @@ public class AdminControllerTests
 
         var result = await controller.AuditLogs();
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsAssignableFrom<IEnumerable<AuditRecordViewModel>>(viewResult.Model);
+        var model = Assert.IsType<AuditLogPageViewModel>(viewResult.Model).Records;
 
         var log = Assert.Single(model);
         Assert.NotNull(log.AfterStateJson);
         Assert.Contains("\"bankAccountNumber\":\"[REDACTED]\"", log.AfterStateJson);
+    }
+
+    [Fact]
+    public async Task AuditLogs_ManagerRole_PaginatesOnlyPermittedMetadata()
+    {
+        var db = CreateInMemoryDbContext();
+        var audit = new AuditService(db, NullLogger<AuditService>.Instance);
+        for (var index = 0; index < 51; index++)
+        {
+            await audit.LogAsync("CLAIM_UPDATED", new AuditEntity("Claim", index.ToString()), afterState: new { bankAccountNumber = "999888777" });
+        }
+        await audit.LogAsync("PAYROLL_GENERATED", new AuditEntity("Payroll", "excluded"));
+
+        var controller = new AdminController(db, audit, NullLogger<AdminController>.Instance)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new SecurityClaim(ClaimTypes.Role, UserRole.Manager.ToString()) }, "TestAuth")) } }
+        };
+
+        var page = Assert.IsType<AuditLogPageViewModel>(Assert.IsType<ViewResult>(await controller.AuditLogs(page: 2)).Model);
+
+        Assert.Equal(2, page.Page);
+        Assert.Equal(51, page.TotalCount);
+        var record = Assert.Single(page.Records);
+        Assert.Equal("Claim", record.EntityType);
+        Assert.Null(record.AfterStateJson);
     }
 
     [Fact]

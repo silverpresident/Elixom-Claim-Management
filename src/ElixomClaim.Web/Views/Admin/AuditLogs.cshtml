@@ -1,4 +1,4 @@
-@model IEnumerable<ElixomClaim.Web.Models.AuditRecordViewModel>
+@model ElixomClaim.Web.Models.AuditLogPageViewModel
 @{
     ViewData["Title"] = "Audit Logs";
     bool isAdministrator = ViewBag.IsAdministrator ?? false;
@@ -36,7 +36,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var log in Model)
+                        @foreach (var log in Model.Records)
                         {
                             <tr>
                                 <td>@log.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
@@ -69,4 +69,9 @@
             </div>
         </div>
     </div>
+    <nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Audit log pages">
+        <a asp-action="AuditLogs" asp-route-page="@(Model.Page - 1)" class="btn btn-outline-secondary @(Model.HasPreviousPage ? string.Empty : "disabled")" aria-disabled="@(!Model.HasPreviousPage)">Previous</a>
+        <span class="text-muted">Page @Model.Page of @Model.TotalPages (@Model.TotalCount records)</span>
+        <a asp-action="AuditLogs" asp-route-page="@(Model.Page + 1)" class="btn btn-outline-secondary @(Model.HasNextPage ? string.Empty : "disabled")" aria-disabled="@(!Model.HasNextPage)">Next</a>
+    </nav>
 </div>

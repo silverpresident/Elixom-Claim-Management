@@ -91,8 +91,9 @@ public class AdminController : Controller
 
     [HttpGet("audit-logs")]
     [Authorize(Policy = PolicyNames.RequireManager)]
-    public async Task<IActionResult> AuditLogs()
+    public async Task<IActionResult> AuditLogs([FromQuery] int page = 1)
     {
+        const int pageSize = 50;
         var isAdministrator = User.IsInRole(UserRole.Administrator.ToString());
         var query = _dbContext.AuditRecords.AsNoTracking();
         if (!isAdministrator)
@@ -100,9 +101,13 @@ public class AdminController : Controller
             query = query.Where(record => record.EntityType == "Claim" || record.EntityType == "CollectionTransaction" || record.EntityType == "JobPayment");
         }
 
+        var totalCount = await query.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)pageSize));
+        var safePage = Math.Clamp(page, 1, totalPages);
         var records = await query
             .OrderByDescending(a => a.OccurredAtUtc)
-            .Take(200)
+            .Skip((safePage - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
         var viewModels = records.Select(r => new Models.AuditRecordViewModel
@@ -122,7 +127,7 @@ public class AdminController : Controller
         }).ToList();
 
         ViewBag.IsAdministrator = isAdministrator;
-        return View(viewModels);
+        return View(new Models.AuditLogPageViewModel(viewModels, safePage, pageSize, totalCount));
     }
 
     [HttpGet("emails")]
