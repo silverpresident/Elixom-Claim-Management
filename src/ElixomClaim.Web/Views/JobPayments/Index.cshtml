@@ -19,11 +19,19 @@ else
         <tbody>
             @foreach (var job in Model)
             {
+                var statusCss = job.Status switch
+                {
+                    ElixomClaim.Lib.Entities.JobPaymentStatus.Processing => "text-bg-secondary",
+                    ElixomClaim.Lib.Entities.JobPaymentStatus.Submitted => "text-bg-info",
+                    ElixomClaim.Lib.Entities.JobPaymentStatus.Scheduled => "text-bg-warning",
+                    ElixomClaim.Lib.Entities.JobPaymentStatus.Paid => "text-bg-success",
+                    _ => "text-bg-secondary"
+                };
                 <tr>
                     <td><a asp-action="Details" asp-route-id="@job.Id">#@job.SequenceNo</a></td>
                     <td>@(job.PayeeUser?.FullName ?? job.CollectionClient?.Name)</td>
                     <td>@job.TotalPaid.ToString("N2") JMD</td>
-                    <td>@await Component.InvokeAsync("StatusBadge", new { status = job.Status.ToString() })</td>
+                    <td><span class="badge @statusCss">@job.Status</span></td>
                 </tr>
             }
         </tbody>
