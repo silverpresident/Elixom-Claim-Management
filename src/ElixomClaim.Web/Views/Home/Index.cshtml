@@ -93,7 +93,7 @@
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="card-title fw-bold mb-0">Accountant Settlement Queue</h5>
+                            <h5 class="card-title fw-bold mb-0">Settlement Queue</h5>
                             <span class="badge bg-info text-dark fs-6">@Model.SubmittedJobsCount Queue</span>
                         </div>
                         <p class="card-text text-muted">Schedule submitted job payments, mark payments as paid, and create linked adjustments.</p>
@@ -112,6 +112,20 @@
                         </div>
                         <p class="card-text text-muted">Configure salary definitions, benefits/deductions, generate payroll runs, and add custom entries.</p>
                         <a asp-controller="Payroll" asp-action="Index" class="btn btn-outline-primary btn-sm w-100 fw-semibold">Open Payroll Workspace &rarr;</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collection Client -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title fw-bold mb-0">Collection Clients</h5>
+                            <span class="badge bg-primary fs-6">@Model.CollectionClientCount</span>
+                        </div>
+                        <p class="card-text text-muted">Manage collection clients and their information.</p>
+                        <a asp-controller="CollectionClients" asp-action="Index" class="btn btn-outline-primary btn-sm w-100 fw-semibold">Manage Collection Clients &rarr;</a>
                     </div>
                 </div>
             </div>
