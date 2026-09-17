@@ -30,6 +30,24 @@ public sealed class CollectionCreationWorkflowTests
         Assert.IsType<SelectCollectionClientInput>(view.Model);
         var clients = Assert.IsAssignableFrom<IEnumerable<CollectionClient>>(view.ViewData["Clients"]);
         Assert.Collection(clients, client => Assert.Equal("Active client", client.Name));
+        Assert.True((bool)view.ViewData["UseClientCards"]!);
+    }
+
+    [Fact]
+    public async Task Create_UsesTheDropdownWhenMoreThanTwelveActiveClientsExist()
+    {
+        await using var db = CreateDb();
+        for (var index = 1; index <= 13; index++)
+        {
+            db.CollectionClients.Add(new CollectionClient { Name = $"Client {index}" });
+        }
+        await db.SaveChangesAsync();
+        var controller = CreateController(db);
+
+        var result = await controller.Create();
+
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.False((bool)view.ViewData["UseClientCards"]!);
     }
 
     [Fact]

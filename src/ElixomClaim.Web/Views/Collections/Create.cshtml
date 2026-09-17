@@ -2,7 +2,8 @@
 @using ElixomClaim.Lib.Entities
 @{
     ViewData["Title"] = "Record collection";
-    var clients = (IEnumerable<CollectionClient>)ViewBag.Clients;
+    var clients = ((IEnumerable<CollectionClient>)ViewBag.Clients).ToList();
+    var useClientCards = (bool)ViewBag.UseClientCards;
 }
 
 <div class="container my-4">
@@ -19,16 +20,45 @@
                         @Html.AntiForgeryToken()
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-                        <div class="col-12">
-                            <label asp-for="CollectionClientId" class="form-label fw-bold">Client</label>
-                            <select asp-for="CollectionClientId" class="form-select" required>
-                                <option value="">Choose a client</option>
-                                @foreach(var client in clients)
-                                {
-                                    <option value="@client.Id">@client.Name</option>
-                                }
-                            </select>
-                        </div>
+                        @if (useClientCards)
+                        {
+                            <fieldset class="col-12">
+                                <legend class="form-label fw-bold">Client</legend>
+                                <div class="row g-3">
+                                    @for (var index = 0; index < clients.Count; index++)
+                                    {
+                                        var client = clients[index];
+                                        var colourClass = (index % 4) switch
+                                        {
+                                            0 => "border-primary bg-primary-subtle",
+                                            1 => "border-success bg-success-subtle",
+                                            2 => "border-info bg-info-subtle",
+                                            _ => "border-warning bg-warning-subtle"
+                                        };
+                                        <div class="col-sm-6 col-lg-4">
+                                            <input asp-for="CollectionClientId" class="btn-check" type="radio" id="client-@client.Id" value="@client.Id" required />
+                                            <label for="client-@client.Id" class="card collection-client-card h-100 @colourClass">
+                                                <span class="card-body d-flex align-items-center fw-semibold">@client.Name</span>
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                                <span asp-validation-for="CollectionClientId" class="text-danger"></span>
+                            </fieldset>
+                        }
+                        else
+                        {
+                            <div class="col-12">
+                                <label asp-for="CollectionClientId" class="form-label fw-bold">Client</label>
+                                <select asp-for="CollectionClientId" class="form-select" required>
+                                    <option value="">Choose a client</option>
+                                    @foreach(var client in clients)
+                                    {
+                                        <option value="@client.Id">@client.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        }
 
                         <div class="col-12 d-flex justify-content-between mt-4">
                             <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>

@@ -30,7 +30,7 @@ public class CollectionsController : Controller
     [HttpGet("create")]
     public async Task<IActionResult> Create()
     {
-        ViewBag.Clients = await ActiveClientsAsync();
+        await PopulateClientSelectionAsync();
         return View(new SelectCollectionClientInput());
     }
 
@@ -44,7 +44,7 @@ public class CollectionsController : Controller
         }
 
         ModelState.AddModelError(nameof(input.CollectionClientId), "Choose an active client to continue.");
-        ViewBag.Clients = await ActiveClientsAsync();
+        await PopulateClientSelectionAsync();
         return View("Create", input);
     }
 
@@ -68,7 +68,7 @@ public class CollectionsController : Controller
         if (!await IsActiveClientAsync(input.CollectionClientId))
         {
             ModelState.AddModelError(nameof(input.CollectionClientId), "Choose an active client before recording a collection.");
-            ViewBag.Clients = await ActiveClientsAsync();
+            await PopulateClientSelectionAsync();
             return View("Create", new SelectCollectionClientInput());
         }
 
@@ -126,6 +126,13 @@ public class CollectionsController : Controller
 
     private Task<List<CollectionClient>> ActiveClientsAsync() =>
         _dbContext.CollectionClients.AsNoTracking().Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
+
+    private async Task PopulateClientSelectionAsync()
+    {
+        var clients = await ActiveClientsAsync();
+        ViewBag.Clients = clients;
+        ViewBag.UseClientCards = clients.Count <= 12;
+    }
 
     private Task<bool> IsActiveClientAsync(Guid clientId) =>
         _dbContext.CollectionClients.AsNoTracking().AnyAsync(c => c.Id == clientId && c.IsActive);

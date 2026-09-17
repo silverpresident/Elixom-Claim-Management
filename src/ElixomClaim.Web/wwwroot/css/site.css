@@ -92,6 +92,26 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     outline-offset: 2px;
 }
 
+/* Collection client quick selection */
+.collection-client-card {
+    cursor: pointer;
+    transition: box-shadow 0.15s ease-in-out, transform 0.15s ease-in-out;
+}
+
+.collection-client-card:hover {
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+.btn-check:focus-visible + .collection-client-card,
+.btn-check:checked + .collection-client-card {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.35);
+}
+
+.btn-check:checked + .collection-client-card {
+    border-width: 3px;
+}
+
 /* Print Stylesheet (@media print) */
 @media print {
     /* Hide non-printable navigation, buttons, footers, and internal notes */
