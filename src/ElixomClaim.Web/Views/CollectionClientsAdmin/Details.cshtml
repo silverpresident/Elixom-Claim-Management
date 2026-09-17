@@ -58,9 +58,10 @@
         </div>
     </div>
 
-    @if (User.IsInRole("Administrator"))
-    {
+    @{ var canManageOptions = User.IsInRole("Administrator"); }
     <div class="row g-4">
+        @if (canManageOptions)
+        {
         <section class="col-md-6">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-light"><h5 class="mb-0">Assigned Users</h5></div>
@@ -96,6 +97,7 @@
                 </div>
             </div>
         </section>
+        }
 
         <section class="col-md-6">
             <div class="card shadow-sm border-0 h-100">
@@ -108,6 +110,8 @@
                             <li class="list-group-item px-0">
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                     <div><strong>@option.Name</strong> <span class="badge text-bg-@(option.IsActive ? "success" : "secondary")">@(option.IsActive ? "Active" : "Inactive")</span><span class="small text-muted ms-2">Display order: @option.DisplayOrder</span></div>
+                                    @if (canManageOptions)
+                                    {
                                     <div class="d-flex gap-2">
                                         <form method="post" asp-action="SetPurposeActive" asp-route-id="@client.Id" asp-route-optionId="@option.Id">
                                             @Html.AntiForgeryToken()
@@ -116,7 +120,10 @@
                                         </form>
                                         <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-purpose-@option.Id" aria-expanded="false" aria-controls="edit-purpose-@option.Id">Edit</button>
                                     </div>
+                                    }
                                 </div>
+                                @if (canManageOptions)
+                                {
                                 <div id="edit-purpose-@option.Id" class="collapse mt-3">
                                     <form method="post" asp-action="UpdatePurpose" asp-route-id="@client.Id" asp-route-optionId="@option.Id" class="row g-2 align-items-end">
                                         @Html.AntiForgeryToken()
@@ -125,14 +132,18 @@
                                         <div class="col-12"><button class="btn btn-sm btn-primary">Save purpose</button></div>
                                     </form>
                                 </div>
+                                }
                             </li>
                         }
                     </ul>
+                    @if (canManageOptions)
+                    {
                     <form method="post" asp-action="AddPurpose" asp-route-id="@client.Id" class="border-top pt-3">
                         @Html.AntiForgeryToken()
                         <h6>Add purpose option</h6>
                         <div class="row g-2 align-items-end"><div class="col-sm-8"><label class="form-label small" for="new-purpose-name">Purpose name</label><input id="new-purpose-name" name="name" class="form-control form-control-sm" required /></div><div class="col-sm-4"><label class="form-label small" for="new-purpose-order">Display order</label><input id="new-purpose-order" name="displayOrder" type="number" class="form-control form-control-sm" value="0" required /></div><div class="col-12"><button class="btn btn-outline-primary btn-sm">Add purpose</button></div></div>
                     </form>
+                    }
                 </div>
             </div>
         </section>
@@ -148,6 +159,8 @@
                             <li class="list-group-item px-0">
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                     <div><strong>@option.Name</strong> — <span class="fw-semibold">$@option.Amount.ToString("N2") JMD</span> <span class="badge text-bg-@(option.IsActive ? "success" : "secondary")">@(option.IsActive ? "Active" : "Inactive")</span><span class="small text-muted ms-2">Display order: @option.DisplayOrder</span></div>
+                                    @if (canManageOptions)
+                                    {
                                     <div class="d-flex gap-2">
                                         <form method="post" asp-action="SetAmountActive" asp-route-id="@client.Id" asp-route-optionId="@option.Id">
                                             @Html.AntiForgeryToken()
@@ -156,7 +169,10 @@
                                         </form>
                                         <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-amount-@option.Id" aria-expanded="false" aria-controls="edit-amount-@option.Id">Edit</button>
                                     </div>
+                                    }
                                 </div>
+                                @if (canManageOptions)
+                                {
                                 <div id="edit-amount-@option.Id" class="collapse mt-3">
                                     <form method="post" asp-action="UpdateAmount" asp-route-id="@client.Id" asp-route-optionId="@option.Id" class="row g-2 align-items-end">
                                         @Html.AntiForgeryToken()
@@ -166,18 +182,24 @@
                                         <div class="col-12"><button class="btn btn-sm btn-primary">Save amount</button></div>
                                     </form>
                                 </div>
+                                }
                             </li>
                         }
                     </ul>
+                    @if (canManageOptions)
+                    {
                     <form method="post" asp-action="AddAmount" asp-route-id="@client.Id" class="border-top pt-3">
                         @Html.AntiForgeryToken()
                         <h6>Add amount option</h6>
                         <div class="row g-2 align-items-end"><div class="col-sm-5"><label class="form-label small" for="new-amount-name">Option name</label><input id="new-amount-name" name="name" class="form-control form-control-sm" required /></div><div class="col-sm-4"><label class="form-label small" for="new-amount-value">Amount (JMD)</label><input id="new-amount-value" name="amount" type="number" min="0.01" step="0.01" class="form-control form-control-sm" required /></div><div class="col-sm-3"><label class="form-label small" for="new-amount-order">Display order</label><input id="new-amount-order" name="displayOrder" type="number" class="form-control form-control-sm" value="0" required /></div><div class="col-12"><button class="btn btn-outline-primary btn-sm">Add amount</button></div></div>
                     </form>
+                    }
                 </div>
             </div>
         </section>
 
+        @if (canManageOptions)
+        {
         <section class="col-md-6">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-light"><h5 class="mb-0">Bank Details & Internal Notes</h5></div>
@@ -213,8 +235,8 @@
                 </div>
             </div>
         </section>
+        }
     </div>
-    }
 </div>
 
 @if (User.IsInRole("Administrator"))

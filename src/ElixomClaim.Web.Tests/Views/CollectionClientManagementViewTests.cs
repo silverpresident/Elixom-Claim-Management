@@ -20,4 +20,16 @@ public class CollectionClientManagementViewTests
         Assert.Contains("SetAmountActive", details);
         Assert.Contains("Deactivate an option", details);
     }
+
+    [Fact]
+    public void DetailsView_ShowsOptionListsToAccountantsWhileKeepingControlsAdministratorOnly()
+    {
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "ElixomClaim.Web", "Views", "CollectionClientsAdmin", "Details.cshtml"));
+        var content = File.ReadAllText(path);
+
+        Assert.Contains("var canManageOptions = User.IsInRole(\"Administrator\")", content);
+        Assert.Contains("Predefined purposes shown to tellers", content);
+        Assert.Contains("Predefined JMD amounts shown to tellers", content);
+        Assert.DoesNotContain("@if (User.IsInRole(\"Administrator\"))\n    {\n    <div class=\"row g-4\">", content);
+    }
 }
