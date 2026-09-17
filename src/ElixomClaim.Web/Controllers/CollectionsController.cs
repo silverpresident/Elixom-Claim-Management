@@ -30,26 +30,60 @@ public class CollectionsController : Controller
     [HttpGet("create")]
     public async Task<IActionResult> Create()
     {
-        await PopulateOptionsAsync();
-        return View(new RecordCollectionInput());
+        ViewBag.Clients = await ActiveClientsAsync();
+        return View(new SelectCollectionClientInput());
+    }
+
+    [HttpPost("create/select-client")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SelectClient(SelectCollectionClientInput input)
+    {
+        if (input.CollectionClientId is { } clientId && await IsActiveClientAsync(clientId))
+        {
+            return RedirectToAction(nameof(CreateTransaction), new { clientId });
+        }
+
+        ModelState.AddModelError(nameof(input.CollectionClientId), "Choose an active client to continue.");
+        ViewBag.Clients = await ActiveClientsAsync();
+        return View("Create", input);
+    }
+
+    [HttpGet("create/transaction")]
+    public async Task<IActionResult> CreateTransaction(Guid? clientId)
+    {
+        if (clientId is not { } selectedClientId || !await IsActiveClientAsync(selectedClientId))
+        {
+            TempData["ErrorMessage"] = "Choose an active client before recording a collection.";
+            return RedirectToAction(nameof(Create));
+        }
+
+        await PopulateOptionsAsync(selectedClientId);
+        return View("Transaction", new RecordCollectionInput { CollectionClientId = selectedClientId });
     }
 
     [HttpPost("create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(RecordCollectionInput input)
     {
+        if (!await IsActiveClientAsync(input.CollectionClientId))
+        {
+            ModelState.AddModelError(nameof(input.CollectionClientId), "Choose an active client before recording a collection.");
+            ViewBag.Clients = await ActiveClientsAsync();
+            return View("Create", new SelectCollectionClientInput());
+        }
+
         if (input.PaymentDateUtc is null)
         {
             ModelState.AddModelError(nameof(input.PaymentDateLocal), "Enter a payment date and time.");
-            await PopulateOptionsAsync();
-            return View(input);
+            await PopulateOptionsAsync(input.CollectionClientId);
+            return View("Transaction", input);
         }
 
         var result = await _collectionService.RecordAsync(new(
             CurrentUserId(), input.CollectionClientId, input.PurposeOptionId, input.AmountOptionId, input.PayorName, input.PayorEmail,
             input.Method, 0m, input.PaymentDateUtc.Value, input.ReferenceNumber,
             input.PayorTelephone, input.Purpose, input.Amount > 0 ? input.Amount : null));
-        if (result.IsFailure) { ModelState.AddModelError(string.Empty, result.Error); await PopulateOptionsAsync(); return View(input); }
+        if (result.IsFailure) { ModelState.AddModelError(string.Empty, result.Error); await PopulateOptionsAsync(input.CollectionClientId); return View("Transaction", input); }
         TempData["SuccessMessage"] = "Collection recorded and receipt queued.";
         return RedirectToAction(nameof(Details), new { id = result.Value!.Id });
     }
@@ -90,11 +124,17 @@ public class CollectionsController : Controller
         return collection.TellerUserId == CurrentUserId() || current?.Role.HasMinimumRole(UserRole.Manager) == true ? collection : null;
     }
 
-    private async Task PopulateOptionsAsync()
+    private Task<List<CollectionClient>> ActiveClientsAsync() =>
+        _dbContext.CollectionClients.AsNoTracking().Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
+
+    private Task<bool> IsActiveClientAsync(Guid clientId) =>
+        _dbContext.CollectionClients.AsNoTracking().AnyAsync(c => c.Id == clientId && c.IsActive);
+
+    private async Task PopulateOptionsAsync(Guid clientId)
     {
-        ViewBag.Clients = await _dbContext.CollectionClients.AsNoTracking().Where(c => c.IsActive).OrderBy(c => c.Name).ToListAsync();
-        ViewBag.Purposes = await _dbContext.CollectionPurposeOptions.AsNoTracking().Where(o => o.IsActive).OrderBy(o => o.DisplayOrder).ToListAsync();
-        ViewBag.Amounts = await _dbContext.CollectionAmountOptions.AsNoTracking().Where(o => o.IsActive).OrderBy(o => o.DisplayOrder).ToListAsync();
+        ViewBag.Client = await _dbContext.CollectionClients.AsNoTracking().SingleOrDefaultAsync(c => c.Id == clientId && c.IsActive);
+        ViewBag.Purposes = await _dbContext.CollectionPurposeOptions.AsNoTracking().Where(o => o.IsActive && o.CollectionClientId == clientId).OrderBy(o => o.DisplayOrder).ToListAsync();
+        ViewBag.Amounts = await _dbContext.CollectionAmountOptions.AsNoTracking().Where(o => o.IsActive && o.CollectionClientId == clientId).OrderBy(o => o.DisplayOrder).ToListAsync();
     }
 
     private Guid CurrentUserId()
@@ -103,6 +143,11 @@ public class CollectionsController : Controller
         if (!Guid.TryParse(raw, out var id)) _logger.LogWarning("Collection request had no valid user identifier claim.");
         return id;
     }
+}
+
+public class SelectCollectionClientInput
+{
+    public Guid? CollectionClientId { get; set; }
 }
 
 public class RecordCollectionInput

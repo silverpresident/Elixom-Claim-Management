@@ -1,0 +1,102 @@
+@model ElixomClaim.Web.Controllers.RecordCollectionInput
+@using ElixomClaim.Lib.Entities
+@{
+    ViewData["Title"] = "Record collection";
+    var client = (CollectionClient)ViewBag.Client;
+    var purposes = (IEnumerable<CollectionPurposeOption>)ViewBag.Purposes;
+    var amounts = (IEnumerable<CollectionAmountOption>)ViewBag.Amounts;
+}
+
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white p-3">
+                    <h4 class="mb-0">Record Collection Transaction</h4>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted">Recording a transaction for <strong>@client.Name</strong>. Only this client’s active options can be recorded.</p>
+
+                    <form method="post" asp-action="Create" class="row g-3">
+                        @Html.AntiForgeryToken()
+                        <input asp-for="CollectionClientId" type="hidden" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PayorName" class="form-label fw-bold">Payor Name</label>
+                            <input asp-for="PayorName" class="form-control" placeholder="e.g. John Brown" required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PayorEmail" class="form-label fw-bold">Payor Email <span class="text-muted fw-normal">(optional)</span></label>
+                            <input asp-for="PayorEmail" type="email" class="form-control" placeholder="john@example.com" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PayorTelephone" class="form-label fw-bold">Payor Telephone <span class="text-muted fw-normal">(optional internal)</span></label>
+                            <input asp-for="PayorTelephone" type="tel" class="form-control" placeholder="876-555-0199" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Purpose" class="form-label fw-bold">Purpose</label>
+                            <input asp-for="Purpose" class="form-control" list="purpose-suggestions" maxlength="200" placeholder="Enter or choose a purpose" required />
+                            <datalist id="purpose-suggestions">
+                                @foreach(var option in purposes) { <option value="@option.Name"></option> }
+                            </datalist>
+                            <div class="form-text">Choose a suggestion or enter a different purpose.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Amount" class="form-label fw-bold">Amount (JMD)</label>
+                            <input asp-for="Amount" type="number" class="form-control" list="amount-suggestions" min="0.01" step="0.01" placeholder="Enter or choose an amount" required />
+                            <datalist id="amount-suggestions">
+                                @foreach(var option in amounts) { <option value="@option.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" label="@option.Name"></option> }
+                            </datalist>
+                            <div class="form-text">Choose a suggested amount or enter another positive JMD amount.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Method" class="form-label fw-bold">Payment Method</label>
+                            <select asp-for="Method" asp-items="Html.GetEnumSelectList<CollectionMethod>()" class="form-select"></select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="ReferenceNumber" class="form-label fw-bold">Reference / Check No. <span class="text-muted fw-normal">(optional)</span></label>
+                            <input asp-for="ReferenceNumber" class="form-control" maxlength="100" placeholder="e.g. REF-88991" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PaymentDateLocal" class="form-label fw-bold">Payment Date/Time</label>
+                            <input asp-for="PaymentDateLocal" type="datetime-local" class="form-control" required />
+                            <input asp-for="PaymentDateUtc" type="hidden" />
+                            <div class="form-text">Shown in your local time and stored as UTC.</div>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-between mt-4">
+                            <a asp-action="Create" class="btn btn-outline-secondary">Change Client</a>
+                            <button type="submit" class="btn btn-primary">Record Collection</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function(){
+            const localInput = document.getElementById('PaymentDateLocal');
+            const utcInput = document.getElementById('PaymentDateUtc');
+            if (!localInput.value) {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                localInput.value = now.toISOString().slice(0, 16);
+            }
+            $('form').on('submit', function () {
+                const localDate = new Date(localInput.value);
+                utcInput.value = Number.isNaN(localDate.getTime()) ? '' : localDate.toISOString();
+            });
+        });
+    </script>
+}

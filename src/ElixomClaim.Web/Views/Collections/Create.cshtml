@@ -1,10 +1,8 @@
-@model ElixomClaim.Web.Controllers.RecordCollectionInput
+@model ElixomClaim.Web.Controllers.SelectCollectionClientInput
 @using ElixomClaim.Lib.Entities
 @{
     ViewData["Title"] = "Record collection";
     var clients = (IEnumerable<CollectionClient>)ViewBag.Clients;
-    var purposes = (IEnumerable<CollectionPurposeOption>)ViewBag.Purposes;
-    var amounts = (IEnumerable<CollectionAmountOption>)ViewBag.Amounts;
 }
 
 <div class="container my-4">
@@ -12,16 +10,16 @@
         <div class="col-md-10 col-lg-8">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-primary text-white p-3">
-                    <h4 class="mb-0">Record Collection Transaction</h4>
+                    <h4 class="mb-0">Select Collection Client</h4>
                 </div>
                 <div class="card-body p-4">
-                    <p class="text-muted">Only active options belonging to the selected client can be recorded.</p>
+                    <p class="text-muted">Choose the client first. The next step shows only that client’s active transaction options.</p>
 
-                    <form method="post" class="row g-3">
+                    <form method="post" asp-action="SelectClient" class="row g-3">
                         @Html.AntiForgeryToken()
                         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label asp-for="CollectionClientId" class="form-label fw-bold">Client</label>
                             <select asp-for="CollectionClientId" class="form-select" required>
                                 <option value="">Choose a client</option>
@@ -32,65 +30,9 @@
                             </select>
                         </div>
 
-                        <div class="col-md-6">
-                            <label asp-for="Method" class="form-label fw-bold">Payment Method</label>
-                            <select asp-for="Method" asp-items="Html.GetEnumSelectList<CollectionMethod>()" class="form-select"></select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label asp-for="Purpose" class="form-label fw-bold">Purpose</label>
-                            <input asp-for="Purpose" class="form-control" list="purpose-suggestions" maxlength="200" placeholder="Enter or choose a purpose" required />
-                            <datalist id="purpose-suggestions">
-                                @foreach(var option in purposes)
-                                {
-                                    <option value="@option.Name" data-client="@option.CollectionClientId"></option>
-                                }
-                            </datalist>
-                            <div class="form-text">Choose a suggestion or enter a different purpose.</div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label asp-for="Amount" class="form-label fw-bold">Amount (JMD)</label>
-                            <input asp-for="Amount" type="number" class="form-control" list="amount-suggestions" min="0.01" step="0.01" placeholder="Enter or choose an amount" required />
-                            <datalist id="amount-suggestions">
-                                @foreach(var option in amounts)
-                                {
-                                    <option value="@option.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" label="@option.Name" data-client="@option.CollectionClientId"></option>
-                                }
-                            </datalist>
-                            <div class="form-text">Choose a suggested amount or enter another positive JMD amount.</div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label asp-for="PayorName" class="form-label fw-bold">Payor Name</label>
-                            <input asp-for="PayorName" class="form-control" placeholder="e.g. John Brown" required />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label asp-for="PayorEmail" class="form-label fw-bold">Payor Email <span class="text-muted fw-normal">(optional)</span></label>
-                            <input asp-for="PayorEmail" type="email" class="form-control" placeholder="john@example.com" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label asp-for="PayorTelephone" class="form-label fw-bold">Payor Telephone <span class="text-muted fw-normal">(optional internal)</span></label>
-                            <input asp-for="PayorTelephone" type="tel" class="form-control" placeholder="876-555-0199" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label asp-for="PaymentDateLocal" class="form-label fw-bold">Payment Date/Time</label>
-                            <input asp-for="PaymentDateLocal" type="datetime-local" class="form-control" required />
-                            <input asp-for="PaymentDateUtc" type="hidden" />
-                            <div class="form-text">Shown in your local time and stored as UTC.</div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label asp-for="ReferenceNumber" class="form-label fw-bold">Reference / Check No. <span class="text-muted fw-normal">(optional)</span></label>
-                            <input asp-for="ReferenceNumber" class="form-control" maxlength="100" placeholder="e.g. REF-88991" />
-                        </div>
-
                         <div class="col-12 d-flex justify-content-between mt-4">
                             <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                            <button type="submit" class="btn btn-primary">Record Collection</button>
+                            <button type="submit" class="btn btn-primary">Continue</button>
                         </div>
                     </form>
                 </div>
@@ -98,29 +40,3 @@
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        $(function(){
-            const filter=()=>{
-                const c=$('#CollectionClientId').val();
-                $('#purpose-suggestions option[data-client],#amount-suggestions option[data-client]').each(function(){
-                    $(this).prop('hidden', !!c && $(this).data('client') != c);
-                });
-            };
-            $('#CollectionClientId').on('change',filter);
-            const localInput = document.getElementById('PaymentDateLocal');
-            const utcInput = document.getElementById('PaymentDateUtc');
-            if (!localInput.value) {
-                const now = new Date();
-                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-                localInput.value = now.toISOString().slice(0, 16);
-            }
-            $('form').on('submit', function () {
-                const localDate = new Date(localInput.value);
-                utcInput.value = Number.isNaN(localDate.getTime()) ? '' : localDate.toISOString();
-            });
-            filter();
-        });
-    </script>
-}
