@@ -102,12 +102,48 @@ public class CollectionClientsAdminController : Controller
         return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
     }
 
+    [HttpPost("{id:guid}/purpose-options/{optionId:guid}/edit")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
+    public async Task<IActionResult> UpdatePurpose(Guid id, Guid optionId, [FromForm] string name, [FromForm] int displayOrder)
+    {
+        var result = await _service.UpdatePurposeOptionAsync(new(GetCurrentUserId(), id, optionId, name, displayOrder));
+        return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
+    }
+
+    [HttpPost("{id:guid}/purpose-options/{optionId:guid}/active")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
+    public async Task<IActionResult> SetPurposeActive(Guid id, Guid optionId, [FromForm] bool isActive)
+    {
+        var result = await _service.SetPurposeOptionActiveAsync(new(GetCurrentUserId(), id, optionId, isActive));
+        return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
+    }
+
     [HttpPost("{id:guid}/amount-options")]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = PolicyNames.RequireAdministrator)]
     public async Task<IActionResult> AddAmount(Guid id, [FromForm] string name, [FromForm] decimal amount, [FromForm] int displayOrder)
     {
         var result = await _service.AddAmountOptionAsync(new(GetCurrentUserId(), id, name, amount, displayOrder));
+        return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
+    }
+
+    [HttpPost("{id:guid}/amount-options/{optionId:guid}/edit")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
+    public async Task<IActionResult> UpdateAmount(Guid id, Guid optionId, [FromForm] string name, [FromForm] decimal amount, [FromForm] int displayOrder)
+    {
+        var result = await _service.UpdateAmountOptionAsync(new(GetCurrentUserId(), id, optionId, name, amount, displayOrder));
+        return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
+    }
+
+    [HttpPost("{id:guid}/amount-options/{optionId:guid}/active")]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = PolicyNames.RequireAdministrator)]
+    public async Task<IActionResult> SetAmountActive(Guid id, Guid optionId, [FromForm] bool isActive)
+    {
+        var result = await _service.SetAmountOptionActiveAsync(new(GetCurrentUserId(), id, optionId, isActive));
         return RedirectWithError(nameof(Details), id, result.Error, result.IsFailure);
     }
 

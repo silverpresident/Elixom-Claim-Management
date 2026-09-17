@@ -11,7 +11,11 @@ public interface ICollectionClientAdministrationService
     Task<Result> AssignUserAsync(AssignCollectionClientUserCommand command, CancellationToken cancellationToken = default);
     Task<Result> RemoveUserAsync(RemoveCollectionClientUserCommand command, CancellationToken cancellationToken = default);
     Task<Result<CollectionPurposeOption>> AddPurposeOptionAsync(AddCollectionPurposeOptionCommand command, CancellationToken cancellationToken = default);
+    Task<Result<CollectionPurposeOption>> UpdatePurposeOptionAsync(UpdateCollectionPurposeOptionCommand command, CancellationToken cancellationToken = default);
+    Task<Result> SetPurposeOptionActiveAsync(SetCollectionPurposeOptionActiveCommand command, CancellationToken cancellationToken = default);
     Task<Result<CollectionAmountOption>> AddAmountOptionAsync(AddCollectionAmountOptionCommand command, CancellationToken cancellationToken = default);
+    Task<Result<CollectionAmountOption>> UpdateAmountOptionAsync(UpdateCollectionAmountOptionCommand command, CancellationToken cancellationToken = default);
+    Task<Result> SetAmountOptionActiveAsync(SetCollectionAmountOptionActiveCommand command, CancellationToken cancellationToken = default);
     Task<Result<CollectionClientBankDetail>> AddBankDetailAsync(AddCollectionClientBankDetailCommand command, CancellationToken cancellationToken = default);
 }
 
@@ -21,7 +25,11 @@ public record SetCollectionClientActiveCommand(Guid ActorUserId, Guid Collection
 public record AssignCollectionClientUserCommand(Guid ActorUserId, Guid CollectionClientId, Guid UserId);
 public record RemoveCollectionClientUserCommand(Guid ActorUserId, Guid CollectionClientId, Guid UserId);
 public record AddCollectionPurposeOptionCommand(Guid ActorUserId, Guid CollectionClientId, string Name, int DisplayOrder);
+public record UpdateCollectionPurposeOptionCommand(Guid ActorUserId, Guid CollectionClientId, Guid PurposeOptionId, string Name, int DisplayOrder);
+public record SetCollectionPurposeOptionActiveCommand(Guid ActorUserId, Guid CollectionClientId, Guid PurposeOptionId, bool IsActive);
 public record AddCollectionAmountOptionCommand(Guid ActorUserId, Guid CollectionClientId, string Name, decimal Amount, int DisplayOrder);
+public record UpdateCollectionAmountOptionCommand(Guid ActorUserId, Guid CollectionClientId, Guid AmountOptionId, string Name, decimal Amount, int DisplayOrder);
+public record SetCollectionAmountOptionActiveCommand(Guid ActorUserId, Guid CollectionClientId, Guid AmountOptionId, bool IsActive);
 public record AddCollectionClientBankDetailCommand(
     Guid ActorUserId,
     Guid CollectionClientId,

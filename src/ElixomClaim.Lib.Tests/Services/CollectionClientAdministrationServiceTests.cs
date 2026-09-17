@@ -63,6 +63,39 @@ public class CollectionClientAdministrationServiceTests
     }
 
     [Fact]
+    public async Task OptionManagement_UpdatesAndDeactivatesOptionsWithoutDeletingTheirRecords()
+    {
+        await using var db = CreateDb();
+        var admin = new User { Email = "admin@anonymized.example.com", NormalizedEmail = "ADMIN@ANONYMIZED.EXAMPLE.COM", FullName = "Admin", Role = UserRole.Administrator };
+        var client = new CollectionClient { Name = "Acme" };
+        db.AddRange(admin, client);
+        await db.SaveChangesAsync();
+        var service = CreateService(db);
+        var purpose = (await service.AddPurposeOptionAsync(new(admin.Id, client.Id, "Water bill", 1))).Value!;
+        var amount = (await service.AddAmountOptionAsync(new(admin.Id, client.Id, "Standard", 100m, 1))).Value!;
+
+        var updatedPurpose = await service.UpdatePurposeOptionAsync(new(admin.Id, client.Id, purpose.Id, "Water payment", 2));
+        var updatedAmount = await service.UpdateAmountOptionAsync(new(admin.Id, client.Id, amount.Id, "Full payment", 250m, 3));
+        var deactivatedPurpose = await service.SetPurposeOptionActiveAsync(new(admin.Id, client.Id, purpose.Id, false));
+        var deactivatedAmount = await service.SetAmountOptionActiveAsync(new(admin.Id, client.Id, amount.Id, false));
+
+        Assert.True(updatedPurpose.IsSuccess);
+        Assert.Equal("Water payment", purpose.Name);
+        Assert.Equal(2, purpose.DisplayOrder);
+        Assert.True(updatedAmount.IsSuccess);
+        Assert.Equal(250m, amount.Amount);
+        Assert.Equal(3, amount.DisplayOrder);
+        Assert.True(deactivatedPurpose.IsSuccess);
+        Assert.True(deactivatedAmount.IsSuccess);
+        Assert.False(purpose.IsActive);
+        Assert.False(amount.IsActive);
+        Assert.Equal(1, await db.CollectionPurposeOptions.CountAsync());
+        Assert.Equal(1, await db.CollectionAmountOptions.CountAsync());
+        Assert.Contains(db.AuditRecords, record => record.Action == "COLLECTION_PURPOSE_OPTION_UPDATED");
+        Assert.Contains(db.AuditRecords, record => record.Action == "COLLECTION_AMOUNT_OPTION_DISABLED");
+    }
+
+    [Fact]
     public async Task SetClientActiveAsync_AllowsAccountantAndAuditsLifecycleChange()
     {
         await using var db = CreateDb();

@@ -144,6 +144,44 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
                 return option;
             }, "COLLECTION_PURPOSE_OPTION_ADDED", cancellationToken);
 
+    public async Task<Result<CollectionPurposeOption>> UpdatePurposeOptionAsync(UpdateCollectionPurposeOptionCommand command, CancellationToken cancellationToken = default)
+    {
+        var authorization = await EnsureAdministratorAsync(command.ActorUserId, cancellationToken);
+        if (authorization.IsFailure || string.IsNullOrWhiteSpace(command.Name))
+            return Result.Failure<CollectionPurposeOption>(authorization.IsFailure ? authorization.Error : "Option name is required.");
+
+        var option = await _dbContext.CollectionPurposeOptions.SingleOrDefaultAsync(option =>
+            option.Id == command.PurposeOptionId && option.CollectionClientId == command.CollectionClientId, cancellationToken);
+        if (option is null) return Result.Failure<CollectionPurposeOption>("Purpose option was not found for this client.");
+
+        var name = command.Name.Trim();
+        if (await _dbContext.CollectionPurposeOptions.AnyAsync(candidate =>
+            candidate.CollectionClientId == command.CollectionClientId && candidate.Name == name && candidate.Id != option.Id, cancellationToken))
+            return Result.Failure<CollectionPurposeOption>("This purpose option already exists for the client.");
+
+        option.Name = name;
+        option.DisplayOrder = command.DisplayOrder;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await AuditAsync("COLLECTION_PURPOSE_OPTION_UPDATED", new AuditEntity("CollectionClient", command.CollectionClientId.ToString()), command.ActorUserId, new { option.Id, option.Name, option.DisplayOrder }, cancellationToken);
+        return Result.Success(option);
+    }
+
+    public async Task<Result> SetPurposeOptionActiveAsync(SetCollectionPurposeOptionActiveCommand command, CancellationToken cancellationToken = default)
+    {
+        var authorization = await EnsureAdministratorAsync(command.ActorUserId, cancellationToken);
+        if (authorization.IsFailure) return authorization;
+
+        var option = await _dbContext.CollectionPurposeOptions.SingleOrDefaultAsync(option =>
+            option.Id == command.PurposeOptionId && option.CollectionClientId == command.CollectionClientId, cancellationToken);
+        if (option is null) return Result.Failure("Purpose option was not found for this client.");
+        if (option.IsActive == command.IsActive) return Result.Success();
+
+        option.IsActive = command.IsActive;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await AuditAsync(command.IsActive ? "COLLECTION_PURPOSE_OPTION_ENABLED" : "COLLECTION_PURPOSE_OPTION_DISABLED", new AuditEntity("CollectionClient", command.CollectionClientId.ToString()), command.ActorUserId, new { option.Id, option.Name, option.IsActive }, cancellationToken);
+        return Result.Success();
+    }
+
     public async Task<Result<CollectionAmountOption>> AddAmountOptionAsync(AddCollectionAmountOptionCommand command, CancellationToken cancellationToken = default)
     {
         var authorization = await EnsureAdministratorAsync(command.ActorUserId, cancellationToken);
@@ -159,6 +197,45 @@ public class CollectionClientAdministrationService : ICollectionClientAdministra
         await _dbContext.SaveChangesAsync(cancellationToken);
         await AuditAsync("COLLECTION_AMOUNT_OPTION_ADDED", new AuditEntity("CollectionClient", command.CollectionClientId.ToString()), command.ActorUserId, new { option.Id, option.Name, option.Amount }, cancellationToken);
         return Result.Success(option);
+    }
+
+    public async Task<Result<CollectionAmountOption>> UpdateAmountOptionAsync(UpdateCollectionAmountOptionCommand command, CancellationToken cancellationToken = default)
+    {
+        var authorization = await EnsureAdministratorAsync(command.ActorUserId, cancellationToken);
+        if (authorization.IsFailure || string.IsNullOrWhiteSpace(command.Name) || command.Amount <= 0)
+            return Result.Failure<CollectionAmountOption>(authorization.IsFailure ? authorization.Error : "Option name and a positive amount are required.");
+
+        var option = await _dbContext.CollectionAmountOptions.SingleOrDefaultAsync(option =>
+            option.Id == command.AmountOptionId && option.CollectionClientId == command.CollectionClientId, cancellationToken);
+        if (option is null) return Result.Failure<CollectionAmountOption>("Amount option was not found for this client.");
+
+        var name = command.Name.Trim();
+        if (await _dbContext.CollectionAmountOptions.AnyAsync(candidate =>
+            candidate.CollectionClientId == command.CollectionClientId && candidate.Name == name && candidate.Id != option.Id, cancellationToken))
+            return Result.Failure<CollectionAmountOption>("This amount option already exists for the client.");
+
+        option.Name = name;
+        option.Amount = command.Amount;
+        option.DisplayOrder = command.DisplayOrder;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await AuditAsync("COLLECTION_AMOUNT_OPTION_UPDATED", new AuditEntity("CollectionClient", command.CollectionClientId.ToString()), command.ActorUserId, new { option.Id, option.Name, option.Amount, option.DisplayOrder }, cancellationToken);
+        return Result.Success(option);
+    }
+
+    public async Task<Result> SetAmountOptionActiveAsync(SetCollectionAmountOptionActiveCommand command, CancellationToken cancellationToken = default)
+    {
+        var authorization = await EnsureAdministratorAsync(command.ActorUserId, cancellationToken);
+        if (authorization.IsFailure) return authorization;
+
+        var option = await _dbContext.CollectionAmountOptions.SingleOrDefaultAsync(option =>
+            option.Id == command.AmountOptionId && option.CollectionClientId == command.CollectionClientId, cancellationToken);
+        if (option is null) return Result.Failure("Amount option was not found for this client.");
+        if (option.IsActive == command.IsActive) return Result.Success();
+
+        option.IsActive = command.IsActive;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await AuditAsync(command.IsActive ? "COLLECTION_AMOUNT_OPTION_ENABLED" : "COLLECTION_AMOUNT_OPTION_DISABLED", new AuditEntity("CollectionClient", command.CollectionClientId.ToString()), command.ActorUserId, new { option.Id, option.Name, option.IsActive }, cancellationToken);
+        return Result.Success();
     }
 
     public async Task<Result<CollectionClientBankDetail>> AddBankDetailAsync(AddCollectionClientBankDetailCommand command, CancellationToken cancellationToken = default)
