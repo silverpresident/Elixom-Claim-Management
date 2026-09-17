@@ -92,6 +92,36 @@ public class JobPaymentServiceTests
     }
 
     [Fact]
+    public async Task AttachCollectionsAsync_SkipsAlreadyAttachedCollectionsAndAttachesTheRemainingEligibleSelection()
+    {
+        await using var db = CreateDb();
+        var manager = User(UserRole.Manager, "manager@anonymized.example.com");
+        var client = new CollectionClient { Name = "Acme", PerJobProcessingFee = 10m };
+        db.AddRange(manager, client);
+        await db.SaveChangesAsync();
+        var job = new JobPayment { CollectionClientId = client.Id };
+        var alreadyAttached = Collection(client.Id, manager.Id, 100m, 5m);
+        var eligible = Collection(client.Id, manager.Id, 200m, 7m);
+        db.AddRange(job, alreadyAttached, eligible);
+        await db.SaveChangesAsync();
+        db.JobPaymentCollections.Add(new JobPaymentCollection { JobPaymentId = job.Id, CollectionTransactionId = alreadyAttached.Id });
+        alreadyAttached.Status = CollectionStatus.Processing;
+        await db.SaveChangesAsync();
+        var service = Service(db);
+
+        var result = await service.AttachCollectionsAsync(new(manager.Id, job.Id, new[] { alreadyAttached.Id, eligible.Id }));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(CollectionStatus.Processing, eligible.Status);
+        Assert.Equal(2, await db.JobPaymentCollections.CountAsync());
+        Assert.Equal(300m, job.JobTotal);
+        Assert.Equal(10m, job.ClientProcessingFee);
+        Assert.Equal(12m, job.TotalTxnProcessingFee);
+        Assert.Equal(278m, job.TotalPaid);
+        Assert.Contains(db.AuditRecords, x => x.Action == "JOB_PAYMENT_COLLECTIONS_ATTACHED");
+    }
+
+    [Fact]
     public async Task AttachClaimAsync_RequiresAcceptedClaimForPayeeAndRestoresStateOnRemoval()
     {
         await using var db = CreateDb();

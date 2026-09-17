@@ -194,14 +194,20 @@ public class JobPaymentService : IJobPaymentService
             return Result.Failure(jobResult.Error);
 
         var job = jobResult.Value!;
-        var collections = await _db.CollectionTransactions
-            .Where(x => collectionIds.Contains(x.Id))
+        var attachedCollectionIds = await _db.JobPaymentCollections
+            .Where(x => collectionIds.Contains(x.CollectionTransactionId))
+            .Select(x => x.CollectionTransactionId)
             .ToListAsync(ct);
-        if (collections.Count != collectionIds.Length || collections.Any(x => x.Status != CollectionStatus.Collected || x.CollectionClientId != job.CollectionClientId))
-            return Result.Failure("Only Collected transactions for the job's client can be attached.");
+        var collectionIdsToAttach = collectionIds.Except(attachedCollectionIds).ToArray();
 
-        if (await _db.JobPaymentCollections.AnyAsync(x => collectionIds.Contains(x.CollectionTransactionId), ct))
-            return Result.Failure("One or more collections are already attached to a job.");
+        if (collectionIdsToAttach.Length == 0)
+            return Result.Success();
+
+        var collections = await _db.CollectionTransactions
+            .Where(x => collectionIdsToAttach.Contains(x.Id))
+            .ToListAsync(ct);
+        if (collections.Count != collectionIdsToAttach.Length || collections.Any(x => x.Status != CollectionStatus.Collected || x.CollectionClientId != job.CollectionClientId))
+            return Result.Failure("Only Collected transactions for the job's client can be attached.");
 
         await using var transaction = _db.Database.IsRelational() ? await _db.Database.BeginTransactionAsync(ct) : null;
         try
@@ -218,7 +224,7 @@ public class JobPaymentService : IJobPaymentService
             await _audit.LogAsync(
                 "JOB_PAYMENT_COLLECTIONS_ATTACHED",
                 new AuditEntity("JobPayment", job.Id.ToString()),
-                afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid, CollectionTransactionIds = collectionIds },
+                afterState: new { job.Id, job.Status, job.JobTotal, job.TotalPaid, CollectionTransactionIds = collectionIdsToAttach },
                 actorUserId: c.ActorUserId.ToString(),
                 cancellationToken: ct);
             if (transaction is not null)
