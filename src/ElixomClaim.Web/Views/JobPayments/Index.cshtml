@@ -23,7 +23,7 @@ else
                     <td><a asp-action="Details" asp-route-id="@job.Id">#@job.SequenceNo</a></td>
                     <td>@(job.PayeeUser?.FullName ?? job.CollectionClient?.Name)</td>
                     <td>@job.TotalPaid.ToString("N2") JMD</td>
-                    <td>@job.Status</td>
+                    <td>@await Component.InvokeAsync("StatusBadge", new { status = job.Status.ToString() })</td>
                 </tr>
             }
         </tbody>
