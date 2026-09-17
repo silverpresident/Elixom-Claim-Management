@@ -1,0 +1,9 @@
+@model DateTime
+@using System.Globalization
+@{
+    // SQL Server does not retain DateTime.Kind; persisted application instants are UTC by convention.
+    var utcInstant = Model.Kind == DateTimeKind.Local
+        ? Model.ToUniversalTime()
+        : DateTime.SpecifyKind(Model, DateTimeKind.Utc);
+}
+<time data-utc-date datetime="@utcInstant.ToString("O", CultureInfo.InvariantCulture)">@utcInstant.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture)</time>

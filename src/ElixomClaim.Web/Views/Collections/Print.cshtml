@@ -25,7 +25,7 @@
                 <dt>Reference no.</dt><dd>@Model.ReferenceNumber</dd>
             }
             <dt>Payment date</dt>
-            <dd><time class="local-payment-date" datetime="@Model.PaymentDateUtc.ToUniversalTime().ToString("O")">@Model.PaymentDateUtc.ToUniversalTime().ToString("yyyy-MM-dd HH:mm") UTC</time></dd>
+            <dd>@Html.DisplayFor(model => model.PaymentDateUtc, "UtcDateTime")</dd>
         </dl>
     </section>
 
@@ -52,16 +52,3 @@
 
     <p class="no-print"><button class="btn btn-primary" onclick="window.print()">Print receipt</button></p>
 </article>
-
-@section Scripts {
-    <script>
-        document.querySelectorAll('.local-payment-date').forEach(function (element) {
-            var instant = new Date(element.dateTime);
-            if (!Number.isNaN(instant.getTime())) {
-                element.textContent = new Intl.DateTimeFormat(undefined, {
-                    dateStyle: 'medium', timeStyle: 'short'
-                }).format(instant);
-            }
-        });
-    </script>
-}

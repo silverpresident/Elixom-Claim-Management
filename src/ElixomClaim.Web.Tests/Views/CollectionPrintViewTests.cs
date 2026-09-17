@@ -25,8 +25,8 @@ public class CollectionPrintViewTests
         Assert.Contains("Model.TellerUser.DisplayName", content);
         Assert.Contains("Model.PayorName", content);
         Assert.Contains("Model.PayorEmail", content);
-        Assert.Contains("Intl.DateTimeFormat", content);
-        Assert.Contains("local-payment-date", content);
+        Assert.Contains("UtcDateTime", content);
+        Assert.DoesNotContain("Intl.DateTimeFormat", content);
         Assert.DoesNotContain("PayorTelephone", content);
         Assert.Contains("Model.Purpose", content);
     }
